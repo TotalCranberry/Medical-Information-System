@@ -6,10 +6,11 @@ import {
 
 const ReportsTab = ({ history, labs, prescriptions }) => (
   <Box>
-    <Typography variant="h3" color="primary" fontWeight={700} mb={4} textAlign={{ xs: "center", md: "left" }}>
+    <Typography variant="h4" color="primary" fontWeight={700} mb={4} ml={7} textAlign={{ xs: "center", md: "left" }}>
       Medical Reports
     </Typography>
-    <Grid container spacing={4}>
+    <Grid container spacing={4} justifyContent="center"
+      alignItems="flex-start">
       <Grid item xs={12} md={6}>
         <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
           <Typography variant="h6" fontWeight={600} mb={2}>Medical History Summary</Typography>

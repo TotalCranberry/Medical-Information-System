@@ -17,7 +17,7 @@ const AppointmentsTab = ({ appointments, onBook }) => {
 
   return (
     <Box>
-      <Typography variant="h4" color="primary" fontWeight={700} sx={{ mb: 3, textAlign: { xs: "center", md: "left" } }}>
+      <Typography variant="h4" color="primary" fontWeight={700} sx={{ mb: 3, ml:10, textAlign: { xs: "center", md: "left" } }}>
         Appointments
       </Typography>
       <Grid container spacing={4} justifyContent="center">

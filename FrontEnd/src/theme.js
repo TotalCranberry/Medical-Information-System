@@ -24,8 +24,14 @@ const theme = createTheme({
     },
     MuiButton: {
       styleOverrides: {
-        root: { borderRadius: 24, textTransform: "none", fontWeight: 600 }
-      }
+        root: {
+          transition: "background-color 0.2s",
+          '&:hover': {
+            backgroundColor: "#45d27a",
+            color: '#fff', // optional
+          },
+        },
+      },
     }
   }
 });
