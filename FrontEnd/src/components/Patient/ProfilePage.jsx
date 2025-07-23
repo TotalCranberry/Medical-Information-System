@@ -1,6 +1,6 @@
 import React, { useState } from "react";
 import {
-  Avatar, Button, TextField, Typography, Paper, Box, Grid, Switch, FormControlLabel, Divider
+  Avatar, Button, TextField, Typography, Paper, Box, Switch, FormControlLabel, Divider
 } from "@mui/material";
 
 const ProfilePage = ({ user }) => {
@@ -14,31 +14,24 @@ const ProfilePage = ({ user }) => {
   };
 
   return (
-    <Paper sx={{ maxWidth: 500, margin: "40px auto", p: 4 }}>
-      <Box display="flex" flexDirection="column" alignItems="center">
-        <Avatar src={user.avatar} sx={{ width: 80, height: 80, mb: 2 }} />
-        <Typography variant="h5" mb={2}>Profile & Preferences</Typography>
+    <Box display="flex" alignItems="center" justifyContent="center" minHeight="90vh" sx={{ bgcolor: "#f5f7fa" }}>
+      <Paper elevation={3} sx={{ p: 4, borderRadius: 4, width: 420 }}>
+        <Typography variant="h4" fontWeight={700} color="primary" mb={2}>Profile & Preferences</Typography>
+        <Divider sx={{ mb: 3 }} />
         <form onSubmit={handleSave}>
           <TextField
             label="Full Name"
-            fullWidth
-            margin="normal"
             value={name}
             onChange={e => setName(e.target.value)}
-          />
-          <TextField
-            label="Email"
             fullWidth
             margin="normal"
-            value={user.email}
-            disabled
           />
           <TextField
-            label="Phone"
-            fullWidth
-            margin="normal"
+            label="Phone Number"
             value={phone}
             onChange={e => setPhone(e.target.value)}
+            fullWidth
+            margin="normal"
           />
           <FormControlLabel
             control={
@@ -49,14 +42,20 @@ const ProfilePage = ({ user }) => {
               />
             }
             label="Receive Email Notifications"
+            sx={{ mt: 2 }}
           />
-          <Divider sx={{ my: 2 }} />
-          <Button type="submit" variant="contained" fullWidth>
+          <Button
+            type="submit"
+            variant="contained"
+            color="secondary"
+            sx={{ borderRadius: 2, fontWeight: 600, mt: 2 }}
+            fullWidth
+          >
             Save Changes
           </Button>
         </form>
-      </Box>
-    </Paper>
+      </Paper>
+    </Box>
   );
 };
 

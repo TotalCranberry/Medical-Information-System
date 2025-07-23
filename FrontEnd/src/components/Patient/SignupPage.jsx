@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import {
   Avatar, Button, TextField, FormControlLabel, Checkbox,
-  Link, Grid, Box, Typography, Container, Paper, MenuItem
+  Link, Grid, Box, Typography, Container, Paper, MenuItem, Divider
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
 
@@ -19,40 +19,44 @@ const SignupPage = () => {
   };
 
   return (
-    <Container component="main" maxWidth="xs">
-      <Paper elevation={3} sx={{ p: 4, mt: 8 }}>
-        <Box sx={{ display: "flex", flexDirection: "column", alignItems: "center" }}>
-          <Avatar sx={{ m: 1, bgcolor: "secondary.main" }}>
-            <LockOutlinedIcon />
-          </Avatar>
-          <Typography component="h1" variant="h5">Sign Up</Typography>
+    <Box display="flex" alignItems="center" justifyContent="center" minHeight="90vh" sx={{ bgcolor: "#f5f7fa" }}>
+      <Container maxWidth="xs">
+        <Paper elevation={3} sx={{ p: 4, borderRadius: 4 }}>
+          <Box display="flex" flexDirection="column" alignItems="center">
+            <Avatar sx={{ m: 1, bgcolor: "#45d27a" }}>
+              <LockOutlinedIcon />
+            </Avatar>
+            <Typography component="h1" variant="h5" sx={{ fontWeight: 600 }}>Sign Up</Typography>
+          </Box>
           <Box component="form" onSubmit={handleSubmit} sx={{ mt: 1 }}>
             <TextField
-              margin="normal"
-              required
-              fullWidth
               label="Full Name"
               value={name}
               onChange={e => setName(e.target.value)}
+              fullWidth
+              margin="normal"
               autoFocus
+              variant="outlined"
             />
             <TextField
-              margin="normal"
-              required
-              fullWidth
-              label="University Email"
+              label="Email"
               type="email"
               value={email}
               onChange={e => setEmail(e.target.value)}
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              required
             />
             <TextField
-              margin="normal"
-              required
-              fullWidth
               label="Password"
               type="password"
               value={password}
               onChange={e => setPassword(e.target.value)}
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              required
             />
             <TextField
               select
@@ -61,27 +65,40 @@ const SignupPage = () => {
               onChange={e => setRole(e.target.value)}
               fullWidth
               margin="normal"
+              variant="outlined"
             >
               <MenuItem value="student">Student/Staff</MenuItem>
               <MenuItem value="provider">Healthcare Provider</MenuItem>
             </TextField>
             <FormControlLabel
-              control={<Checkbox value="terms" color="primary" />}
+              control={<Checkbox value="agree" color="secondary" />}
               label="I agree to the terms and conditions"
             />
-            <Button type="submit" fullWidth variant="contained" sx={{ mt: 2, mb: 1 }}>
+            <Button
+              type="submit"
+              fullWidth
+              variant="contained"
+              color="secondary"
+              sx={{ mt: 3, mb: 2, fontWeight: 600 }}
+            >
               Sign Up
             </Button>
-            <Grid container justifyContent="flex-end">
+            <Grid container>
               <Grid item>
-                <Link href="/login" variant="body2">Already have an account? Login</Link>
+                <Link href="/login" variant="body2" sx={{ color: "#45d27a" }}>
+                  Already have an account? Login
+                </Link>
               </Grid>
             </Grid>
-            {error && <Typography color="error" sx={{ mt: 1 }}>{error}</Typography>}
+            {error && (
+              <Typography color="error" variant="body2" sx={{ mt: 2 }}>
+                {error}
+              </Typography>
+            )}
           </Box>
-        </Box>
-      </Paper>
-    </Container>
+        </Paper>
+      </Container>
+    </Box>
   );
 };
 
