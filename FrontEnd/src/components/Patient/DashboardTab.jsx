@@ -10,76 +10,44 @@ const DashboardTab = ({ user, appointments, reports, prescriptions }) => (
       variant="h4"
       gutterBottom
       sx={{
-        color: "#0c3c3c",
+        color: "primary.main",
         fontWeight: 700,
-        mb: { xs: 2, md: 4 },
-        ml: { xs: 0, md: 7 },
+        mb: { xs: 3, md: 4 },
         textAlign: { xs: "center", md: "left" }
       }}
     >
-      Welcome, {user.name}
+      Welcome, {user?.name || 'User'}
     </Typography>
-    {/* BIGGER Stat Cards */}
-    <Grid
-      container
-      spacing={4}
-      justifyContent="center"
-      alignItems="stretch"
-      sx={{ mb: { xs: 2, md: 5 } }}
-    >
+    
+    <Grid container spacing={4} justifyContent="center" alignItems="stretch" sx={{ mb: { xs: 3, md: 5 } }}>
       <Grid item xs={12} sm={6} md={4}>
-        <Paper elevation={3} sx={{
-          p: 3,
-          borderLeft: "8px solid #45d27a",
-          textAlign: "center",
-          height: { xs: 150, sm: 160, md: 170 },
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center"
-        }}>
-          <Typography variant="subtitle1" sx={{ mb: 1, color: "#6c6b6b", fontSize: 18 }}>Appointments</Typography>
+        <Paper elevation={3} sx={{ p: 3, borderLeft: "8px solid #45d27a", textAlign: "center", height: '100%', display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <Typography variant="subtitle1" sx={{ mb: 1, color: "text.secondary", fontSize: 18 }}>Appointments</Typography>
           <Typography variant="h2" color="primary" fontWeight={800} sx={{ fontSize: 56 }}>
             {appointments.length}
           </Typography>
         </Paper>
       </Grid>
       <Grid item xs={12} sm={6} md={4}>
-        <Paper elevation={3} sx={{
-          p: 3,
-          borderLeft: "8px solid #45d27a",
-          textAlign: "center",
-          height: { xs: 150, sm: 160, md: 170 },
-          width: { xs: 150, sm: 160, md: 170 },
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center"
-        }}>
-          <Typography variant="subtitle1" sx={{ mb: 1, color: "#6c6b6b", fontSize: 18 }}>Reports</Typography>
+        <Paper elevation={3} sx={{ p: 3, borderLeft: "8px solid #45d27a", textAlign: "center", height: '100%', display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <Typography variant="subtitle1" sx={{ mb: 1, color: "text.secondary", fontSize: 18 }}>Reports</Typography>
           <Typography variant="h2" color="primary" fontWeight={800} sx={{ fontSize: 56 }}>
             {reports.length}
           </Typography>
         </Paper>
       </Grid>
       <Grid item xs={12} sm={6} md={4}>
-        <Paper elevation={3} sx={{
-          p: 3,
-          borderLeft: "8px solid #45d27a",
-          textAlign: "center",
-          height: { xs: 150, sm: 160, md: 170 },
-          display: "flex",
-          flexDirection: "column",
-          justifyContent: "center"
-        }}>
-          <Typography variant="subtitle1" sx={{ mb: 1, color: "#6c6b6b", fontSize: 18 }}>Prescriptions</Typography>
+        <Paper elevation={3} sx={{ p: 3, borderLeft: "8px solid #45d27a", textAlign: "center", height: '100%', display: "flex", flexDirection: "column", justifyContent: "center" }}>
+          <Typography variant="subtitle1" sx={{ mb: 1, color: "text.secondary", fontSize: 18 }}>Prescriptions</Typography>
           <Typography variant="h2" color="primary" fontWeight={800} sx={{ fontSize: 56 }}>
             {prescriptions.length}
           </Typography>
         </Paper>
       </Grid>
     </Grid>
-    {/* TABLES: 3 side-by-side at md+, stacked on smaller screens */}
+
     <Grid container spacing={4} justifyContent="center" alignItems="flex-start">
-      <Grid item xs={12} md={4}>
+      <Grid item xs={12} lg={4}>
         <Paper elevation={2} sx={{ p: 3, minHeight: 300 }}>
           <Typography variant="h6" fontWeight={600} mb={2} textAlign="center">Upcoming Appointments</Typography>
           <TableContainer>
@@ -110,7 +78,7 @@ const DashboardTab = ({ user, appointments, reports, prescriptions }) => (
           </TableContainer>
         </Paper>
       </Grid>
-      <Grid item xs={12} md={4}>
+      <Grid item xs={12} lg={4}>
         <Paper elevation={2} sx={{ p: 3, minHeight: 300 }}>
           <Typography variant="h6" fontWeight={600} mb={2} textAlign="center">Recent Reports</Typography>
           <TableContainer>
@@ -128,7 +96,7 @@ const DashboardTab = ({ user, appointments, reports, prescriptions }) => (
                   </TableRow>
                 ) : (
                   reports.map(rep => (
-                    <TableRow key={rep.test}>
+                    <TableRow key={rep.id || rep.test}>
                       <TableCell>{rep.test}</TableCell>
                       <TableCell>{rep.result}</TableCell>
                     </TableRow>
@@ -139,7 +107,7 @@ const DashboardTab = ({ user, appointments, reports, prescriptions }) => (
           </TableContainer>
         </Paper>
       </Grid>
-      <Grid item xs={12} md={4}>
+      <Grid item xs={12} lg={4}>
         <Paper elevation={2} sx={{ p: 3, minHeight: 300 }}>
           <Typography variant="h6" fontWeight={600} mb={2} textAlign="center">Prescriptions</Typography>
           <TableContainer>
@@ -158,7 +126,7 @@ const DashboardTab = ({ user, appointments, reports, prescriptions }) => (
                   </TableRow>
                 ) : (
                   prescriptions.map(rx => (
-                    <TableRow key={rx.date}>
+                    <TableRow key={rx.id || rx.date}>
                       <TableCell>{rx.date}</TableCell>
                       <TableCell>{rx.medicine}</TableCell>
                       <TableCell>{rx.status}</TableCell>

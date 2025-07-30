@@ -1,22 +1,31 @@
-import React, { useState } from "react";
-import { Routes, Route, Link, Navigate, useLocation, useNavigate } from "react-router-dom";
+import React, { useState, useEffect, useCallback } from "react";
+import { Routes, Route, Link, Navigate, useLocation, useNavigate, Outlet } from "react-router-dom";
 import {
   AppBar, Box, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem,
   ListItemButton, ListItemIcon, ListItemText, Avatar, Menu, MenuItem, useTheme,
-  useMediaQuery, Divider
+  useMediaQuery, Divider, CircularProgress, Container
 } from "@mui/material";
+
+// Icons
 import MenuIcon from "@mui/icons-material/Menu";
 import DashboardIcon from "@mui/icons-material/Dashboard";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ContactSupportIcon from "@mui/icons-material/ContactSupport";
 import PersonIcon from "@mui/icons-material/Person";
+import LogoutIcon from '@mui/icons-material/Logout';
+import MedicalServicesIcon from '@mui/icons-material/MedicalServices'; // For Doctor
 
+// Assets
 import UOPLogo from './assets/UOP_logo.jpeg';
-
-// Use the local background image
 import BackgroundImg from './assets/Background.jpeg';
 
+// API
+import { getProfile } from "./api/auth";
+import { fetchAppointments, createAppointment } from "./api/appointments";
+import { fetchReports, fetchPrescriptions } from "./api/reports";
+
+// Pages
 import LoginPage from "./components/Patient/LoginPage";
 import SignupPage from "./components/Patient/SignupPage";
 import DashboardTab from "./components/Patient/DashboardTab";
@@ -25,79 +34,49 @@ import ReportsTab from "./components/Patient/ReportsTab";
 import ProfilePage from "./components/Patient/ProfilePage";
 import SupportPage from "./components/Patient/SupportPage";
 
-const navLinks = [
-  { label: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
-  { label: "Appointments", path: "/appointments", icon: <CalendarTodayIcon /> },
-  { label: "Reports", path: "/reports", icon: <DescriptionIcon /> },
-  { label: "Support", path: "/support", icon: <ContactSupportIcon /> },
+// --- Role-Specific Navigation Links ---
+const studentNavLinks = [
+  { label: "Dashboard", path: "/student/dashboard", icon: <DashboardIcon /> },
+  { label: "Appointments", path: "/student/appointments", icon: <CalendarTodayIcon /> },
+  { label: "Reports", path: "/student/reports", icon: <DescriptionIcon /> },
+  { label: "Support", path: "/student/support", icon: <ContactSupportIcon /> },
 ];
 
-const mockUser = { name: "Student Name", avatar: "" };
-const mockAppointments = [];
-const mockReports = [];
-const mockPrescriptions = [];
-const mockHistory = [];
-const mockLabs = [];
+const doctorNavLinks = [
+  { label: "Dashboard", path: "/doctor/dashboard", icon: <DashboardIcon /> },
+  { label: "My Schedule", path: "/doctor/schedule", icon: <CalendarTodayIcon /> },
+  { label: "Patient Records", path: "/doctor/records", icon: <MedicalServicesIcon /> },
+];
 
-function App() {
+
+// --- Main Layout Component (Now Role-Aware) ---
+const MainLayout = ({ user, onLogout }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const hideNav = ["/login", "/signup"].includes(location.pathname);
-
-  const [appointments, setAppointments] = useState(mockAppointments);
-
-  const theme = useTheme();
-  const isMobile = useMediaQuery(theme.breakpoints.down("md"));
-
+  
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileAnchor, setProfileAnchor] = useState(null);
+
+  const navLinks = user.role === 'Student' ? studentNavLinks : doctorNavLinks;
 
   const handleDrawerToggle = () => setDrawerOpen(!drawerOpen);
   const handleAvatarClick = (event) => setProfileAnchor(event.currentTarget);
   const handleProfileMenuClose = () => setProfileAnchor(null);
-  const handleProfile = () => { handleProfileMenuClose(); navigate("/profile"); };
-  const handleLogout = () => { handleProfileMenuClose(); navigate("/login"); };
-  const handleBook = (newApp) => { setAppointments([...appointments, { ...newApp, id: Date.now(), status: "Pending" }]); };
+  const handleProfile = () => { 
+    handleProfileMenuClose(); 
+    navigate(`/${user.role.toLowerCase()}/profile`); 
+  };
 
-  const drawer = (
-    <Box sx={{ width: 250, height: "100%", bgcolor: "#0c3c3c", color: "#fff" }} role="presentation" onClick={handleDrawerToggle} onKeyDown={handleDrawerToggle}>
-      <Box sx={{ display: "flex", alignItems: "center", mr: 2, mt:2, mb: 2, justifyContent: "center" }}>
-        <Box
-          sx={{
-            height: 48,
-            width: 48,
-            borderRadius: "50%",
-            bgcolor: "#fff",
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            overflow: "hidden",
-            boxShadow: 1
-          }}
-        >
-          <img
-            src={UOPLogo}
-            alt="University of Peradeniya Logo"
-            style={{ height: 42, width: 42, objectFit: "contain" }}
-          />
-        </Box>
+  const drawerContent = (
+    <Box sx={{ width: 250, height: "100%", bgcolor: "#0c3c3c", color: "#fff" }} role="presentation">
+      <Toolbar />
+      <Box sx={{ display: "flex", alignItems: "center", p: 2, justifyContent: "center" }}>
+        <Box component="img" src={UOPLogo} alt="Logo" sx={{ height: 48, width: 48, borderRadius: '50%', p: '2px', bgcolor: 'white' }} />
       </Box>
       <List sx={{ mt: 1 }}>
         {navLinks.map((link) => (
           <ListItem key={link.path} disablePadding>
-            <ListItemButton
-              component={Link}
-              to={link.path}
-              sx={{
-                color: "#fff",
-                fontWeight: location.pathname === link.path ? 700 : 500,
-                backgroundColor: location.pathname === link.path ? "#21867a22" : "transparent",
-                "&:hover": {
-                  fontWeight: 700,
-                  backgroundColor: "#173d3d"
-                }
-              }}
-            >
+            <ListItemButton component={Link} to={link.path} selected={location.pathname === link.path} onClick={() => setDrawerOpen(false)} sx={{ "&.Mui-selected": { backgroundColor: "#173d3d" }, "&:hover": { backgroundColor: "#21867a22" } }}>
               <ListItemIcon sx={{ color: "#45d27a" }}>{link.icon}</ListItemIcon>
               <ListItemText primary={link.label} />
             </ListItemButton>
@@ -105,38 +84,14 @@ function App() {
         ))}
         <Divider sx={{ my: 1, bgcolor: "#45d27a" }} />
         <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => { setDrawerOpen(false); handleProfile(); }}
-            sx={{
-              color: "#fff",
-              "&:hover": {
-                fontWeight: 700,
-                backgroundColor: "#173d3d"
-              }
-            }}
-          >
-            <ListItemIcon>
-              <PersonIcon sx={{ color: "#45d27a" }} />
-            </ListItemIcon>
+          <ListItemButton onClick={() => { handleProfile(); setDrawerOpen(false); }}>
+            <ListItemIcon sx={{ color: "#45d27a" }}><PersonIcon /></ListItemIcon>
             <ListItemText primary="Profile" />
           </ListItemButton>
         </ListItem>
         <ListItem disablePadding>
-          <ListItemButton
-            onClick={() => { setDrawerOpen(false); handleLogout(); }}
-            sx={{
-              color: "#fff",
-              "&:hover": {
-                fontWeight: 700,
-                backgroundColor: "#173d3d"
-              }
-            }}
-          >
-            <ListItemIcon>
-              <Avatar sx={{ width: 24, height: 24, bgcolor: "#45d27a", fontSize: 16 }}>
-                {mockUser.name.charAt(0)}
-              </Avatar>
-            </ListItemIcon>
+          <ListItemButton onClick={onLogout}>
+            <ListItemIcon sx={{ color: "#45d27a" }}><LogoutIcon /></ListItemIcon>
             <ListItemText primary="Logout" />
           </ListItemButton>
         </ListItem>
@@ -145,174 +100,173 @@ function App() {
   );
 
   return (
-    <>
-      {!hideNav && (
-        <AppBar position="static" color="primary" elevation={0} sx={{ boxShadow: "0 3px 7px rgba(12,60,60,0.08)" }}>
-          <Toolbar>
-            <Box
-              sx={{
-                mr: 2,
-                display: 'flex',
-                alignItems: 'center'
-              }}
-            >
-              <Box
-                sx={{
-                  bgcolor: "#fff",
-                  borderRadius: "50%",
-                  width: 48,
-                  height: 48,
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  overflow: "hidden",
-                  boxShadow: 1
-                }}
-              >
-                <img
-                  src={UOPLogo}
-                  alt="University of Peradeniya Logo"
-                  style={{ width: 42, height: 42, objectFit: "contain" }}
-                />
-              </Box>
-            </Box>
-            <Typography variant="h6" component="div" ml={2} sx={{ flexGrow: 1, fontWeight: 700, letterSpacing: 1 }}>
-              University of Peradeniya MIS
+    <Box sx={{ display: 'flex', minHeight: '100vh' }}>
+      <AppBar position="fixed" color="primary" elevation={1} sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, borderRadius: '0' }}>
+        <Toolbar>
+          <IconButton color="inherit" aria-label="open drawer" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2, display: { md: 'none' } }}>
+            <MenuIcon />
+          </IconButton>
+          
+          <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+            <Box component="img" src={UOPLogo} alt="Logo" sx={{ height: 40, width: 40, borderRadius: '50%', p: '2px', bgcolor: 'white', mr: 2 }} />
+            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700 }}>
+              University MIS
             </Typography>
-            {!isMobile && (
-              <Box sx={{ display: "flex", alignItems: "center" }}>
-                {navLinks.filter(link => link.label !== "Support").map((link) => (
-                  <Button
-                    key={link.path}
-                    component={Link}
-                    to={link.path}
-                    color="inherit"
-                    sx={{
-                      mx: 1,
-                      fontWeight: 500,
-                      fontSize: "1rem",
-                      "&.active": { fontWeight: 700 },
-                    }}
-                  >
-                    {link.label}
-                  </Button>
-                ))}
-                <Button
-                  component={Link}
-                  to="/support"
-                  color="primary"
-                  sx={{ mx: 1, color: "#fff" }}
-                >
-                  Support
-                </Button>
-              </Box>
-            )}
-            {isMobile && (
-              <IconButton
-                edge="end"
-                onClick={handleDrawerToggle}
-                sx={{
-                  color: "#0c3c3c",
-                  backgroundColor: "#fff",
-                  "&:hover": {
-                    backgroundColor: "#0c3c3c",
-                    color: "#fff",
-                  }
-                }}
-              >
-                <MenuIcon />
-              </IconButton>
-            )}
-            {!isMobile && (
-              <>
-                <IconButton sx={{ ml: 1 }} onClick={handleAvatarClick}>
-                  <Avatar sx={{ bgcolor: "#45d27a" }}>
-                    {mockUser.name.charAt(0)}
-                  </Avatar>
-                </IconButton>
-                <Menu
-                  anchorEl={profileAnchor}
-                  open={Boolean(profileAnchor)}
-                  onClose={handleProfileMenuClose}
-                  anchorOrigin={{ vertical: "bottom", horizontal: "right" }}
-                  transformOrigin={{ vertical: "top", horizontal: "right" }}
-                  PaperProps={{
-                    sx: {
-                      backgroundColor: "#0c3c3c",
-                      color: "#fff",
-                    }
-                  }}
-                >
-                  <MenuItem onClick={handleProfile} sx={{ color: "#fff" }}>Profile</MenuItem>
-                  <MenuItem onClick={handleLogout} sx={{ color: "#fff" }}>Logout</MenuItem>
-                </Menu>
-              </>
-            )}
-          </Toolbar>
-        </AppBar>
-      )}
-      <Drawer
-        anchor="left"
-        open={drawerOpen}
-        onClose={handleDrawerToggle}
-        PaperProps={{
-          sx: {
-            backgroundColor: "#0c3c3c",
-            color: "#fff"
-          }
-        }}
-      >
-        {drawer}
+          </Box>
+          
+          <Box sx={{ flexGrow: 1 }} />
+
+          <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
+            {navLinks.map((link) => (
+              <Button key={link.label} component={Link} to={link.path} sx={{ color: 'white' }}>
+                {link.label}
+              </Button>
+            ))}
+          </Box>
+
+          <IconButton sx={{ ml: 2 }} onClick={handleAvatarClick}>
+            <Avatar sx={{ bgcolor: "#45d27a" }}>{user?.name?.charAt(0)}</Avatar>
+          </IconButton>
+          <Menu anchorEl={profileAnchor} open={Boolean(profileAnchor)} onClose={handleProfileMenuClose}>
+            <MenuItem onClick={handleProfile}>Profile</MenuItem>
+            <MenuItem onClick={onLogout}>Logout</MenuItem>
+          </Menu>
+        </Toolbar>
+      </AppBar>
+      
+      <Drawer variant="temporary" open={drawerOpen} onClose={handleDrawerToggle} ModalProps={{ keepMounted: true }} PaperProps={{ sx: { backgroundColor: "#0c3c3c", color: "#fff" } }}>
+        {drawerContent}
       </Drawer>
-      <Box sx={{
-        minHeight: "90vh",
-        bgcolor: "#f5f7fa",
-        px: { xs: 1, sm: 2, md: 4 },
-        py: { xs: 2, md: 5, lg: 7 },
-        position: "relative",
-        "&::before": {
-          content: '""',
-          backgroundImage: `url(${BackgroundImg})`,
-          backgroundPosition: "center",
-          backgroundSize: "cover",
-          backgroundRepeat: "no-repeat",
-          position: "absolute",
-          zIndex: 0,
-          top: 0, left: 0, right: 0, bottom: 0,
-          opacity: 0.08,
-          pointerEvents: "none"
-        }
-      }}>
-        <Box sx={{ position: "relative", zIndex: 1 }}>
-          <Routes>
-            <Route path="/login" element={<LoginPage />} />
-            <Route path="/signup" element={<SignupPage />} />
-            <Route
-              path="/dashboard"
-              element={
-                <DashboardTab
-                  user={mockUser}
-                  appointments={appointments}
-                  reports={mockReports}
-                  prescriptions={mockPrescriptions}
-                />
-              }
-            />
-            <Route
-              path="/appointments"
-              element={<AppointmentsTab appointments={appointments} onBook={handleBook} />}
-            />
-            <Route
-              path="/reports"
-              element={<ReportsTab history={mockHistory} labs={mockLabs} prescriptions={mockPrescriptions} />}
-            />
-            <Route path="/profile" element={<ProfilePage user={mockUser} />} />
-            <Route path="/support" element={<SupportPage />} />
-            <Route path="*" element={<Navigate to="/dashboard" />} />
-          </Routes>
-        </Box>
+      
+      <Box component="main" sx={{ flexGrow: 1, p: 3, width: '100%' }}>
+        <Toolbar /> 
+        <Container maxWidth="lg">
+          <Outlet /> 
+        </Container>
       </Box>
-    </>
+    </Box>
+  );
+};
+
+
+// --- Main App Component ---
+function App() {
+  const [user, setUser] = useState(null);
+  const [appointments, setAppointments] = useState([]);
+  const [reports, setReports] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const navigate = useNavigate();
+
+  const handleLogout = useCallback(() => {
+    localStorage.removeItem("jwtToken");
+    localStorage.removeItem("userRole");
+    setUser(null);
+    navigate("/login");
+  }, [navigate]);
+
+  const fetchAllUserData = useCallback(async () => {
+    const token = localStorage.getItem("jwtToken");
+    if (!token) {
+      setLoading(false);
+      return;
+    }
+    setLoading(true);
+    try {
+      const profileData = await getProfile();
+      setUser(profileData);
+      
+      if (profileData.role === 'Student') {
+        const [appointmentsData, reportsData, prescriptionsData] = await Promise.all([
+          fetchAppointments(),
+          fetchReports(),
+          fetchPrescriptions(),
+        ]);
+        setAppointments(appointmentsData);
+        setReports(reportsData);
+        setPrescriptions(prescriptionsData);
+      }
+    } catch (error) {
+      console.error("Failed to fetch user data:", error);
+      handleLogout();
+    } finally {
+      setLoading(false);
+    }
+  }, [handleLogout]);
+
+  useEffect(() => {
+    fetchAllUserData();
+  }, []);
+
+  const handleBookAppointment = async (newApp) => {
+    try {
+      await createAppointment(newApp);
+      const updatedAppointments = await fetchAppointments();
+      setAppointments(updatedAppointments);
+    } catch (error) {
+      console.error("Booking failed:", error);
+    }
+  };
+
+  if (loading) {
+    return (
+      <Box sx={{ display: 'flex', justifyContent: 'center', alignItems: 'center', height: '100vh' }}>
+        <CircularProgress />
+      </Box>
+    );
+  }
+
+  return (
+    <Box sx={{ 
+      minHeight: '100vh', 
+      position: 'relative',
+      '&::before': {
+        content: '""',
+        backgroundImage: `url(${BackgroundImg})`,
+        backgroundPosition: "center",
+        backgroundSize: "cover",
+        position: 'fixed', // Use fixed to cover the whole viewport
+        top: 0,
+        left: 0,
+        right: 0,
+        bottom: 0,
+        opacity: 0.08,
+        zIndex: -1, // Ensure it's behind everything
+      }
+    }}>
+      <Routes>
+        <Route path="/login" element={<LoginPage onAuth={fetchAllUserData} />} />
+        <Route path="/signup" element={<SignupPage />} />
+        
+        <Route 
+          path="/student/*"
+          element={user && user.role === 'Student' ? <MainLayout user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
+        >
+          <Route path="dashboard" element={<DashboardTab user={user} appointments={appointments} reports={reports} prescriptions={prescriptions} />} />
+          <Route path="appointments" element={<AppointmentsTab appointments={appointments} onBookSuccess={handleBookAppointment} />} />
+          <Route path="reports" element={<ReportsTab history={reports} labs={reports} prescriptions={prescriptions} />} />
+          <Route path="profile" element={<ProfilePage user={user} />} />
+          <Route path="support" element={<SupportPage />} />
+        </Route>
+
+        <Route 
+          path="/doctor/*"
+          element={user && user.role === 'Doctor' ? <MainLayout user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
+        >
+          <Route path="dashboard" element={<div><h1>Doctor Dashboard</h1></div>} />
+          <Route path="schedule" element={<div><h1>My Schedule</h1></div>} />
+          <Route path="records" element={<div><h1>Patient Records</h1></div>} />
+          <Route path="profile" element={<ProfilePage user={user} />} />
+        </Route>
+
+        <Route 
+          path="*" 
+          element={
+            <Navigate to={user ? `/${user.role.toLowerCase()}/dashboard` : "/login"} />
+          } 
+        />
+      </Routes>
+    </Box>
   );
 }
 
