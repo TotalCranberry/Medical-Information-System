@@ -4,8 +4,8 @@ import {
 } from "@mui/material";
 
 const SupportPage = () => (
-  <Box display="flex" alignItems="center" justifyContent="center" minHeight="80vh" sx={{ bgcolor: "#f5f7fa" }}>
-    <Paper elevation={3} sx={{ p: 4, borderRadius: 4, width: 500 }}>
+  <Box display="flex" alignItems="center" justifyContent="center" minHeight="80vh">
+    <Paper elevation={3} sx={{ p: 4, borderRadius: 4, width: '100%', maxWidth: 500 }}>
       <Typography variant="h4" fontWeight={700} color="primary" mb={2}>
         Accessibility & Support
       </Typography>
@@ -30,7 +30,7 @@ const SupportPage = () => (
           />
         </ListItem>
       </List>
-      <form>
+      <Box component="form" sx={{ mt: 2 }}>
         <TextField
           label="Your Message"
           variant="outlined"
@@ -42,7 +42,7 @@ const SupportPage = () => (
         <Button variant="contained" color="secondary" sx={{ mt: 2, float: "right" }}>
           Submit
         </Button>
-      </form>
+      </Box>
     </Paper>
   </Box>
 );

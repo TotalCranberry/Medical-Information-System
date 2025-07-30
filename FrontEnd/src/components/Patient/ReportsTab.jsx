@@ -1,19 +1,19 @@
 import React from "react";
 import {
   Box, Typography, Paper, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Link, Grid
+  TableContainer, TableHead, TableRow, Link, Grid, Divider
 } from "@mui/material";
 
-const ReportsTab = ({ history, labs, prescriptions }) => (
+const ReportsTab = ({ history = [], labs = [], prescriptions = [] }) => (
   <Box>
-    <Typography variant="h4" color="primary" fontWeight={700} mb={4} ml={7} textAlign={{ xs: "center", md: "left" }}>
+    <Typography variant="h4" color="primary" fontWeight={700} mb={4} textAlign={{ xs: "center", md: "left" }}>
       Medical Reports
     </Typography>
-    <Grid container spacing={4} justifyContent="center"
-      alignItems="flex-start">
-      <Grid item xs={12} md={6}>
-        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+    <Grid container spacing={4} justifyContent="center" alignItems="flex-start">
+      <Grid item xs={12}>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
           <Typography variant="h6" fontWeight={600} mb={2}>Medical History Summary</Typography>
+          <Divider sx={{ mb: 2 }} />
           <TableContainer>
             <Table>
               <TableHead>
@@ -26,11 +26,11 @@ const ReportsTab = ({ history, labs, prescriptions }) => (
               <TableBody>
                 {history.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3}>No history found</TableCell>
+                    <TableCell colSpan={3} align="center">No history found</TableCell>
                   </TableRow>
                 ) : (
                   history.map(item => (
-                    <TableRow key={item.date}>
+                    <TableRow key={item.id || item.date}>
                       <TableCell>{item.date}</TableCell>
                       <TableCell>{item.diagnosis}</TableCell>
                       <TableCell>{item.doctor}</TableCell>
@@ -43,8 +43,9 @@ const ReportsTab = ({ history, labs, prescriptions }) => (
         </Paper>
       </Grid>
       <Grid item xs={12} md={6}>
-        <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
           <Typography variant="h6" fontWeight={600} mb={2}>Lab Results</Typography>
+          <Divider sx={{ mb: 2 }} />
           <TableContainer>
             <Table>
               <TableHead>
@@ -57,15 +58,15 @@ const ReportsTab = ({ history, labs, prescriptions }) => (
               <TableBody>
                 {labs.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3}>No lab results</TableCell>
+                    <TableCell colSpan={3} align="center">No lab results</TableCell>
                   </TableRow>
                 ) : (
                   labs.map(lab => (
-                    <TableRow key={lab.type}>
+                    <TableRow key={lab.id || lab.type}>
                       <TableCell>{lab.type}</TableCell>
                       <TableCell>{lab.date}</TableCell>
                       <TableCell>
-                        <Link href="#">View</Link>
+                        <Link href="#" sx={{ color: 'secondary.main' }}>View</Link>
                       </TableCell>
                     </TableRow>
                   ))
@@ -75,9 +76,10 @@ const ReportsTab = ({ history, labs, prescriptions }) => (
           </TableContainer>
         </Paper>
       </Grid>
-      <Grid item xs={12}>
-        <Paper elevation={2} sx={{ p: 3 }}>
+      <Grid item xs={12} md={6}>
+        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
           <Typography variant="h6" fontWeight={600} mb={2}>Prescriptions</Typography>
+          <Divider sx={{ mb: 2 }} />
           <TableContainer>
             <Table>
               <TableHead>
@@ -90,15 +92,15 @@ const ReportsTab = ({ history, labs, prescriptions }) => (
               <TableBody>
                 {prescriptions.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={3}>No prescriptions</TableCell>
+                    <TableCell colSpan={3} align="center">No prescriptions</TableCell>
                   </TableRow>
                 ) : (
                   prescriptions.map(rx => (
-                    <TableRow key={rx.date}>
+                    <TableRow key={rx.id || rx.date}>
                       <TableCell>{rx.doctor}</TableCell>
                       <TableCell>{rx.date}</TableCell>
                       <TableCell>
-                        <Link href="#">Download</Link>
+                        <Link href="#" sx={{ color: 'secondary.main' }}>Download</Link>
                       </TableCell>
                     </TableRow>
                   ))
