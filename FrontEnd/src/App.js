@@ -23,7 +23,7 @@ import DashboardTab from "./components/Patient/DashboardTab";
 import AppointmentsTab from "./components/Patient/AppointmentsTab";
 import ReportsTab from "./components/Patient/ReportsTab";
 import ProfilePage from "./components/Patient/ProfilePage";
-import SupportPage from "./components/Patient/SupportPage";
+import SupportPage from "./components/Patient/SupportPage"; //changes 
 
 const navLinks = [
   { label: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
