@@ -33,6 +33,7 @@ import AppointmentsTab from "./components/Patient/AppointmentsTab";
 import ReportsTab from "./components/Patient/ReportsTab";
 import ProfilePage from "./components/Patient/ProfilePage";
 import SupportPage from "./components/Patient/SupportPage";
+import DoctorDashboard from './components/Doctor/DoctorDashboard'; // Import the Doctor Dashboard
 
 // --- Role-Specific Navigation Links ---
 const studentNavLinks = [
@@ -101,7 +102,7 @@ const MainLayout = ({ user, onLogout }) => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <AppBar position="fixed" color="primary" elevation={1} sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, borderRadius: '0' }}>
+      <AppBar position="fixed" color="primary" elevation={1} sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, borderRadius: 0 }}>
         <Toolbar>
           <IconButton color="inherit" aria-label="open drawer" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2, display: { md: 'none' } }}>
             <MenuIcon />
@@ -253,7 +254,7 @@ function App() {
           path="/doctor/*"
           element={user && user.role === 'Doctor' ? <MainLayout user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
         >
-          <Route path="dashboard" element={<div><h1>Doctor Dashboard</h1></div>} />
+          <Route path="dashboard" element={<DoctorDashboard user={user} />} />
           <Route path="schedule" element={<div><h1>My Schedule</h1></div>} />
           <Route path="records" element={<div><h1>Patient Records</h1></div>} />
           <Route path="profile" element={<ProfilePage user={user} />} />
