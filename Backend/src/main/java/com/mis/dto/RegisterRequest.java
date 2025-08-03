@@ -2,14 +2,12 @@ package com.mis.dto;
 
 import com.mis.model.AuthMethod;
 import com.mis.model.Role;
-import com.mis.model.Status;
 
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 import jakarta.validation.constraints.NotNull;
 
 public class RegisterRequest {
-    @NotBlank
     private String id;
     @NotBlank
     private String name;
@@ -21,8 +19,6 @@ public class RegisterRequest {
     private Role role;
     @NotNull
     private AuthMethod authMethod;
-    @NotNull
-    private Status status;
     
     public String getId() {
         return id;
@@ -59,12 +55,6 @@ public class RegisterRequest {
     }
     public void setAuthMethod(AuthMethod authMethod) {
         this.authMethod = authMethod;
-    }
-    public Status getStatus() {
-        return status;
-    }
-    public void setStatus(Status status) {
-        this.status = status;
     }
 
     

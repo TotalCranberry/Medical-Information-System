@@ -12,4 +12,11 @@ export async function getProfile() {
   return apiFetch('/auth/profile', 'GET', null, true);
 }
 
+// New function for Google authentication
+export async function loginWithGoogle(idToken) {
+  // We send the Google ID token to our backend
+  return apiFetch('/auth/google', 'POST', { token: idToken });
+}
+
+
 // Add more functions as needed (appointments, profile, etc.)

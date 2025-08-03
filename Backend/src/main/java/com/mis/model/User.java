@@ -37,10 +37,6 @@ public class User {
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
-    @Enumerated(EnumType.STRING)
-    @Column(nullable = false)
-    private Status status;
-
     public String getId() {
         return id;
     }
@@ -95,14 +91,6 @@ public class User {
 
     public void setLastLogin(LocalDateTime lastLogin) {
         this.lastLogin = lastLogin;
-    }
-
-    public Status getStatus() {
-        return status;
-    }
-
-    public void setStatus(Status status) {
-        this.status = status;
     }
 
     

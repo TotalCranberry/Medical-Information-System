@@ -1,7 +1,7 @@
 import React, { useState } from "react";
 import { Box, Button, TextField, Typography, Paper, Divider, Link as MuiLink, Grid } from "@mui/material";
-import GoogleIcon from "@mui/icons-material/Google";
-import { loginUser } from "../../api/auth";
+import { GoogleLogin } from '@react-oauth/google';
+import { loginUser, loginWithGoogle } from "../../api/auth";
 import { useNavigate, Link } from "react-router-dom";
 
 const LoginPage = ({ onAuth }) => {
@@ -10,28 +10,46 @@ const LoginPage = ({ onAuth }) => {
   const [error, setError] = useState(null);
   const navigate = useNavigate();
 
-  const handleLogin = async (e) => {
+  const handleLoginSuccess = (data) => {
+    localStorage.setItem("jwtToken", data.token);
+    localStorage.setItem("userRole", data.role);
+    if (onAuth) onAuth();
+
+    switch (data.role) {
+      case "Student":
+        navigate("/student/dashboard");
+        break;
+      case "Doctor":
+        navigate("/doctor/dashboard");
+        break;
+      default:
+        // Fallback for other roles
+        navigate(`/${data.role.toLowerCase()}/dashboard`);
+        break;
+    }
+  };
+
+  const handleManualLogin = async (e) => {
     e.preventDefault();
     setError(null);
     try {
       const data = await loginUser({ email, password });
-      localStorage.setItem("jwtToken", data.token);
-      localStorage.setItem("userRole", data.role);
-      if (onAuth) onAuth();
-
-      switch (data.role) {
-        case "Student":
-          navigate("/patient/dashboard");
-          break;
-        case "Doctor":
-          navigate("/doctor/dashboard");
-          break;
-        default:
-          navigate("/dashboard");
-          break;
-      }
+      handleLoginSuccess(data);
     } catch (err) {
       setError(err.message || "Login failed. Please check your credentials.");
+    }
+  };
+
+  const handleGoogleLogin = async (credentialResponse) => {
+    setError(null);
+    try {
+      // The credentialResponse object from Google contains the ID token
+      const idToken = credentialResponse.credential;
+      // We send this token to our backend
+      const data = await loginWithGoogle(idToken);
+      handleLoginSuccess(data);
+    } catch (err) {
+      setError(err.message || "Google login failed. Please try again.");
     }
   };
 
@@ -41,7 +59,6 @@ const LoginPage = ({ onAuth }) => {
       alignItems="center"
       justifyContent="center"
       minHeight="100vh"
-      sx={{ bgcolor: "background.default" }}
     >
       <Paper
         elevation={3}
@@ -59,39 +76,21 @@ const LoginPage = ({ onAuth }) => {
         <Typography sx={{ color: "text.secondary", mb: 2 }}>
           Log in to University Medical Center
         </Typography>
-        <Box component="form" onSubmit={handleLogin} autoComplete="off" sx={{ mt: 1 }}>
+        <Box component="form" onSubmit={handleManualLogin} autoComplete="off" sx={{ mt: 1 }}>
           <TextField
-            label="Email"
-            type="email"
-            value={email}
-            onChange={(e) => setEmail(e.target.value)}
-            fullWidth
-            margin="normal"
-            required
-            variant="outlined"
+            label="Email" type="email" value={email} onChange={(e) => setEmail(e.target.value)}
+            fullWidth margin="normal" required variant="outlined"
           />
           <TextField
-            label="Password"
-            type="password"
-            value={password}
-            onChange={(e) => setPassword(e.target.value)}
-            fullWidth
-            margin="normal"
-            required
-            variant="outlined"
+            label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+            fullWidth margin="normal" required variant="outlined"
           />
           {error && (
-            <Typography color="error" variant="body2" sx={{ my: 1 }}>
+            <Typography color="error" variant="body2" sx={{ my: 1, textAlign: 'left' }}>
               {error}
             </Typography>
           )}
-          <Button
-            type="submit"
-            variant="contained"
-            color="secondary"
-            fullWidth
-            sx={{ mt: 3, mb: 1, fontWeight: 600 }}
-          >
+          <Button type="submit" variant="contained" color="secondary" fullWidth sx={{ mt: 2, mb: 1, fontWeight: 600 }}>
             Sign In
           </Button>
            <Grid container justifyContent="flex-end" sx={{ mt: 1 }}>
@@ -103,15 +102,16 @@ const LoginPage = ({ onAuth }) => {
             </Grid>
         </Box>
         <Divider sx={{ my: 2 }}>OR</Divider>
-        <Button
-          variant="outlined"
-          fullWidth
-          sx={{ fontWeight: 500, borderColor: "#45d27a", color: "primary.main" }}
-          startIcon={<GoogleIcon />}
-          disabled
-        >
-          Sign in with Google
-        </Button>
+        <Box sx={{ display: 'flex', justifyContent: 'center' }}>
+            <GoogleLogin
+                onSuccess={handleGoogleLogin}
+                onError={() => {
+                    setError('Google Login Failed');
+                }}
+                width="300px"
+                theme="outline"
+            />
+        </Box>
       </Paper>
     </Box>
   );
