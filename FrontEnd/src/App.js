@@ -33,7 +33,7 @@ import AppointmentsTab from "./components/Patient/AppointmentsTab";
 import ReportsTab from "./components/Patient/ReportsTab";
 import ProfilePage from "./components/Patient/ProfilePage";
 import SupportPage from "./components/Patient/SupportPage";
-import DoctorDashboard from './components/Doctor/DoctorDashboard'; // Import the Doctor Dashboard
+import DoctorDashboard from './components/Doctor/DoctorDashboard';
 
 // --- Role-Specific Navigation Links ---
 const studentNavLinks = [
@@ -69,10 +69,9 @@ const MainLayout = ({ user, onLogout }) => {
   };
 
   const drawerContent = (
+    // FIX: Removed the extra <Toolbar /> component that was causing empty space
     <Box sx={{ width: 250, height: "100%", bgcolor: "#0c3c3c", color: "#fff" }} role="presentation">
-      <Toolbar />
-      <Box sx={{ display: "flex", alignItems: "center", p: 2, justifyContent: "center" }}>
-        <Box component="img" src={UOPLogo} alt="Logo" sx={{ height: 48, width: 48, borderRadius: '50%', p: '2px', bgcolor: 'white' }} />
+      <Box sx={{ display: "flex", alignItems: "center", p: 2, justifyContent: "center", mt: 2 }}>
       </Box>
       <List sx={{ mt: 1 }}>
         {navLinks.map((link) => (
@@ -108,9 +107,10 @@ const MainLayout = ({ user, onLogout }) => {
             <MenuIcon />
           </IconButton>
           
-          <Box sx={{ display: { xs: 'none', md: 'flex' }, alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+          {/* FIX: Logo and Title are now always visible, but title text may hide on extra small screens */}
+          <Box component={Link} to={`/${user.role.toLowerCase()}/dashboard`} sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
             <Box component="img" src={UOPLogo} alt="Logo" sx={{ height: 40, width: 40, borderRadius: '50%', p: '2px', bgcolor: 'white', mr: 2 }} />
-            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700 }}>
+            <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, display: { xs: 'none', sm: 'block' } }}>
               University MIS
             </Typography>
           </Box>
@@ -218,6 +218,7 @@ function App() {
   }
 
   return (
+    // FIX: The background image is now applied to the root Box that wraps the entire app
     <Box sx={{ 
       minHeight: '100vh', 
       position: 'relative',
@@ -226,13 +227,13 @@ function App() {
         backgroundImage: `url(${BackgroundImg})`,
         backgroundPosition: "center",
         backgroundSize: "cover",
-        position: 'fixed', // Use fixed to cover the whole viewport
+        position: 'fixed',
         top: 0,
         left: 0,
         right: 0,
         bottom: 0,
         opacity: 0.08,
-        zIndex: -1, // Ensure it's behind everything
+        zIndex: -1,
       }
     }}>
       <Routes>

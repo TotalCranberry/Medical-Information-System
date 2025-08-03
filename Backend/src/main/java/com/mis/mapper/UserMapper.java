@@ -12,7 +12,6 @@ public class UserMapper {
         user.setEmail(req.getEmail());
         user.setRole(req.getRole());
         user.setAuthMethod(req.getAuthMethod());
-        user.setStatus(req.getStatus());
         return user;
     }
     public static UserResponse toUserResponse(User user) {

@@ -2,6 +2,7 @@ package com.mis.configuration;
 
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
+import static org.springframework.security.config.Customizer.withDefaults;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -13,8 +14,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.mis.security.JwtTokenFilter;
-
-import static org.springframework.security.config.Customizer.withDefaults;
 
 @Configuration
 public class SecurityConfig {
@@ -31,21 +30,21 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // Public endpoints that anyone can access
-                .requestMatchers("/api/auth/login", "/api/auth/register").permitAll()
+                // FIX: Combined all public authentication endpoints into a single, clean rule.
+                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/google").permitAll()
+                
+                // FIX: Explicitly permit access to the error page for better debugging messages.
+                .requestMatchers("/error").permitAll()
 
                 // The profile endpoint should be accessible by any authenticated user
                 .requestMatchers("/api/auth/profile").authenticated()
 
-                // FIX: All endpoints under /api/patient/** are now restricted to the Student role.
-                // Using hasAuthority to exactly match "ROLE_Student" from your CustomUserDetailsService.
+                // Role-specific endpoints remain the same
                 .requestMatchers("/api/patient/**").hasAuthority("ROLE_Student")
-                
-                // Example for a doctor role.
                 .requestMatchers("/api/doctor/**").hasAuthority("ROLE_Doctor")
 
-                // Deny any other request that doesn't match the rules above as a security measure.
-                .anyRequest().denyAll()
+                // Any other request must be authenticated.
+                .anyRequest().authenticated()
             )
             .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
 

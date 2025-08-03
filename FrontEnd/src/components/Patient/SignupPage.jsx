@@ -41,7 +41,7 @@ const SignupPage = () => {
   };
 
   return (
-    <Box display="flex" alignItems="center" justifyContent="center" minHeight="100vh" sx={{ bgcolor: "background.default" }}>
+    <Box display="flex" alignItems="center" justifyContent="center" minHeight="100vh" >
       <Container maxWidth="xs">
         <Paper elevation={3} sx={{ p: 4, borderRadius: 4, mt: 4, mb: 4 }}>
           <Box display="flex" flexDirection="column" alignItems="center">
