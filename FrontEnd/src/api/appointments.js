@@ -7,3 +7,7 @@ export async function fetchAppointments() {
 export async function createAppointment(data) {
   return apiFetch('/patient/appointments', 'POST', data, true);
 }
+
+export async function cancelAppointment(appointmentId) {
+  return apiFetch(`/patient/appointments/${appointmentId}`, 'DELETE', null, true);
+}

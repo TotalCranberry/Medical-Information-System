@@ -1,5 +1,7 @@
 package com.mis.controller;
 
+import java.util.Map;
+
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PutMapping;
@@ -44,9 +46,8 @@ public class ProfileController {
         try {
             String userId = authentication.getName();
             userService.changePassword(userId, request.getCurrentPassword(), request.getNewPassword());
-            return ResponseEntity.ok().body("Password changed successfully.");
+            return ResponseEntity.ok().body(Map.of("message","Password changed successfully."));
         } catch (IllegalStateException e) {
-            // Handles incorrect password or Google user errors
             return ResponseEntity.badRequest().body(e.getMessage());
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(e.getMessage());

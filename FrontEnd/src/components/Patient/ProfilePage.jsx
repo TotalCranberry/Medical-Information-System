@@ -8,7 +8,6 @@ import { updateProfile } from "../../api/auth";
 
 const ProfilePage = ({ user, onProfileUpdate }) => {
   const [name, setName] = useState("");
-  const [phone, setPhone] = useState("");
   const [notifications, setNotifications] = useState(true);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -19,7 +18,6 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
   useEffect(() => {
     if (user) {
       setName(user.name || "");
-      setPhone(user.phone || "");
     }
   }, [user]);
 
@@ -28,7 +26,7 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
     setMessage({ text: "", type: "" });
     try {
       const updatedUser = await updateProfile({ name }); // Pass only the fields to be updated
-      setMessage({ text: "Profile updated successfully!", type: "success" });
+      setMessage({ text: response.message || "Profile updated successfully!", type: "success" });
       if (onProfileUpdate) {
         onProfileUpdate(updatedUser); // Notify parent component of the change
       }
@@ -42,7 +40,7 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
     setMessage({ text: "", type: "" });
     try {
       const response = await changePassword({ currentPassword, newPassword });
-      setMessage({ text: response, type: "success" });
+      setMessage({ text: response.message, type: "success" });
       setCurrentPassword("");
       setNewPassword("");
     } catch (error) {

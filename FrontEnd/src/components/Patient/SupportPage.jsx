@@ -16,7 +16,7 @@ const SupportPage = () => {
     setFeedback({ text: "", type: "" });
     try {
       const response = await submitSupportRequest(message);
-      setFeedback({ text: response, type: "success" });
+      setFeedback({ text: response.message, type: "success" });
       setMessage("");
     } catch (error) {
       setFeedback({ text: error.message, type: "error" });

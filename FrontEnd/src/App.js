@@ -22,7 +22,7 @@ import BackgroundImg from './assets/Background.jpeg';
 
 // API
 import { getProfile } from "./api/auth";
-import { fetchAppointments, createAppointment } from "./api/appointments";
+import { fetchAppointments, createAppointment, cancelAppointment } from "./api/appointments";
 import { fetchReports, fetchPrescriptions } from "./api/reports";
 
 // Pages
@@ -38,11 +38,11 @@ import DoctorDashboard from './components/Doctor/DoctorDashboard';
 
 
 // --- Role-Specific Navigation Links ---
-const studentNavLinks = [
-  { label: "Dashboard", path: "/student/dashboard", icon: <DashboardIcon /> },
-  { label: "Appointments", path: "/student/appointments", icon: <CalendarTodayIcon /> },
-  { label: "Reports", path: "/student/reports", icon: <DescriptionIcon /> },
-  { label: "Support", path: "/student/support", icon: <ContactSupportIcon /> },
+const patientNavLinks = [
+  { label: "Dashboard", path: "/patient/dashboard", icon: <DashboardIcon /> },
+  { label: "Appointments", path: "/patient/appointments", icon: <CalendarTodayIcon /> },
+  { label: "Reports", path: "/patient/reports", icon: <DescriptionIcon /> },
+  { label: "Support", path: "/patient/support", icon: <ContactSupportIcon /> },
 ];
 
 const doctorNavLinks = [
@@ -60,19 +60,23 @@ const MainLayout = ({ user, onLogout }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileAnchor, setProfileAnchor] = useState(null);
 
-  const navLinks = user.role === 'Student' ? studentNavLinks : doctorNavLinks;
+  // FIX: Corrected the logic to check for both Student and Staff roles.
+  const isPatient = user.role === 'Student' || user.role === 'Staff';
+  const navLinks = isPatient ? patientNavLinks : doctorNavLinks;
 
   const handleDrawerToggle = () => setDrawerOpen(!drawerOpen);
   const handleAvatarClick = (event) => setProfileAnchor(event.currentTarget);
   const handleProfileMenuClose = () => setProfileAnchor(null);
   const handleProfile = () => { 
     handleProfileMenuClose(); 
-    navigate(`/${user.role.toLowerCase()}/profile`); 
+    const rolePath = isPatient ? 'patient' : user.role.toLowerCase();
+    navigate(`/${rolePath}/profile`); 
   };
 
   const drawerContent = (
     <Box sx={{ width: 250, height: "100%", bgcolor: "#0c3c3c", color: "#fff" }} role="presentation">
       <Box sx={{ display: "flex", alignItems: "center", p: 2, justifyContent: "center", mt: 2 }}>
+        <Box component="img" src={UOPLogo} alt="Logo" sx={{ height: 48, width: 48, borderRadius: '50%', p: '2px', bgcolor: 'white' }} />
       </Box>
       <List sx={{ mt: 1 }}>
         {navLinks.map((link) => (
@@ -110,7 +114,7 @@ const MainLayout = ({ user, onLogout }) => {
           </IconButton>
           
           
-          <Box component={Link} to={`/${user.role.toLowerCase()}/dashboard`} sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+          <Box component={Link} to={`/${isPatient ? 'patient' : user.role.toLowerCase()}/dashboard`} sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
             <Box component="img" src={UOPLogo} alt="Logo" sx={{ height: 40, width: 40, borderRadius: '50%', p: '2px', bgcolor: 'white', mr: 2 }} />
             <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, display: { xs: 'none', sm: 'block' } }}>
               University of Peradeniya MIS
@@ -180,7 +184,7 @@ function App() {
       const profileData = await getProfile();
       setUser(profileData);
       
-      if (profileData.role === 'Student') {
+      if (profileData.role === 'Student' || profileData.role === 'Staff') {
         const [appointmentsData, reportsData, prescriptionsData] = await Promise.all([
           fetchAppointments(),
           fetchReports(),
@@ -199,7 +203,12 @@ function App() {
   }, [handleLogout]);
 
   useEffect(() => {
-    fetchAllUserData();
+    const token = localStorage.getItem("jwtToken");
+    if (token) {
+      fetchAllUserData();
+    } else {
+      setLoading(false);
+    }
   }, []);
 
   const handleBookAppointment = async (newApp, setFeedback) => {
@@ -213,6 +222,18 @@ function App() {
         setFeedback({ text: error.message || "Failed to book appointment.", type: "error" });
       }
     };
+    
+  const handleCancelAppointment = async (appointmentId, setFeedback) => {
+    try {
+      await cancelAppointment(appointmentId);
+      const updatedAppointments = await fetchAppointments();
+      setAppointments(updatedAppointments);
+      setFeedback({ text: "Appointment cancelled successfully.", type: "success" });
+    } catch (error) {
+      console.error("Cancellation failed:", error);
+      setFeedback({ text: error.message || "Failed to cancel appointment.", type: "error" });
+    }
+  };
 
   if (loading) {
     return (
@@ -244,12 +265,13 @@ function App() {
         <Route path="/login" element={<LoginPage onAuth={fetchAllUserData} />} />
         <Route path="/signup" element={<SignupPage />} />
         
+        {/* FIX: Corrected the role checking logic to handle both Student and Staff */}
         <Route 
-          path="/student/*"
-          element={user && user.role === 'Student' ? <MainLayout user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
+          path="/patient/*"
+          element={user && (user.role === 'Student' || user.role === 'Staff') ? <MainLayout user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
         >
           <Route path="dashboard" element={<DashboardTab user={user} appointments={appointments} reports={reports} prescriptions={prescriptions} />} />
-          <Route path="appointments" element={<AppointmentsTab appointments={appointments} onBookSuccess={handleBookAppointment} />} />
+          <Route path="appointments" element={<AppointmentsTab appointments={appointments} onBookSuccess={handleBookAppointment} onCancel={handleCancelAppointment} />} />
           <Route path="reports" element={<ReportsTab history={reports} labs={reports} prescriptions={prescriptions} />} />
           <Route path="profile" element={<ProfilePage user={user} />} />
           <Route path="support" element={<SupportPage />} />
@@ -269,7 +291,7 @@ function App() {
         <Route 
           path="*" 
           element={
-            <Navigate to={user ? `/${user.role.toLowerCase()}/dashboard` : "/login"} />
+            <Navigate to={user ? `/${(user.role === 'Student' || user.role === 'Staff') ? 'patient' : user.role.toLowerCase()}/dashboard` : "/login"} />
           } 
         />
       </Routes>

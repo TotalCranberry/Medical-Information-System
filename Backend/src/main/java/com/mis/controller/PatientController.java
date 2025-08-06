@@ -8,12 +8,15 @@ import java.time.ZoneId;
 import java.util.Collections;
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
+import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
+import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
@@ -52,7 +55,7 @@ public class PatientController {
     public ResponseEntity<?> createAppointment(Authentication authentication, @Valid @RequestBody AppointmentRequest request) {
         if (appointmentRepository.existsByAppointmentDateTime(request.getAppointmentDateTime())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body("An appointment already exists at this time slot. Please choose another.");
+                    .body(Map.of("message","An appointment already exists at this time slot. Please choose another."));
         }
 
         Instant instant = request.getAppointmentDateTime().toInstant();
@@ -65,7 +68,7 @@ public class PatientController {
 
         // 2. Check for weekends
         if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {
-            return ResponseEntity.badRequest().body("Appointments cannot be booked on weekends.");
+            return ResponseEntity.badRequest().body(Map.of("message","Appointments cannot be booked on weekends."));
         }
 
         // 3. Check for valid clinic hours
@@ -78,7 +81,7 @@ public class PatientController {
         boolean isAfternoonSlot = !time.isBefore(afternoonStart) && time.isBefore(afternoonEnd);
 
         if (!isMorningSlot && !isAfternoonSlot) {
-            return ResponseEntity.badRequest().body("Invalid appointment time. Please book between 9:00 AM - 12:00 PM or 1:30 PM - 4:00 PM.");
+            return ResponseEntity.badRequest().body(Map.of("message","Invalid appointment time. Please book between 9:00 AM - 12:00 PM or 1:30 PM - 4:00 PM."));
         }
 
         // --- If all checks pass, create the appointment ---
@@ -95,6 +98,31 @@ public class PatientController {
 
         Appointment savedAppointment = appointmentRepository.save(appointment);
         return ResponseEntity.ok(savedAppointment);
+    }
+
+    @DeleteMapping("/appointments/{appointmentId}")
+    public ResponseEntity<?> cancelAppointment(Authentication authentication, @PathVariable String appointmentId) {
+        String userId = authentication.getName();
+
+        // Find the appointment by its ID
+        Appointment appointment = appointmentRepository.findById(appointmentId)
+                .orElseThrow(() -> new RuntimeException("Appointment not found"));
+
+        // Security Check: Ensure the user owns this appointment
+        if (!appointment.getPatient().getId().equals(userId)) {
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message","You are not authorized to cancel this appointment."));
+        }
+
+        // Business Rule: Only allow cancellation if the appointment is still PENDING
+        if (appointment.getStatus() != AppointmentStatus.Scheduled) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message","This appointment can no longer be cancelled."));
+        }
+
+        // Update the status to CANCELLED
+        appointment.setStatus(AppointmentStatus.Cancelled);
+        appointmentRepository.save(appointment);
+
+        return ResponseEntity.ok().body(Map.of("message","Appointment cancelled successfully."));
     }
 
     // Placeholder for fetching prescriptions.

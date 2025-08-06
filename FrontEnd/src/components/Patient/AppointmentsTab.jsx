@@ -1,19 +1,23 @@
 import React, { useState } from "react";
 import {
   Box, Typography, Paper, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, TextField, Button, Grid, Snackbar, Alert
+  TableContainer, TableHead, TableRow, TextField, Button, Grid, Snackbar, Alert,
+  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle
 } from "@mui/material";
 
-const AppointmentsTab = ({ appointments, onBookSuccess }) => {
+const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
   const [date, setDate] = useState("");
   const [time, setTime] = useState("");
   const [reason, setReason] = useState("");
-  const [feedback, setFeedback] = useState({ text: "", type: "" }); 
+  const [feedback, setFeedback] = useState({ text: "", type: "" });
+  
+  // State for the confirmation dialog
+  const [openCancelDialog, setOpenCancelDialog] = useState(false);
+  const [appointmentToCancel, setAppointmentToCancel] = useState(null);
 
   const handleSubmit = (e) => {
     e.preventDefault();
     const appointmentDateTime = new Date(`${date}T${time}`);
-    
     if (onBookSuccess) {
       onBookSuccess({ appointmentDateTime, reason }, setFeedback);
     }
@@ -22,8 +26,30 @@ const AppointmentsTab = ({ appointments, onBookSuccess }) => {
     setReason("");
   };
 
+  const handleOpenCancelDialog = (appointmentId) => {
+    setAppointmentToCancel(appointmentId);
+    setOpenCancelDialog(true);
+  };
+
+  const handleCloseCancelDialog = () => {
+    setAppointmentToCancel(null);
+    setOpenCancelDialog(false);
+  };
+
+  const handleConfirmCancel = () => {
+    if (onCancel && appointmentToCancel) {
+      onCancel(appointmentToCancel, setFeedback);
+    }
+    handleCloseCancelDialog();
+  };
+
+  const getTodayString = () => {
+    const today = new Date();
+    return today.toISOString().split('T')[0];
+  };
+
   return (
-    <>
+    <>  
       <Box>
         <Typography variant="h4" color="primary" fontWeight={700} sx={{ mb: 4, textAlign: { xs: "center", md: "left" } }}>
           Appointments
@@ -61,29 +87,66 @@ const AppointmentsTab = ({ appointments, onBookSuccess }) => {
                       <TableCell>Date</TableCell>
                       <TableCell>Time</TableCell>
                       <TableCell>Status</TableCell>
+                      <TableCell>Actions</TableCell>
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {appointments && appointments.length > 0 ? (
-                      appointments.map(app => (
-                        <TableRow key={app.id}>
-                          <TableCell>{new Date(app.appointmentDateTime).toLocaleDateString()}</TableCell>
-                          <TableCell>{new Date(app.appointmentDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
-                          <TableCell>{app.status}</TableCell>
-                        </TableRow>
-                      ))
+                    {appointments && appointments.length > 0  ? (
+                      [...appointments] 
+                        .filter(app => app.status !== 'Cancelled')
+                        .sort((a, b) => new Date(a.appointmentDateTime) - new Date(b.appointmentDateTime))
+                        .map(app => (
+                          <TableRow key={app.id}>
+                            <TableCell>{new Date(app.appointmentDateTime).toLocaleDateString()}</TableCell>
+                            <TableCell>{new Date(app.appointmentDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
+                            <TableCell>{app.status}</TableCell>
+                            <TableCell >
+                            {app.status === 'Scheduled' && (
+                              <Button 
+                                variant="outlined" 
+                                color="error" 
+                                size="small"
+                                onClick={() => handleOpenCancelDialog(app.id)}
+                              >
+                                Cancel
+                              </Button>
+                            )}
+                          </TableCell>
+                          </TableRow>
+                        ))
                     ) : (
                       <TableRow>
                         <TableCell colSpan={3} align="center">No appointments found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>
+
                 </Table>
               </TableContainer>
             </Paper>
           </Grid>
         </Grid>
       </Box>
+
+      {/* Confirmation Dialog for Cancellation */}
+      <Dialog
+        open={openCancelDialog}
+        onClose={handleCloseCancelDialog}
+      >
+        <DialogTitle>Confirm Cancellation</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to cancel this appointment? This action cannot be undone.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={handleCloseCancelDialog}>Back</Button>
+          <Button onClick={handleConfirmCancel} color="error" autoFocus>
+            Confirm Cancel
+          </Button>
+        </DialogActions>
+      </Dialog>
+
       <Snackbar open={!!feedback.text} autoHideDuration={6000} onClose={() => setFeedback({ text: "", type: "" })}>
         <Alert onClose={() => setFeedback({ text: "", type: "" })} severity={feedback.type || "info"} sx={{ width: '100%' }}>
           {feedback.text}

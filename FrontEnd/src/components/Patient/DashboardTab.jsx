@@ -24,7 +24,7 @@ const DashboardTab = ({ user, appointments, reports, prescriptions }) => (
         <Paper elevation={3} sx={{ p: 3, borderLeft: "8px solid #45d27a", textAlign: "center", height: '100%', display: "flex", flexDirection: "column", justifyContent: "center" }}>
           <Typography variant="subtitle1" sx={{ mb: 1, color: "text.secondary", fontSize: 18 }}>Appointments</Typography>
           <Typography variant="h2" color="primary" fontWeight={800} sx={{ fontSize: 56 }}>
-            {appointments.length}
+            {appointments.filter(app => app.status !== 'Cancelled').length}
           </Typography>
         </Paper>
       </Grid>
@@ -60,18 +60,21 @@ const DashboardTab = ({ user, appointments, reports, prescriptions }) => (
                 </TableRow>
               </TableHead>
               <TableBody>
-                {appointments.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} align="center">No upcoming appointments</TableCell>
-                  </TableRow>
+                {appointments && appointments.length > 0 ? (
+                  [...appointments]
+                    .sort((a, b) => new Date(a.appointmentDateTime) - new Date(b.appointmentDateTime))
+                    .slice(0, 4)
+                    .map(app => (
+                      <TableRow key={app.id}>
+                        <TableCell>{new Date(app.appointmentDateTime).toLocaleDateString()}</TableCell>
+                        <TableCell>{new Date(app.appointmentDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
+                        <TableCell>{app.status}</TableCell>
+                      </TableRow>
+                    ))
                 ) : (
-                  appointments.map(app => (
-                    <TableRow key={app.id}>
-                      <TableCell>{new Date(app.appointmentDateTime).toLocaleDateString()}</TableCell>
-                      <TableCell>{new Date(app.appointmentDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
-                      <TableCell>{app.status}</TableCell>
-                    </TableRow>
-                  ))
+                  <TableRow>
+                    <TableCell colSpan={3} align="center">No appointments found</TableCell>
+                  </TableRow>
                 )}
               </TableBody>
             </Table>

@@ -2,6 +2,7 @@ package com.mis.controller;
 
 import java.util.Date;
 import java.util.List;
+import java.util.Map;
 import java.util.UUID;
 
 import org.springframework.http.ResponseEntity;
@@ -48,7 +49,7 @@ public class SupportController {
 
         supportTicketRepository.save(ticket);
 
-        return ResponseEntity.ok().body("Support request received successfully.");
+        return ResponseEntity.ok().body(Map.of("message","Support request received successfully."));
     }
 
     // New endpoint for Admins

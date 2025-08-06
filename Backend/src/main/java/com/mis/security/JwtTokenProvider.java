@@ -1,14 +1,19 @@
 package com.mis.security;
 
-import com.mis.model.User;
-import io.jsonwebtoken.*;
-import io.jsonwebtoken.security.Keys;
+import java.security.Key;
+import java.util.Date;
+
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.stereotype.Component;
 
+import com.mis.model.User;
+
+import io.jsonwebtoken.Claims;
+import io.jsonwebtoken.JwtException;
+import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.SignatureAlgorithm;
+import io.jsonwebtoken.security.Keys;
 import jakarta.annotation.PostConstruct;
-import java.security.Key;
-import java.util.Date;
 
 @Component
 public class JwtTokenProvider {
@@ -23,11 +28,9 @@ public class JwtTokenProvider {
 
     @PostConstruct
     protected void init() {
-        // Decode secret key string to byte and create signing key
         key = Keys.hmacShaKeyFor(secretKey.getBytes());
     }
 
-    // Create token containing user's id and role
     public String createToken(User user) {
         Claims claims = Jwts.claims().setSubject(user.getId());
         claims.put("role", user.getRole().name());
@@ -43,7 +46,6 @@ public class JwtTokenProvider {
                 .compact();
     }
 
-    // Get user id from token
     public String getUserIdFromToken(String token) {
         return Jwts.parserBuilder()
                    .setSigningKey(key)
@@ -53,7 +55,6 @@ public class JwtTokenProvider {
                    .getSubject();
     }
 
-    // Validate token: signature and expiration
     public boolean validateToken(String token) {
         try {
             Jwts.parserBuilder()

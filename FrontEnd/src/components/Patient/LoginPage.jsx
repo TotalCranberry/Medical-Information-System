@@ -13,20 +13,22 @@ const LoginPage = ({ onAuth }) => {
   const [showPassword, setShowPassword] = useState(false); 
   const navigate = useNavigate();
 
-  const handleLoginSuccess = (data) => {
+  const handleLoginSuccess = async (data) => {
     localStorage.setItem("jwtToken", data.token);
     localStorage.setItem("userRole", data.role);
-    if (onAuth) onAuth();
+    if (onAuth) {
+      await onAuth(); 
+    }
 
     switch (data.role) {
       case "Student":
-        navigate("/student/dashboard");
+      case "Staff":
+        navigate("/patient/dashboard");
         break;
       case "Doctor":
         navigate("/doctor/dashboard");
         break;
       default:
-        // Fallback for other roles
         navigate(`/${data.role.toLowerCase()}/dashboard`);
         break;
     }
@@ -37,7 +39,7 @@ const LoginPage = ({ onAuth }) => {
     setError(null);
     try {
       const data = await loginUser({ email, password });
-      handleLoginSuccess(data);
+      await handleLoginSuccess(data);
     } catch (err) {
       setError(err.message || "Login failed. Please check your credentials.");
     }
@@ -46,11 +48,9 @@ const LoginPage = ({ onAuth }) => {
   const handleGoogleLogin = async (credentialResponse) => {
     setError(null);
     try {
-      // The credentialResponse object from Google contains the ID token
       const idToken = credentialResponse.credential;
-      // We send this token to our backend
       const data = await loginWithGoogle(idToken);
-      handleLoginSuccess(data);
+      await handleLoginSuccess(data);
     } catch (err) {
       setError(err.message || "Google login failed. Please try again.");
     }
