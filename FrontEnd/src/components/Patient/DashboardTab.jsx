@@ -67,8 +67,8 @@ const DashboardTab = ({ user, appointments, reports, prescriptions }) => (
                 ) : (
                   appointments.map(app => (
                     <TableRow key={app.id}>
-                      <TableCell>{app.date}</TableCell>
-                      <TableCell>{app.time}</TableCell>
+                      <TableCell>{new Date(app.appointmentDateTime).toLocaleDateString()}</TableCell>
+                      <TableCell>{new Date(app.appointmentDateTime).toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' })}</TableCell>
                       <TableCell>{app.status}</TableCell>
                     </TableRow>
                   ))

@@ -1,12 +1,9 @@
 package com.mis.security;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -14,7 +11,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.mis.service.CustomUserDetailsService;
 
-import java.io.IOException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JwtTokenFilter extends OncePerRequestFilter {
@@ -27,8 +27,7 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
-    // FIX: Removed the shouldNotFilter method.
-    // Spring Security configuration now handles which endpoints are public.
+    // Spring Security configuration handles which endpoints are public.
     // This ensures the filter runs on protected endpoints like /api/auth/profile.
 
     @Override

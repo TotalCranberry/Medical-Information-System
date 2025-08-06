@@ -28,7 +28,7 @@ public class CustomUserDetailsService implements UserDetailsService {
         // Map user role to GrantedAuthority, e.g. ROLE_Admin, etc.
         SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
 
-        // FIX: Handle users without a password (e.g., Google login)
+        // Handle users without a password (e.g., Google login)
         // The Spring Security User object requires a non-null password.
         // We provide an empty string for users who don't have a password hash.
         String password = user.getPasswordHash() != null ? user.getPasswordHash() : "";

@@ -40,76 +40,58 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
         try {
             User userEntity = UserMapper.toUser(request);
             User savedUser = userService.register(userEntity, request.getPassword());
             UserResponse response = UserMapper.toUserResponse(savedUser);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(ex.getMessage());
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
         }
     }
 
     @PostMapping("/login")
-    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             Optional<User> userOpt = userService.authenticate(loginRequest.getEmail(), loginRequest.getPassword());
             if (userOpt.isPresent()) {
-                String token = jwtTokenProvider.createToken(userOpt.get());
-                String role = userOpt.get().getRole().name();
+                User user = userOpt.get();
+                String token = jwtTokenProvider.createToken(user);
+                String role = user.getRole().name();
                 LoginResponse response = new LoginResponse(token, "Login successful", role);
                 return ResponseEntity.ok(response);
-            } else {
-                return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Invalid email or password.");
             }
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         } catch (IllegalStateException ex) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(ex.getMessage());
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
         }
     }
-    // --- New Endpoint for Google Auth ---
+
     @PostMapping("/google")
-    public ResponseEntity<?> loginWithGoogle(@RequestBody Map<String, String> body) {
+    public ResponseEntity<LoginResponse> loginWithGoogle(@RequestBody Map<String, String> body) {
+        String idToken = body.get("token");
+        if (idToken == null) {
+            return ResponseEntity.badRequest().build();
+        }
         try {
-            String idToken = body.get("token");
-            if (idToken == null) {
-                return ResponseEntity.badRequest().body("ID token is missing.");
-            }
-            
-            // 1. Verify the Google token
             Payload payload = googleTokenVerifierService.verify(idToken);
-            
-            // 2. Process the user (find or create)
             User user = userService.processGoogleUser(payload);
-            
-            // 3. Create your application's JWT token
             String appToken = jwtTokenProvider.createToken(user);
             String role = user.getRole().name();
-            
-            // 4. Send the response
             LoginResponse response = new LoginResponse(appToken, "Login successful", role);
             return ResponseEntity.ok(response);
-
         } catch (Exception e) {
-            // Log the exception for debugging
-            e.printStackTrace();
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body("Google authentication failed: " + e.getMessage());
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
         }
     }
 
-    // FIX: Added the /profile endpoint to get the current authenticated user's data.
     @GetMapping("/profile")
-    public ResponseEntity<?> getProfile(Authentication authentication) {
-        // The JWT filter sets the authentication object. We can get the user ID from it.
-        String userId = authentication.getName(); 
-        Optional<User> userOpt = userService.findById(userId); // You will need to add findById to your UserService
-
-        if (userOpt.isPresent()) {
-            UserResponse response = UserMapper.toUserResponse(userOpt.get());
-            return ResponseEntity.ok(response);
-        }
-
-        return ResponseEntity.status(HttpStatus.NOT_FOUND).body("User not found.");
+    public ResponseEntity<UserResponse> getProfile(Authentication authentication) {
+        String userId = authentication.getName();
+        Optional<User> userOpt = userService.findById(userId);
+        return userOpt
+            .map(user -> ResponseEntity.ok(UserMapper.toUserResponse(user)))
+            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
     }
-
 }

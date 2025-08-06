@@ -14,7 +14,7 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import ContactSupportIcon from "@mui/icons-material/ContactSupport";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from '@mui/icons-material/Logout';
-import MedicalServicesIcon from '@mui/icons-material/MedicalServices'; // For Doctor
+import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 
 // Assets
 import UOPLogo from './assets/UOP_logo.jpeg';
@@ -33,7 +33,9 @@ import AppointmentsTab from "./components/Patient/AppointmentsTab";
 import ReportsTab from "./components/Patient/ReportsTab";
 import ProfilePage from "./components/Patient/ProfilePage";
 import SupportPage from "./components/Patient/SupportPage";
+import FAQPage from './components/Patient/FAQPage';
 import DoctorDashboard from './components/Doctor/DoctorDashboard';
+
 
 // --- Role-Specific Navigation Links ---
 const studentNavLinks = [
@@ -50,7 +52,7 @@ const doctorNavLinks = [
 ];
 
 
-// --- Main Layout Component (Now Role-Aware) ---
+// --- Main Layout Component ---
 const MainLayout = ({ user, onLogout }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -69,7 +71,6 @@ const MainLayout = ({ user, onLogout }) => {
   };
 
   const drawerContent = (
-    // FIX: Removed the extra <Toolbar /> component that was causing empty space
     <Box sx={{ width: 250, height: "100%", bgcolor: "#0c3c3c", color: "#fff" }} role="presentation">
       <Box sx={{ display: "flex", alignItems: "center", p: 2, justifyContent: "center", mt: 2 }}>
       </Box>
@@ -99,6 +100,7 @@ const MainLayout = ({ user, onLogout }) => {
     </Box>
   );
 
+
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
       <AppBar position="fixed" color="primary" elevation={1} sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, borderRadius: 0 }}>
@@ -107,11 +109,11 @@ const MainLayout = ({ user, onLogout }) => {
             <MenuIcon />
           </IconButton>
           
-          {/* FIX: Logo and Title are now always visible, but title text may hide on extra small screens */}
+          
           <Box component={Link} to={`/${user.role.toLowerCase()}/dashboard`} sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
             <Box component="img" src={UOPLogo} alt="Logo" sx={{ height: 40, width: 40, borderRadius: '50%', p: '2px', bgcolor: 'white', mr: 2 }} />
             <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, display: { xs: 'none', sm: 'block' } }}>
-              University MIS
+              University of Peradeniya MIS
             </Typography>
           </Box>
           
@@ -166,6 +168,7 @@ function App() {
     navigate("/login");
   }, [navigate]);
 
+  
   const fetchAllUserData = useCallback(async () => {
     const token = localStorage.getItem("jwtToken");
     if (!token) {
@@ -199,15 +202,17 @@ function App() {
     fetchAllUserData();
   }, []);
 
-  const handleBookAppointment = async (newApp) => {
-    try {
-      await createAppointment(newApp);
-      const updatedAppointments = await fetchAppointments();
-      setAppointments(updatedAppointments);
-    } catch (error) {
-      console.error("Booking failed:", error);
-    }
-  };
+  const handleBookAppointment = async (newApp, setFeedback) => {
+      try {
+        await createAppointment(newApp);
+        const updatedAppointments = await fetchAppointments();
+        setAppointments(updatedAppointments);
+        setFeedback({ text: "Appointment requested successfully!", type: "success" });
+      } catch (error) {
+        console.error("Booking failed:", error);
+        setFeedback({ text: error.message || "Failed to book appointment.", type: "error" });
+      }
+    };
 
   if (loading) {
     return (
@@ -218,7 +223,6 @@ function App() {
   }
 
   return (
-    // FIX: The background image is now applied to the root Box that wraps the entire app
     <Box sx={{ 
       minHeight: '100vh', 
       position: 'relative',
@@ -249,6 +253,7 @@ function App() {
           <Route path="reports" element={<ReportsTab history={reports} labs={reports} prescriptions={prescriptions} />} />
           <Route path="profile" element={<ProfilePage user={user} />} />
           <Route path="support" element={<SupportPage />} />
+          <Route path="faq" element={<FAQPage />} />
         </Route>
 
         <Route 

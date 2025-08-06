@@ -1,8 +1,9 @@
 import React, { useState } from "react";
 import {
-  Avatar, Button, TextField, FormControlLabel, Checkbox, Link as MuiLink, Grid, Box, Typography, Container, Paper, MenuItem
+  Avatar, Button, TextField, FormControlLabel, Checkbox, Link as MuiLink, Grid, Box, Typography, Container, Paper, MenuItem, IconButton, InputAdornment
 } from "@mui/material";
 import LockOutlinedIcon from "@mui/icons-material/LockOutlined";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { Link, useNavigate } from "react-router-dom";
 import { registerUser } from "../../api/auth";
 
@@ -14,6 +15,7 @@ const SignupPage = () => {
   const [agreeTerms, setAgreeTerms] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
+  const [showPassword, setShowPassword] = useState(false); 
   const navigate = useNavigate();
 
   const handleSubmit = async (e) => {
@@ -75,13 +77,19 @@ const SignupPage = () => {
             />
             <TextField
               label="Password"
-              type="password"
+              type={showPassword ? "text" : "password"}
               value={password}
               onChange={(e) => setPassword(e.target.value)}
-              fullWidth
-              margin="normal"
-              variant="outlined"
-              required
+              fullWidth margin="normal" required variant="outlined"
+              InputProps={{
+                endAdornment: (
+                  <InputAdornment position="end">
+                    <IconButton aria-label="toggle password visibility" onClick={() => setShowPassword(!showPassword)} edge="end">
+                      {showPassword ? <VisibilityOff /> : <Visibility />}
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
             />
             <TextField
               select

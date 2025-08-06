@@ -1,13 +1,16 @@
 import React, { useState } from "react";
-import { Box, Button, TextField, Typography, Paper, Divider, Link as MuiLink, Grid } from "@mui/material";
+import { Box, Button, TextField, Typography, Paper, Divider, Link as MuiLink, Grid, IconButton, InputAdornment} from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { GoogleLogin } from '@react-oauth/google';
 import { loginUser, loginWithGoogle } from "../../api/auth";
 import { useNavigate, Link } from "react-router-dom";
+
 
 const LoginPage = ({ onAuth }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false); 
   const navigate = useNavigate();
 
   const handleLoginSuccess = (data) => {
@@ -82,8 +85,20 @@ const LoginPage = ({ onAuth }) => {
             fullWidth margin="normal" required variant="outlined"
           />
           <TextField
-            label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+            label="Password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             fullWidth margin="normal" required variant="outlined"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton aria-label="toggle password visibility" onClick={() => setShowPassword(!showPassword)} edge="end">
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           {error && (
             <Typography color="error" variant="body2" sx={{ my: 1, textAlign: 'left' }}>
