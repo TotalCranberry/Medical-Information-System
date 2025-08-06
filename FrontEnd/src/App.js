@@ -58,10 +58,10 @@ const doctorNavLinks = [
 ];
 
 const pharmaNavLinks = [
-  { label: "Dashboard", path: "/dashboard", icon: <DashboardIcon /> },
-  { label: "View Prescriptions", path: "/view-prescriptions", icon: <ReceiptLongIcon /> },
-  { label: "Inventory Search", path: "/inventory-search", icon: <InventoryIcon /> },
-  { label: "Inventory Update", path: "/inventory-update", icon: <EditNoteIcon /> },
+  { label: "Dashboard", path: "/pharmacist/dashboard", icon: <DashboardIcon /> },
+  { label: "View Prescriptions", path: "/pharmacist/view-prescriptions", icon: <ReceiptLongIcon /> },
+  { label: "Inventory Search", path: "/pharmacist/inventory-search", icon: <InventoryIcon /> },
+  { label: "Inventory Update", path: "/pharmacist/inventory-update", icon: <EditNoteIcon /> },
 ]
 
 
@@ -79,7 +79,7 @@ let navLinks = [];
       navLinks = studentNavLinks;
     } else if (user.role === 'Doctor') {
       navLinks = doctorNavLinks;
-    } else if (user.role === 'Pharmacy') {
+    } else if (user.role === 'Pharmacist') {
       navLinks = pharmaNavLinks;
     }
   const handleDrawerToggle = () => setDrawerOpen(!drawerOpen);
@@ -274,12 +274,12 @@ function App() {
         </Route>
 
         <Route 
-          path="/pharmacy/*"
-          element={user && user.role === 'Pharmacy' ? ( <MainLayout user={user} onLogout={handleLogout} /> ) : ( <Navigate to="/login" /> )} >
+          path="/pharmacist/*"
+          element={user && user.role === 'Pharmacist' ? ( <MainLayout user={user} onLogout={handleLogout} /> ) : ( <Navigate to="/login" /> )} >
           <Route path="dashboard" element={<PharmacyDashboard />} />
-          <Route path="prescriptions" element={<ViewPrescriptions />} />
-          <Route path="inventory" element={<InventorySearch />} />
-          <Route path="update-inventory" element={<UpdateInventory />} />
+          <Route path="view-prescriptions" element={<Prescriptions />} />
+          <Route path="inventory-search" element={<InventoryPage />} />
+          <Route path="inventory-update" element={<UpdateInventory />} />
         </Route>
 
 
