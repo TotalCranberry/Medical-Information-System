@@ -82,7 +82,7 @@ const MainLayout = ({ user, onLogout }) => {
 
   let navLinks = [];
 
-  if (user.role === Student' || user.role === 'Staff') {
+  if (user.role === 'Student' || user.role === 'Staff') {
       navLinks = patientNavLinks;
   } else if (user.role === 'Doctor') {
     navLinks = doctorNavLinks;
