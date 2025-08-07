@@ -12,7 +12,6 @@ public class LoginRequest {
     @NotBlank
     private String password;
 
-    // Getters and setters
     public String getEmail() { return email; }
     public void setEmail(String email) { this.email = email; }
 

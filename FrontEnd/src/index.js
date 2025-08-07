@@ -11,7 +11,6 @@ import "@fontsource/poppins/400.css";
 import "@fontsource/poppins/500.css";
 import "@fontsource/poppins/700.css";
 
-// Replace this with the Client ID you got from Google Cloud Console
 const GOOGLE_CLIENT_ID = "793704402829-o85624o9bu1ti9u6mkagktkqe8h78kne.apps.googleusercontent.com";
 
 const root = ReactDOM.createRoot(document.getElementById("root"));

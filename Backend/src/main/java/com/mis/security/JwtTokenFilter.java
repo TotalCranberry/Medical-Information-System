@@ -1,12 +1,9 @@
 package com.mis.security;
 
-import jakarta.servlet.FilterChain;
-import jakarta.servlet.ServletException;
-import jakarta.servlet.http.HttpServletRequest;
-import jakarta.servlet.http.HttpServletResponse;
+import java.io.IOException;
 
-import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.context.SecurityContextHolder;
 import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.web.authentication.WebAuthenticationDetailsSource;
 import org.springframework.stereotype.Component;
@@ -14,7 +11,10 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.mis.service.CustomUserDetailsService;
 
-import java.io.IOException;
+import jakarta.servlet.FilterChain;
+import jakarta.servlet.ServletException;
+import jakarta.servlet.http.HttpServletRequest;
+import jakarta.servlet.http.HttpServletResponse;
 
 @Component
 public class JwtTokenFilter extends OncePerRequestFilter {
@@ -27,10 +27,6 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         this.userDetailsService = userDetailsService;
     }
 
-    // FIX: Removed the shouldNotFilter method.
-    // Spring Security configuration now handles which endpoints are public.
-    // This ensures the filter runs on protected endpoints like /api/auth/profile.
-
     @Override
     protected void doFilterInternal(HttpServletRequest request,
                                     HttpServletResponse response,
@@ -40,7 +36,6 @@ public class JwtTokenFilter extends OncePerRequestFilter {
         String token = null;
         String userId = null;
 
-        // Extract token from the "Bearer " header
         if (header != null && header.startsWith("Bearer ")) {
             token = header.substring(7);
             if (jwtTokenProvider.validateToken(token)) {
@@ -48,7 +43,6 @@ public class JwtTokenFilter extends OncePerRequestFilter {
             }
         }
 
-        // If token is valid, set the authentication in the security context
         if (userId != null && SecurityContextHolder.getContext().getAuthentication() == null) {
             UserDetails userDetails = userDetailsService.loadUserByUsername(userId);
             UsernamePasswordAuthenticationToken authToken = new UsernamePasswordAuthenticationToken(

@@ -32,16 +32,22 @@ public class SecurityConfig {
             .csrf(csrf -> csrf.disable())
             .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
             .authorizeHttpRequests(auth -> auth
-                // FIX: Combined all public authentication endpoints into a single, clean rule.
+                // Public authentication endpoints
                 .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/google").permitAll()
                 
-                // FIX: Explicitly permit access to the error page for better debugging messages.
+                // Public error page
                 .requestMatchers("/error").permitAll()
 
-                // The profile endpoint should be accessible by any authenticated user
-                .requestMatchers("/api/auth/profile").authenticated()
+                // Profile endpoints accessible by any authenticated user
+                .requestMatchers("/api/auth/profile", "/api/profile/**").authenticated()
 
-                // Role-specific endpoints remain the same
+                // Support request endpoint accessible by any authenticated user
+                .requestMatchers("/api/support/**").authenticated()
+
+                // Admin-specific endpoints
+                .requestMatchers("/api/support/tickets").hasAuthority("ROLE_Admin")
+
+                // Role-specific endpoints
                 .requestMatchers("/api/patient/**").hasAuthority("ROLE_Student")
                 .requestMatchers("/api/doctor/**").hasAuthority("ROLE_Doctor")
                     .requestMatchers("/api/medicines/**").hasAuthority("ROLE_PHARMACIST")
