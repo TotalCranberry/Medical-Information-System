@@ -14,7 +14,11 @@ import DescriptionIcon from "@mui/icons-material/Description";
 import ContactSupportIcon from "@mui/icons-material/ContactSupport";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from '@mui/icons-material/Logout';
-import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
+import MedicalServicesIcon from '@mui/icons-material/MedicalServices'; // For Doctor
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong"; //For Pharmacy
+import InventoryIcon from "@mui/icons-material/Inventory"; //For Pharmacy
+import EditNoteIcon from "@mui/icons-material/EditNote"; // For Pharmacy
+
 
 // Assets
 import UOPLogo from './assets/UOP_logo.jpeg';
@@ -37,6 +41,14 @@ import FAQPage from './components/Patient/FAQPage';
 import DoctorDashboard from './components/Doctor/DoctorDashboard';
 
 
+//Pharmacy Page
+import PharmacyDashboard from "./components/Pharmacy/PharmacyDashboard";
+import InventoryPage from "./components/Pharmacy/Inventory";
+import Prescriptions from "./components/Pharmacy/Prescriptions";
+import UpdateInventory from "./components/Pharmacy/UpdateInventory";
+
+
+
 // --- Role-Specific Navigation Links ---
 const patientNavLinks = [
   { label: "Dashboard", path: "/patient/dashboard", icon: <DashboardIcon /> },
@@ -51,6 +63,13 @@ const doctorNavLinks = [
   { label: "Patient Records", path: "/doctor/records", icon: <MedicalServicesIcon /> },
 ];
 
+const pharmaNavLinks = [
+  { label: "Dashboard", path: "/pharmacist/dashboard", icon: <DashboardIcon /> },
+  { label: "View Prescriptions", path: "/pharmacist/view-prescriptions", icon: <ReceiptLongIcon /> },
+  { label: "Inventory Search", path: "/pharmacist/inventory-search", icon: <InventoryIcon /> },
+  { label: "Inventory Update", path: "/pharmacist/inventory-update", icon: <EditNoteIcon /> },
+]
+
 
 // --- Main Layout Component ---
 const MainLayout = ({ user, onLogout }) => {
@@ -60,10 +79,17 @@ const MainLayout = ({ user, onLogout }) => {
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileAnchor, setProfileAnchor] = useState(null);
 
-  // FIX: Corrected the logic to check for both Student and Staff roles.
-  const isPatient = user.role === 'Student' || user.role === 'Staff';
-  const navLinks = isPatient ? patientNavLinks : doctorNavLinks;
 
+  let navLinks = [];
+
+  if (user.role === Student' || user.role === 'Staff') {
+      navLinks = patientNavLinks;
+  } else if (user.role === 'Doctor') {
+    navLinks = doctorNavLinks;
+  } else if (user.role === 'Pharmacist')
+    navLinks = pharmaNavLinks;
+  }
+  
   const handleDrawerToggle = () => setDrawerOpen(!drawerOpen);
   const handleAvatarClick = (event) => setProfileAnchor(event.currentTarget);
   const handleProfileMenuClose = () => setProfileAnchor(null);
@@ -279,14 +305,16 @@ function App() {
         </Route>
 
         <Route 
-          path="/doctor/*"
-          element={user && user.role === 'Doctor' ? <MainLayout user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
-        >
-          <Route path="dashboard" element={<DoctorDashboard user={user} />} />
-          <Route path="schedule" element={<div><h1>My Schedule</h1></div>} />
-          <Route path="records" element={<div><h1>Patient Records</h1></div>} />
-          <Route path="profile" element={<ProfilePage user={user} />} />
+          path="/pharmacist/*"
+          element={user && user.role === 'Pharmacist' ? ( <MainLayout user={user} onLogout={handleLogout} /> ) : ( <Navigate to="/login" /> )} >
+          <Route path="dashboard" element={<PharmacyDashboard />} />
+          <Route path="view-prescriptions" element={<Prescriptions />} />
+          <Route path="inventory-search" element={<InventoryPage />} />
+          <Route path="inventory-update" element={<UpdateInventory />} />
         </Route>
+
+
+        
 
         <Route 
           path="*" 
