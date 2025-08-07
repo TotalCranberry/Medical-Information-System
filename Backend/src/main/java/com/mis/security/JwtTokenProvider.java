@@ -30,7 +30,9 @@ public class JwtTokenProvider {
     // Create token containing user's id and role
     public String createToken(User user) {
         Claims claims = Jwts.claims().setSubject(user.getId());
-        claims.put("role", user.getRole().name());
+        claims.put("role", "ROLE_" + user.getRole().name().toUpperCase());
+
+
 
         Date now = new Date();
         Date validity = new Date(now.getTime() + validityInMilliseconds);

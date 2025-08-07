@@ -25,16 +25,14 @@ public class CustomUserDetailsService implements UserDetailsService {
         User user = userRepository.findById(id)
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + id));
 
-        // Map user role to GrantedAuthority, e.g. ROLE_Admin, etc.
-        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
+        // ✅ FIXED: Force uppercase and add ROLE_ prefix to match Spring Security expectations
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name().toUpperCase());
 
-        // FIX: Handle users without a password (e.g., Google login)
-        // The Spring Security User object requires a non-null password.
-        // We provide an empty string for users who don't have a password hash.
+        // ✅ For users without passwords (e.g., Google login), use empty string
         String password = user.getPasswordHash() != null ? user.getPasswordHash() : "";
 
         return new org.springframework.security.core.userdetails.User(
-                user.getId(),
+                user.getId(), // This becomes the authentication name (you retrieve via authentication.getName())
                 password,
                 Collections.singleton(authority)
         );
