@@ -20,6 +20,8 @@ public class MedicineMapper {
                 .expiry(med.getExpiry())
                 .manufacturer(med.getManufacturer())
                 .category(med.getCategory())
+                .unitPrice(med.getUnitPrice())
+                .lastUpdate(med.getLastUpdate())
                 .build();
     }
 
@@ -38,6 +40,8 @@ public class MedicineMapper {
                 .expiry(dto.getExpiry())
                 .manufacturer(dto.getManufacturer())
                 .category(dto.getCategory())
+                .unitPrice(dto.getUnitPrice())
+                .lastUpdate(dto.getLastUpdate())
                 .build();
     }
 }

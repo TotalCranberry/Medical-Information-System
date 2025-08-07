@@ -28,7 +28,8 @@ const UpdateInventoryPage = () => {
         mfg: "",
         expiry: "",
         manufacturer: "",
-        category: ""
+        category: "",
+        unitPrice: ""
     });
 
     // Fixed fetchInventory function with proper async/await
@@ -96,7 +97,8 @@ const UpdateInventoryPage = () => {
     const handleSubmit = () => {
         const payload = {
             ...formData,
-            stock: parseInt(formData.stock)
+            stock: parseInt(formData.stock),
+            unitPrice: parseFloat(formData.unitPrice)
         };
 
         saveMedicine(payload)
@@ -117,7 +119,8 @@ const UpdateInventoryPage = () => {
                     mfg: "",
                     expiry: "",
                     manufacturer: "",
-                    category: ""
+                    category: "",
+                    unitPrice: ""
                 });
                 setSearchTerm("");
                 setMode("add");
@@ -139,7 +142,8 @@ const UpdateInventoryPage = () => {
             mfg: "",
             expiry: "",
             manufacturer: "",
-            category: ""
+            category: "",
+            unitPrice: ""
         });
         setSearchTerm("");
         setMode("add");
@@ -204,7 +208,8 @@ const UpdateInventoryPage = () => {
             expiry: "Expiry Date",
             manufacturer: "Manufacturer",
             category: "Category",
-            stock: "Stock Quantity"
+            stock: "Stock Quantity",
+            unitPrice: "Unit Price "
         };
         return labelMap[field] || field.charAt(0).toUpperCase() + field.slice(1);
     };
@@ -405,7 +410,7 @@ const UpdateInventoryPage = () => {
                                 label={formatLabel(field)}
                                 value={formData[field]}
                                 onChange={(e) => handleChange(field, e.target.value)}
-                                disabled={mode === "update" && !["stock", "mfg", "expiry"].includes(field)}
+                                disabled={mode === "update" && !["stock", "mfg", "expiry","unitPrice"].includes(field)}
                                 size="medium"
                                 sx={{
                                     "& .MuiInputLabel-root": { fontSize: "0.95rem" },
@@ -453,6 +458,25 @@ const UpdateInventoryPage = () => {
                             }}
                         />
                     </Grid>
+                    {/* Unit Price */}
+                    <Grid item xs={12} sm={6} md={4}>
+                        <TextField
+                            fullWidth
+                            label="Unit Price in Rs: xx.xx"
+                            type="number"
+                            inputProps={{ step: "0.01", min: 0 }}
+                            value={formData.unitPrice}
+                            onChange={(e) => handleChange("unitPrice", e.target.value)}
+                            disabled={mode === "update" ? false : false}
+                            size="medium"
+                            sx={{
+                                "& .MuiInputLabel-root": { fontSize: "0.95rem" },
+                                "& .MuiInputBase-input": { fontSize: "0.95rem" },
+                                "& .MuiInputBase-root": { minHeight: "56px" }
+                            }}
+                        />
+                    </Grid>
+
                 </Grid>
 
                 <Box sx={{ mt: 4, display: "flex", justifyContent: "center", gap: 2 }}>
@@ -525,14 +549,16 @@ const UpdateInventoryPage = () => {
                     <Table sx={{ minWidth: 1000 }}>
                         <TableHead>
                             <TableRow sx={{ backgroundColor: "#f8f9fa" }}>
-                                {["Generic", "Brand Name", "Form", "Strength", "Stock", "Batch", "MFG Date", "Expiry Date", "Manufacturer", "Category", "Actions"].map((header) => (
+                                {["Generic", "Brand Name", "Form", "Strength", "Stock", "Unit Price", "Batch", "MFG Date", "Expiry Date", "Manufacturer","Last Updated", "Category", "Actions"].map((header) => (
                                     <TableCell
                                         key={header}
                                         sx={{
                                             fontWeight: 700,
                                             fontSize: "0.9rem",
                                             color: "#0c3c3c",
-                                            py: 2
+                                            py: 2,
+                                            whiteSpace: 'nowrap',
+                                            width: header === "Brand Name" ? 150 : (header === "MFG Date" || header === "Expiry Date") ? 190 : 'auto',
                                         }}
                                     >
                                         {header}
@@ -561,11 +587,20 @@ const UpdateInventoryPage = () => {
                                     <TableCell sx={{ fontSize: "0.9rem", fontWeight: medicine.stock < 50 ? 700 : 400, color: medicine.stock < 50 ? "#d32f2f" : "inherit" }}>
                                         {medicine.stock}
                                     </TableCell>
+                                    <TableCell sx={{ fontSize: "0.9rem" }}>
+                                        {medicine.unitPrice ? `Rs. ${medicine.unitPrice.toFixed(2)}` : "-"}
+                                    </TableCell>
+
                                     <TableCell sx={{ fontSize: "0.9rem" }}>{medicine.batch}</TableCell>
-                                    <TableCell sx={{ fontSize: "0.9rem" }}>{medicine.mfg}</TableCell>
-                                    <TableCell sx={{ fontSize: "0.9rem" }}>{medicine.expiry}</TableCell>
+                                    <TableCell sx={{ fontSize: "0.9rem" ,whiteSpace: 'nowrap', width: 150 }}>{medicine.mfg}</TableCell>
+                                    <TableCell sx={{ fontSize: "0.9rem",whiteSpace: 'nowrap', width: 150 }}>{medicine.expiry}</TableCell>
                                     <TableCell sx={{ fontSize: "0.9rem" }}>{medicine.manufacturer}</TableCell>
+                                    <TableCell sx={{ fontSize: "0.9rem" }}>
+                                        {medicine.lastUpdate ? new Date(medicine.lastUpdate).toLocaleDateString("en-GB") : "-"}
+                                    </TableCell>
                                     <TableCell sx={{ fontSize: "0.9rem" }}>{medicine.category}</TableCell>
+
+
                                     <TableCell>
                                         <Button
                                             color="error"
