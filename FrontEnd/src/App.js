@@ -82,11 +82,11 @@ const MainLayout = ({ user, onLogout }) => {
 
   let navLinks = [];
 
-  if (user.role === Student' || user.role === 'Staff') {
+  if (user.role === 'Student' || user.role === 'Staff') {
       navLinks = patientNavLinks;
   } else if (user.role === 'Doctor') {
     navLinks = doctorNavLinks;
-  } else if (user.role === 'Pharmacist')
+  } else if (user.role === 'Pharmacist'){
     navLinks = pharmaNavLinks;
   }
   
@@ -311,6 +311,7 @@ function App() {
           <Route path="view-prescriptions" element={<Prescriptions />} />
           <Route path="inventory-search" element={<InventoryPage />} />
           <Route path="inventory-update" element={<UpdateInventory />} />
+          <Route path="profile" element={<ProfilePage user={user} />} />
         </Route>
 
 
