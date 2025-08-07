@@ -1,29 +1,34 @@
 import React, { useState } from "react";
-import { Box, Button, TextField, Typography, Paper, Divider, Link as MuiLink, Grid } from "@mui/material";
+import { Box, Button, TextField, Typography, Paper, Divider, Link as MuiLink, Grid, IconButton, InputAdornment} from "@mui/material";
+import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { GoogleLogin } from '@react-oauth/google';
 import { loginUser, loginWithGoogle } from "../../api/auth";
 import { useNavigate, Link } from "react-router-dom";
+
 
 const LoginPage = ({ onAuth }) => {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState(null);
+  const [showPassword, setShowPassword] = useState(false); 
   const navigate = useNavigate();
 
-  const handleLoginSuccess = (data) => {
+  const handleLoginSuccess = async (data) => {
     localStorage.setItem("jwtToken", data.token);
     localStorage.setItem("userRole", data.role);
-    if (onAuth) onAuth();
+    if (onAuth) {
+      await onAuth(); 
+    }
 
     switch (data.role) {
       case "Student":
-        navigate("/student/dashboard");
+      case "Staff":
+        navigate("/patient/dashboard");
         break;
       case "Doctor":
         navigate("/doctor/dashboard");
         break;
       default:
-        // Fallback for other roles
         navigate(`/${data.role.toLowerCase()}/dashboard`);
         break;
     }
@@ -34,7 +39,7 @@ const LoginPage = ({ onAuth }) => {
     setError(null);
     try {
       const data = await loginUser({ email, password });
-      handleLoginSuccess(data);
+      await handleLoginSuccess(data);
     } catch (err) {
       setError(err.message || "Login failed. Please check your credentials.");
     }
@@ -43,11 +48,9 @@ const LoginPage = ({ onAuth }) => {
   const handleGoogleLogin = async (credentialResponse) => {
     setError(null);
     try {
-      // The credentialResponse object from Google contains the ID token
       const idToken = credentialResponse.credential;
-      // We send this token to our backend
       const data = await loginWithGoogle(idToken);
-      handleLoginSuccess(data);
+      await handleLoginSuccess(data);
     } catch (err) {
       setError(err.message || "Google login failed. Please try again.");
     }
@@ -82,8 +85,20 @@ const LoginPage = ({ onAuth }) => {
             fullWidth margin="normal" required variant="outlined"
           />
           <TextField
-            label="Password" type="password" value={password} onChange={(e) => setPassword(e.target.value)}
+            label="Password"
+            type={showPassword ? "text" : "password"}
+            value={password}
+            onChange={(e) => setPassword(e.target.value)}
             fullWidth margin="normal" required variant="outlined"
+            InputProps={{
+              endAdornment: (
+                <InputAdornment position="end">
+                  <IconButton aria-label="toggle password visibility" onClick={() => setShowPassword(!showPassword)} edge="end">
+                    {showPassword ? <VisibilityOff /> : <Visibility />}
+                  </IconButton>
+                </InputAdornment>
+              ),
+            }}
           />
           {error && (
             <Typography color="error" variant="body2" sx={{ my: 1, textAlign: 'left' }}>

@@ -14,9 +14,13 @@ export async function getProfile() {
 
 // New function for Google authentication
 export async function loginWithGoogle(idToken) {
-  // We send the Google ID token to our backend
   return apiFetch('/auth/google', 'POST', { token: idToken });
 }
 
+export async function changePassword(data) {
+  return apiFetch('/profile/change-password', 'PUT', data, true);
+}
 
-// Add more functions as needed (appointments, profile, etc.)
+export async function updateProfile(data) {
+  return apiFetch('/profile/update', 'PUT', data, true);
+}
