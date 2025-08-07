@@ -21,19 +21,22 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
     }
   }, [user]);
 
-  const handleProfileSave = async (e) => {
-    e.preventDefault();
-    setMessage({ text: "", type: "" });
-    try {
-      const updatedUser = await updateProfile({ name }); // Pass only the fields to be updated
-      setMessage({ text: response.message || "Profile updated successfully!", type: "success" });
-      if (onProfileUpdate) {
-        onProfileUpdate(updatedUser); // Notify parent component of the change
-      }
-    } catch (error) {
-      setMessage({ text: error.message, type: "error" });
+const handleProfileSave = async (e) => {
+  e.preventDefault();
+  setMessage({ text: "", type: "" });
+
+  try {
+    const { user, message } = await updateProfile({ name }); 
+    setMessage({ text: message || "Profile updated successfully!", type: "success" });
+
+    if (onProfileUpdate) {
+      onProfileUpdate(user);
     }
-  };
+  } catch (error) {
+    setMessage({ text: error.message, type: "error" });
+  }
+};
+
 
   const handlePasswordChange = async (e) => {
     e.preventDefault();

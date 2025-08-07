@@ -1,5 +1,8 @@
 package com.mis.configuration;
 
+import java.util.Arrays;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import static org.springframework.security.config.Customizer.withDefaults;
@@ -14,8 +17,6 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import com.mis.security.JwtTokenFilter;
-
-import java.util.Arrays;
 
 @Configuration
 public class SecurityConfig {
@@ -48,9 +49,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/support/tickets").hasAuthority("ROLE_Admin")
 
                 // Role-specific endpoints
-                .requestMatchers("/api/patient/**").hasAuthority("ROLE_Student")
+                .requestMatchers("/api/patient/**").hasAnyAuthority("ROLE_Student", "ROLE_Staff")
                 .requestMatchers("/api/doctor/**").hasAuthority("ROLE_Doctor")
-                    .requestMatchers("/api/medicines/**").hasAuthority("ROLE_PHARMACIST")
+                    .requestMatchers("/api/medicines/**").hasAuthority("ROLE_Pharmacist")
 
                 // Any other request must be authenticated.
                 .anyRequest().authenticated()
@@ -65,17 +66,13 @@ public class SecurityConfig {
         return new BCryptPasswordEncoder();
     }
 
+    @Value("${cors.allowed-origins}")
+    private String[] allowedOrigins;
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration config = new CorsConfiguration();
-        config.setAllowedOrigins(Arrays.asList(
-                "http://localhost:3000",
-                "http://localhost:3001",
-                "http://localhost:3002",
-                "http://localhost:3003",
-                "http://localhost:3004",
-                "http://localhost:5173"
-        ));
+        config.setAllowedOrigins(Arrays.asList(allowedOrigins));
         config.addAllowedMethod("*");
         config.addAllowedHeader("*");
         config.setAllowCredentials(true);

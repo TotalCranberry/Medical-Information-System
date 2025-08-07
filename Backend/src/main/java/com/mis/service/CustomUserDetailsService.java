@@ -26,7 +26,7 @@ public class CustomUserDetailsService implements UserDetailsService {
                 .orElseThrow(() -> new UsernameNotFoundException("User not found with id: " + id));
 
         // ✅ FIXED: Force uppercase and add ROLE_ prefix to match Spring Security expectations
-        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name().toUpperCase());
+        SimpleGrantedAuthority authority = new SimpleGrantedAuthority("ROLE_" + user.getRole().name());
 
         // ✅ For users without passwords (e.g., Google login), use empty string
         // Handle users without a password (e.g., Google login)
