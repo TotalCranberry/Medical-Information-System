@@ -86,7 +86,7 @@ const MainLayout = ({ user, onLogout }) => {
       navLinks = patientNavLinks;
   } else if (user.role === 'Doctor') {
     navLinks = doctorNavLinks;
-  } else if (user.role === 'Pharmacist')
+  } else if (user.role === 'Pharmacist') {
     navLinks = pharmaNavLinks;
   }
   
