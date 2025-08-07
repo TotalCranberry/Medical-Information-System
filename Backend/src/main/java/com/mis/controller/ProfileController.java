@@ -34,7 +34,12 @@ public class ProfileController {
             String userId = authentication.getName();
             User updatedUser = userService.updateUserProfile(userId, request);
             UserResponse response = UserMapper.toUserResponse(updatedUser);
-            return ResponseEntity.ok(response);
+            return ResponseEntity.ok(
+                Map.of(
+                    "user", response,
+                    "message", "Profile updated successfully."
+                )
+            );
         } catch (RuntimeException e) {
             return ResponseEntity.status(404).body(e.getMessage());
         }
