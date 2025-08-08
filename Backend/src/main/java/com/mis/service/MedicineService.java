@@ -7,6 +7,7 @@ import com.mis.repository.MedicineRepository;
 import lombok.RequiredArgsConstructor;
 import org.springframework.stereotype.Service;
 
+import java.time.LocalDate;
 import java.util.List;
 import java.util.Optional;
 import java.util.stream.Collectors;
@@ -30,14 +31,17 @@ public class MedicineService {
 
         Medicine entity;
         if (existing.isPresent()) {
-            // Update stock, mfg, expiry
+            // Update stock, mfg, expiry,unitPrice
             entity = existing.get();
             entity.setStock(dto.getStock());
             entity.setMfg(dto.getMfg());
             entity.setExpiry(dto.getExpiry());
+            entity.setUnitPrice(dto.getUnitPrice());
+            entity.setLastUpdate(dto.getLastUpdate());
         } else {
             // Add new medicine
             entity = MedicineMapper.toEntity(dto);
+            entity.setLastUpdate(LocalDate.now());
         }
 
         return MedicineMapper.toDto(medicineRepository.save(entity));

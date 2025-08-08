@@ -2,6 +2,8 @@ package com.mis.dto;
 
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Data
 @NoArgsConstructor
 @AllArgsConstructor
@@ -18,4 +20,7 @@ public class MedicineDTO {
     private String expiry;
     private String manufacturer;
     private String category;
+    private Float unitPrice;
+    private LocalDate lastUpdate;
+
 }

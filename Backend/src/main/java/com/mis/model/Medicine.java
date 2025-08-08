@@ -3,6 +3,8 @@ package com.mis.model;
 import jakarta.persistence.*;
 import lombok.*;
 
+import java.time.LocalDate;
+
 @Entity
 @Table(name = "medicines")
 @Data
@@ -25,5 +27,8 @@ public class Medicine {
     private String expiry;
     private String manufacturer;
     private String category;
+    private Float unitPrice;
+    private LocalDate lastUpdate;
+
 }
 
