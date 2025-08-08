@@ -1,5 +1,7 @@
 package com.mis.controller;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.Map;
 import java.util.Optional;
 
@@ -40,19 +42,19 @@ public class AuthController {
     }
 
     @PostMapping("/register")
-    public ResponseEntity<UserResponse> register(@Valid @RequestBody RegisterRequest request) {
+    public ResponseEntity<?> register(@Valid @RequestBody RegisterRequest request) {
         try {
             User userEntity = UserMapper.toUser(request);
             User savedUser = userService.register(userEntity, request.getPassword());
-            UserResponse response = UserMapper.toUserResponse(savedUser);
+            UserResponse response = UserMapper.toUserResponse(savedUser, null, null);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException ex) {
-            return ResponseEntity.status(HttpStatus.BAD_REQUEST).build();
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", ex.getMessage()));
         }
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest loginRequest) {
+    public ResponseEntity<?> login(@Valid @RequestBody LoginRequest loginRequest) {
         try {
             Optional<User> userOpt = userService.authenticate(loginRequest.getEmail(), loginRequest.getPassword());
             if (userOpt.isPresent()) {
@@ -62,17 +64,17 @@ public class AuthController {
                 LoginResponse response = new LoginResponse(token, "Login successful", role);
                 return ResponseEntity.ok(response);
             }
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Invalid email or password."));
         } catch (IllegalStateException ex) {
-            return ResponseEntity.status(HttpStatus.FORBIDDEN).build();
+            return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", ex.getMessage()));
         }
     }
 
     @PostMapping("/google")
-    public ResponseEntity<LoginResponse> loginWithGoogle(@RequestBody Map<String, String> body) {
+    public ResponseEntity<?> loginWithGoogle(@RequestBody Map<String, String> body) {
         String idToken = body.get("token");
         if (idToken == null) {
-            return ResponseEntity.badRequest().build();
+            return ResponseEntity.badRequest().body(Map.of("message", "ID token is missing."));
         }
         try {
             Payload payload = googleTokenVerifierService.verify(idToken);
@@ -81,17 +83,20 @@ public class AuthController {
             String role = user.getRole().name();
             LoginResponse response = new LoginResponse(appToken, "Login successful", role);
             return ResponseEntity.ok(response);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).build();
+        // FIX: Replaced generic 'Exception' with more specific exceptions for better error handling.
+        } catch (GeneralSecurityException | IOException e) {
+            return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Google authentication failed: " + e.getMessage()));
         }
     }
 
     @GetMapping("/profile")
     public ResponseEntity<UserResponse> getProfile(Authentication authentication) {
         String userId = authentication.getName();
-        Optional<User> userOpt = userService.findById(userId);
-        return userOpt
-            .map(user -> ResponseEntity.ok(UserMapper.toUserResponse(user)))
-            .orElseGet(() -> ResponseEntity.status(HttpStatus.NOT_FOUND).build());
+        try {
+            UserResponse response = userService.getUserResponse(userId);
+            return ResponseEntity.ok(response);
+        } catch (RuntimeException e) {
+            return ResponseEntity.status(HttpStatus.NOT_FOUND).build();
+        }
     }
 }
