@@ -1,38 +1,32 @@
 package com.mis.model;
 
-import java.time.LocalDateTime;
+import java.util.Date;
 
-import jakarta.persistence.Column;
+import jakarta.persistence.Column; // Use java.util.Date for better compatibility with JSON
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
 import jakarta.persistence.Enumerated;
-import jakarta.persistence.GeneratedValue;
-import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
 import jakarta.persistence.JoinColumn;
 import jakarta.persistence.ManyToOne;
 import jakarta.persistence.Table;
+import jakarta.persistence.Temporal;
+import jakarta.persistence.TemporalType;
 
 @Entity
 @Table(name = "appointments")
 public class Appointment {
 
     @Id
-    @GeneratedValue(strategy = GenerationType.IDENTITY)
-    private Long id;
+    private String id;
 
-    // Relationship to Student
     @ManyToOne
     @JoinColumn(name = "patient_id", nullable = false)
-    private Student patient;
+    private User patient;
 
-    // Relationship to Doctor
-    @ManyToOne
-    @JoinColumn(name = "doctor_id", nullable = false)
-    private Doctor doctor;
-
+    @Temporal(TemporalType.TIMESTAMP)
     @Column(nullable = false)
-    private LocalDateTime time;
+    private Date appointmentDateTime;
 
     @Column(columnDefinition = "TEXT")
     private String reason;
@@ -41,66 +35,21 @@ public class Appointment {
     @Column(nullable = false)
     private AppointmentStatus status;
 
-    @Column(name = "created_at", nullable = false)
-    private LocalDateTime createdAt;
+    @Temporal(TemporalType.TIMESTAMP)
+    @Column(name = "created_at", nullable = false, updatable = false)
+    private Date createdAt;
 
-    public Long getId() {
-        return id;
-    }
-
-    public void setId(Long id) {
-        this.id = id;
-    }
-
-    public Student getPatient() {
-        return patient;
-    }
-
-    public void setPatient(Student patient) {
-        this.patient = patient;
-    }
-
-    public Doctor getDoctor() {
-        return doctor;
-    }
-
-    public void setDoctor(Doctor doctor) {
-        this.doctor = doctor;
-    }
-
-    public LocalDateTime getTime() {
-        return time;
-    }
-
-    public void setTime(LocalDateTime time) {
-        this.time = time;
-    }
-
-    public String getReason() {
-        return reason;
-    }
-
-    public void setReason(String reason) {
-        this.reason = reason;
-    }
-
-    public AppointmentStatus getStatus() {
-        return status;
-    }
-
-    public void setStatus(AppointmentStatus status) {
-        this.status = status;
-    }
-
-    public LocalDateTime getCreatedAt() {
-        return createdAt;
-    }
-
-    public void setCreatedAt(LocalDateTime createdAt) {
-        this.createdAt = createdAt;
-    }
-
-    // Getters & Setters
-    
-
+    // --- Getters and Setters ---
+    public String getId() { return id; }
+    public void setId(String id) { this.id = id; }
+    public User getPatient() { return patient; }
+    public void setPatient(User patient) { this.patient = patient; }
+    public Date getAppointmentDateTime() { return appointmentDateTime; }
+    public void setAppointmentDateTime(Date appointmentDateTime) { this.appointmentDateTime = appointmentDateTime; }
+    public String getReason() { return reason; }
+    public void setReason(String reason) { this.reason = reason; }
+    public AppointmentStatus getStatus() { return status; }
+    public void setStatus(AppointmentStatus status) { this.status = status; }
+    public Date getCreatedAt() { return createdAt; }
+    public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
 }
