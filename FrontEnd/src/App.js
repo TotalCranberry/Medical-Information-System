@@ -47,14 +47,14 @@ import InventoryPage from "./components/Pharmacy/Inventory";
 import Prescriptions from "./components/Pharmacy/Prescriptions";
 import UpdateInventory from "./components/Pharmacy/UpdateInventory";
 
-// Doctor pages (your part)
+// Doctor pages
 import DoctorDashboard from './components/Doctor/DoctorDashboard';
 import PatientsTab from './components/Doctor/PatientsTab';
 import PatientProfile from './components/Doctor/PatientProfile';
 import RequestLabTest from './components/Doctor/RequestLabTest';
 import PrescriptionsTab from './components/Doctor/PrescriptionsTab';
 
-// --- Doctor mock data & helpers (kept local; swap to API later) ---
+// --- Doctor mock data & helpers ---
 const mockPatients = [
   { id: 1, name: "John Doe", faculty: "Engineering", age: 22 },
   { id: 2, name: "Jane Smith", faculty: "Medicine", age: 24 },
@@ -120,7 +120,6 @@ const navLinksConfig = {
     { label: "Reports", path: "/patient/reports", icon: <DescriptionIcon /> },
     { label: "Support", path: "/patient/support", icon: <ContactSupportIcon /> },
   ],
-  // Updated to match your Doctor features & teammates' navbar pattern
   doctor: [
     { label: "Dashboard", path: "/doctor/dashboard", icon: <DashboardIcon /> },
     { label: "Patients", path: "/doctor/patients", icon: <PeopleIcon /> },
@@ -234,21 +233,6 @@ const MainLayout = ({ user, onLogout }) => {
   );
 };
 
-// --- Helper: Patient Profile route wrapper (Doctor) ---
-const PatientProfileRouteWrapper = ({ patients, patientDetails, onRequestLabTest, onWritePrescription }) => {
-  const location = useLocation();
-  const currentPatientId = parseInt(location.pathname.split('/').pop(), 10);
-  const selectedPatient = patients.find(p => p.id === currentPatientId) || patientDetails;
-
-  return (
-    <PatientProfile
-      patient={selectedPatient}
-      onRequestLabTest={onRequestLabTest}
-      onWritePrescription={onWritePrescription}
-    />
-  );
-};
-
 // --- Main App Component ---
 function App() {
   const [user, setUser] = useState(null);
@@ -298,7 +282,7 @@ function App() {
 
   useEffect(() => {
     fetchAllUserData();
-  }, []); // keep as teammates had
+  }, [fetchAllUserData]);
 
   const handleProfileUpdate = (updatedUser) => {
     setUser(currentUser => ({ ...currentUser, ...updatedUser }));
@@ -371,33 +355,23 @@ function App() {
           {/* Profile (common) */}
           <Route path="profile" element={<ProfilePage user={user} onProfileUpdate={handleProfileUpdate} />} />
 
-          {/* Patient */}
+          {/* Patient Routes */}
           <Route path="patient/dashboard" element={<DashboardTab user={user} appointments={appointments} reports={reports} prescriptions={prescriptions} />} />
           <Route path="patient/appointments" element={<AppointmentsTab appointments={appointments} onBookSuccess={handleBookAppointment} onCancel={handleCancelAppointment} />} />
           <Route path="patient/reports" element={<ReportsTab history={reports} labs={reports} prescriptions={prescriptions} />} />
           <Route path="patient/support" element={<SupportPage />} />
           <Route path="patient/faq" element={<FAQPage />} />
 
-          {/* Pharmacist */}
+          {/* Pharmacist Routes */}
           <Route path="pharmacist/dashboard" element={<PharmacyDashboard />} />
           <Route path="pharmacist/view-prescriptions" element={<Prescriptions />} />
           <Route path="pharmacist/inventory-search" element={<InventoryPage />} />
           <Route path="pharmacist/inventory-update" element={<UpdateInventory />} />
 
-          {/* Doctor (your part) */}
-          <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} todaysAppointments={mockTodaysAppointments} recentActivity={mockRecentActivity} />} />
+          {/* Doctor Routes - FIXED */}
+          <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />
           <Route path="doctor/patients" element={<PatientsTab patients={mockPatients} />} />
-          <Route
-            path="doctor/patients/:patientId"
-            element={
-              <PatientProfileRouteWrapper
-                patients={mockPatients}
-                patientDetails={mockPatientDetails}
-                onRequestLabTest={(patient) => navigate('/doctor/request-test', { state: { patient } })}
-                onWritePrescription={(patient) => navigate('/doctor/prescriptions', { state: { patient } })}
-              />
-            }
-          />
+          <Route path="doctor/patients/:patientId" element={<PatientProfile />} />
           <Route path="doctor/request-test" element={<RequestLabTest pendingRequests={mockLabRequests} onSubmit={handleLabTestRequest} />} />
           <Route path="doctor/prescriptions" element={<PrescriptionsTab recentPrescriptions={mockPrescriptionHistory} onSubmit={handlePrescriptionSubmit} />} />
           <Route path="doctor/support" element={<SupportPage />} />
