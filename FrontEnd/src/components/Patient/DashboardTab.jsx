@@ -1,12 +1,24 @@
 import React from "react";
 import {
   Box, Typography, Paper, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Grid
+  TableContainer, TableHead, TableRow, Grid, Alert
 } from "@mui/material";
 
-const DashboardTab = ({ user, appointments, reports, prescriptions }) => (
-  <Box>
-    <Typography
+const DashboardTab = ({ user, appointments, reports, prescriptions }) => {
+  // Check if DOB is required but not set
+  const isDobRequired = (user?.role === "Student" || user?.role === "Staff");
+  const isDobSet = user?.dateOfBirth !== null && user?.dateOfBirth !== undefined;
+  const showDobReminder = isDobRequired && !isDobSet;
+
+  return (
+    <Box>
+      {showDobReminder && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Please complete your profile by setting your date of birth in the Profile section.
+        </Alert>
+      )}
+      
+      <Typography
       variant="h4"
       gutterBottom
       sx={{
@@ -60,8 +72,9 @@ const DashboardTab = ({ user, appointments, reports, prescriptions }) => (
                 </TableRow>
               </TableHead>
               <TableBody>
-                {appointments && appointments.length > 0 ? (
+                {appointments && [...appointments].filter(app => app.status !== 'Cancelled').length > 0 ? (
                   [...appointments]
+                    .filter(app => app.status !== 'Cancelled')
                     .sort((a, b) => new Date(a.appointmentDateTime) - new Date(b.appointmentDateTime))
                     .slice(0, 4)
                     .map(app => (
@@ -144,5 +157,6 @@ const DashboardTab = ({ user, appointments, reports, prescriptions }) => (
     </Grid>
   </Box>
 );
+};
 
 export default DashboardTab;
