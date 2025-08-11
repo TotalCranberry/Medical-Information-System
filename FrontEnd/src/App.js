@@ -56,6 +56,11 @@ import PrescriptionsTab from './components/Doctor/PrescriptionsTab';
 import IssueMedical from './components/Doctor/IssueMedical';
 import ViewMedical from './components/Doctor/ViewMedical';
 
+// Laboratory pages
+import LabDashboard from './components/Laboratory/LabDashboard';
+import LabRequests from './components/Laboratory/LabTests';
+import LabResults from './components/Laboratory/LabResults';
+
 // --- Doctor mock data & helpers ---
 const mockPatients = [
   { id: 1, name: "John Doe", faculty: "Engineering", age: 22 },
@@ -125,6 +130,8 @@ const navLinksConfig = {
   doctor: [
     { label: "Dashboard", path: "/doctor/dashboard", icon: <DashboardIcon /> },
     { label: "Patients", path: "/doctor/patients", icon: <PeopleIcon /> },
+    { label: "Request Test", path: "/doctor/request-test", icon: <ScienceIcon /> },
+    { label: "Prescriptions", path: "/doctor/prescriptions", icon: <MedicationIcon /> },
     { label: "Support", path: "/doctor/support", icon: <ContactSupportIcon /> },
   ],
   pharmacist: [
@@ -132,6 +139,11 @@ const navLinksConfig = {
     { label: "View Prescriptions", path: "/pharmacist/view-prescriptions", icon: <ReceiptLongIcon /> },
     { label: "Inventory Search", path: "/pharmacist/inventory-search", icon: <InventoryIcon /> },
     { label: "Inventory Update", path: "/pharmacist/inventory-update", icon: <EditNoteIcon /> },
+  ],
+  labtechnician: [
+    { label: "Dashboard", path: "/labtechnician/dashboard", icon: <DashboardIcon /> },
+    { label: "Lab Requests", path: "/labtechnician/lab-requests", icon: <MedicalServicesIcon /> },
+    { label: "Lab Results", path: "/labtechnician/lab-results", icon: <DescriptionIcon /> },
   ]
 };
 
@@ -377,6 +389,13 @@ function App() {
           <Route path="doctor/request-test" element={<RequestLabTest pendingRequests={mockLabRequests} onSubmit={handleLabTestRequest} />} />
           <Route path="doctor/prescriptions" element={<PrescriptionsTab recentPrescriptions={mockPrescriptionHistory} onSubmit={handlePrescriptionSubmit} />} />
           <Route path="doctor/support" element={<SupportPage />} />
+
+          {/* Laboratory Routes */}
+          <Route path="labtechnician/dashboard" element={<LabDashboard />} />
+          <Route path="labtechnician/lab-requests" element={<LabRequests requests={mockLabRequests} />} />
+          <Route path="labtechnician/lab-results" element={<LabResults results={mockLabRequests} />} />
+          <Route path="labtechnician/support" element={<SupportPage />} />
+
         </Route>
 
         {/* Fallback redirect */}

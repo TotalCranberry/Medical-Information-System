@@ -81,7 +81,7 @@ public class PatientController {
         boolean isAfternoonSlot = !time.isBefore(afternoonStart) && time.isBefore(afternoonEnd);
 
         if (!isMorningSlot && !isAfternoonSlot) {
-            return ResponseEntity.badRequest().body(Map.of("message","Invalid appointment time. Please book between 9:00 AM - 12:00 PM or 1:30 PM - 4:00 PM."));
+            return ResponseEntity.badRequest().body("Invalid appointment time. Please book between 9:00 AM - 12:00 PM or 1:30 PM - 4:00 PM.");
         }
 
         // --- If all checks pass, create the appointment ---
