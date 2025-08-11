@@ -191,7 +191,7 @@ const DoctorDashboard = ({ doctor }) => {
           textAlign: { xs: "center", md: "left" }
         }}
       >
-        Welcome, {doctor?.name || "Dr. Name"}
+        Welcome, {"Dr. " +doctor?.name}
       </Typography>
 
       {error && (
