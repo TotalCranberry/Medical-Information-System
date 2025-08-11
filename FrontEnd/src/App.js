@@ -2,8 +2,8 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Routes, Route, Link, Navigate, useLocation, useNavigate, Outlet } from "react-router-dom";
 import {
   AppBar, Box, Toolbar, Typography, Button, IconButton, Drawer, List, ListItem,
-  ListItemButton, ListItemIcon, ListItemText, Avatar, Menu, MenuItem, useTheme,
-  useMediaQuery, Divider, CircularProgress, Container
+  ListItemButton, ListItemIcon, ListItemText, Avatar, Menu, MenuItem,
+  Divider, CircularProgress, Container
 } from "@mui/material";
 
 // Icons
@@ -15,13 +15,16 @@ import ContactSupportIcon from "@mui/icons-material/ContactSupport";
 import PersonIcon from "@mui/icons-material/Person";
 import LogoutIcon from '@mui/icons-material/Logout';
 import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
+import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import InventoryIcon from "@mui/icons-material/Inventory";
+import EditNoteIcon from "@mui/icons-material/EditNote";
 
 // Assets
 import UOPLogo from './assets/UOP_logo.jpeg';
 import BackgroundImg from './assets/Background.jpeg';
 
 // API
-import { getProfile } from "./api/auth";
+import { getProfile, updateProfile } from "./api/auth";
 import { fetchAppointments, createAppointment, cancelAppointment } from "./api/appointments";
 import { fetchReports, fetchPrescriptions } from "./api/reports";
 
@@ -34,43 +37,54 @@ import ReportsTab from "./components/Patient/ReportsTab";
 import ProfilePage from "./components/Patient/ProfilePage";
 import SupportPage from "./components/Patient/SupportPage";
 import FAQPage from './components/Patient/FAQPage';
-import DoctorDashboard from './components/Doctor/DoctorDashboard';
 
+//Pharmacy Pages
+import PharmacyDashboard from "./components/Pharmacy/PharmacyDashboard";
+import InventoryPage from "./components/Pharmacy/Inventory";
+import Prescriptions from "./components/Pharmacy/Prescriptions";
+import UpdateInventory from "./components/Pharmacy/UpdateInventory";
 
 // --- Role-Specific Navigation Links ---
-const patientNavLinks = [
-  { label: "Dashboard", path: "/patient/dashboard", icon: <DashboardIcon /> },
-  { label: "Appointments", path: "/patient/appointments", icon: <CalendarTodayIcon /> },
-  { label: "Reports", path: "/patient/reports", icon: <DescriptionIcon /> },
-  { label: "Support", path: "/patient/support", icon: <ContactSupportIcon /> },
-];
-
-const doctorNavLinks = [
-  { label: "Dashboard", path: "/doctor/dashboard", icon: <DashboardIcon /> },
-  { label: "My Schedule", path: "/doctor/schedule", icon: <CalendarTodayIcon /> },
-  { label: "Patient Records", path: "/doctor/records", icon: <MedicalServicesIcon /> },
-];
-
+const navLinksConfig = {
+  patient: [
+    { label: "Dashboard", path: "/patient/dashboard", icon: <DashboardIcon /> },
+    { label: "Appointments", path: "/patient/appointments", icon: <CalendarTodayIcon /> },
+    { label: "Reports", path: "/patient/reports", icon: <DescriptionIcon /> },
+    { label: "Support", path: "/patient/support", icon: <ContactSupportIcon /> },
+  ],
+  doctor: [
+    { label: "Dashboard", path: "/doctor/dashboard", icon: <DashboardIcon /> },
+    { label: "My Schedule", path: "/doctor/schedule", icon: <CalendarTodayIcon /> },
+    { label: "Patient Records", path: "/doctor/records", icon: <MedicalServicesIcon /> },
+  ],
+  pharmacist: [
+    { label: "Dashboard", path: "/pharmacist/dashboard", icon: <DashboardIcon /> },
+    { label: "View Prescriptions", path: "/pharmacist/view-prescriptions", icon: <ReceiptLongIcon /> },
+    { label: "Inventory Search", path: "/pharmacist/inventory-search", icon: <InventoryIcon /> },
+    { label: "Inventory Update", path: "/pharmacist/inventory-update", icon: <EditNoteIcon /> },
+  ]
+};
 
 // --- Main Layout Component ---
+// This component renders the shared UI elements like the navbar and sidebar.
+// The <Outlet /> component renders the active nested route.
 const MainLayout = ({ user, onLogout }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  
   const [drawerOpen, setDrawerOpen] = useState(false);
   const [profileAnchor, setProfileAnchor] = useState(null);
 
-  // FIX: Corrected the logic to check for both Student and Staff roles.
   const isPatient = user.role === 'Student' || user.role === 'Staff';
-  const navLinks = isPatient ? patientNavLinks : doctorNavLinks;
+  const userRoleKey = isPatient ? 'patient' : user.role.toLowerCase();
+  const navLinks = navLinksConfig[userRoleKey] || [];
 
   const handleDrawerToggle = () => setDrawerOpen(!drawerOpen);
   const handleAvatarClick = (event) => setProfileAnchor(event.currentTarget);
   const handleProfileMenuClose = () => setProfileAnchor(null);
-  const handleProfile = () => { 
-    handleProfileMenuClose(); 
-    const rolePath = isPatient ? 'patient' : user.role.toLowerCase();
-    navigate(`/${rolePath}/profile`); 
+  
+  const handleProfile = () => {
+    handleProfileMenuClose();
+    navigate('/profile');
   };
 
   const drawerContent = (
@@ -104,25 +118,20 @@ const MainLayout = ({ user, onLogout }) => {
     </Box>
   );
 
-
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <AppBar position="fixed" color="primary" elevation={1} sx={{ zIndex: (theme) => theme.zIndex.drawer + 1, borderRadius: 0 }}>
+      <AppBar position="fixed" color="primary" elevation={1} sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
         <Toolbar>
           <IconButton color="inherit" aria-label="open drawer" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2, display: { md: 'none' } }}>
             <MenuIcon />
           </IconButton>
-          
-          
-          <Box component={Link} to={`/${isPatient ? 'patient' : user.role.toLowerCase()}/dashboard`} sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
+          <Box component={Link} to={`/${userRoleKey}/dashboard`} sx={{ display: 'flex', alignItems: 'center', textDecoration: 'none', color: 'inherit' }}>
             <Box component="img" src={UOPLogo} alt="Logo" sx={{ height: 40, width: 40, borderRadius: '50%', p: '2px', bgcolor: 'white', mr: 2 }} />
             <Typography variant="h6" noWrap component="div" sx={{ fontWeight: 700, display: { xs: 'none', sm: 'block' } }}>
               University of Peradeniya MIS
             </Typography>
           </Box>
-          
           <Box sx={{ flexGrow: 1 }} />
-
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
             {navLinks.map((link) => (
               <Button key={link.label} component={Link} to={link.path} sx={{ color: 'white' }}>
@@ -130,7 +139,6 @@ const MainLayout = ({ user, onLogout }) => {
               </Button>
             ))}
           </Box>
-
           <IconButton sx={{ ml: 2 }} onClick={handleAvatarClick}>
             <Avatar sx={{ bgcolor: "#45d27a" }}>{user?.name?.charAt(0)}</Avatar>
           </IconButton>
@@ -140,21 +148,18 @@ const MainLayout = ({ user, onLogout }) => {
           </Menu>
         </Toolbar>
       </AppBar>
-      
       <Drawer variant="temporary" open={drawerOpen} onClose={handleDrawerToggle} ModalProps={{ keepMounted: true }} PaperProps={{ sx: { backgroundColor: "#0c3c3c", color: "#fff" } }}>
         {drawerContent}
       </Drawer>
-      
       <Box component="main" sx={{ flexGrow: 1, p: 3, width: '100%' }}>
-        <Toolbar /> 
+        <Toolbar />
         <Container maxWidth="lg">
-          <Outlet /> 
+          <Outlet /> {/* Renders the matched child route */}
         </Container>
       </Box>
     </Box>
   );
 };
-
 
 // --- Main App Component ---
 function App() {
@@ -172,7 +177,6 @@ function App() {
     navigate("/login");
   }, [navigate]);
 
-  
   const fetchAllUserData = useCallback(async () => {
     const token = localStorage.getItem("jwtToken");
     if (!token) {
@@ -203,25 +207,24 @@ function App() {
   }, [handleLogout]);
 
   useEffect(() => {
-    const token = localStorage.getItem("jwtToken");
-    if (token) {
-      fetchAllUserData();
-    } else {
-      setLoading(false);
-    }
+    fetchAllUserData();
   }, []);
 
+  const handleProfileUpdate = (updatedUser) => {
+    setUser(currentUser => ({ ...currentUser, ...updatedUser }));
+  };
+
   const handleBookAppointment = async (newApp, setFeedback) => {
-      try {
-        await createAppointment(newApp);
-        const updatedAppointments = await fetchAppointments();
-        setAppointments(updatedAppointments);
-        setFeedback({ text: "Appointment requested successfully!", type: "success" });
-      } catch (error) {
-        console.error("Booking failed:", error);
-        setFeedback({ text: error.message || "Failed to book appointment.", type: "error" });
-      }
-    };
+    try {
+      await createAppointment(newApp);
+      const updatedAppointments = await fetchAppointments();
+      setAppointments(updatedAppointments);
+      setFeedback({ text: "Appointment requested successfully!", type: "success" });
+    } catch (error) {
+      console.error("Booking failed:", error);
+      setFeedback({ text: error.message || "Failed to book appointment.", type: "error" });
+    }
+  };
     
   const handleCancelAppointment = async (appointmentId, setFeedback) => {
     try {
@@ -253,45 +256,46 @@ function App() {
         backgroundPosition: "center",
         backgroundSize: "cover",
         position: 'fixed',
-        top: 0,
-        left: 0,
-        right: 0,
-        bottom: 0,
+        top: 0, left: 0, right: 0, bottom: 0,
         opacity: 0.08,
         zIndex: -1,
       }
     }}>
       <Routes>
+        {/* Public Routes */}
         <Route path="/login" element={<LoginPage onAuth={fetchAllUserData} />} />
         <Route path="/signup" element={<SignupPage />} />
-        
-        {/* FIX: Corrected the role checking logic to handle both Student and Staff */}
-        <Route 
-          path="/patient/*"
-          element={user && (user.role === 'Student' || user.role === 'Staff') ? <MainLayout user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
-        >
-          <Route path="dashboard" element={<DashboardTab user={user} appointments={appointments} reports={reports} prescriptions={prescriptions} />} />
-          <Route path="appointments" element={<AppointmentsTab appointments={appointments} onBookSuccess={handleBookAppointment} onCancel={handleCancelAppointment} />} />
-          <Route path="reports" element={<ReportsTab history={reports} labs={reports} prescriptions={prescriptions} />} />
-          <Route path="profile" element={<ProfilePage user={user} />} />
-          <Route path="support" element={<SupportPage />} />
-          <Route path="faq" element={<FAQPage />} />
+
+        {/* Protected Routes: All routes within this element will have the MainLayout */}
+        <Route element={user ? <MainLayout user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />}>
+          
+          {/* Profile Page (accessible to all authenticated users) */}
+          <Route path="profile" element={<ProfilePage user={user} onProfileUpdate={handleProfileUpdate} />} />
+
+          {/* Patient Routes */}
+          <Route path="patient/dashboard" element={<DashboardTab user={user} appointments={appointments} reports={reports} prescriptions={prescriptions} />} />
+          <Route path="patient/appointments" element={<AppointmentsTab appointments={appointments} onBookSuccess={handleBookAppointment} onCancel={handleCancelAppointment} />} />
+          <Route path="patient/reports" element={<ReportsTab history={reports} labs={reports} prescriptions={prescriptions} />} />
+          <Route path="patient/support" element={<SupportPage />} />
+          <Route path="patient/faq" element={<FAQPage />} />
+
+          {/* Pharmacist Routes */}
+          <Route path="pharmacist/dashboard" element={<PharmacyDashboard />} />
+          <Route path="pharmacist/view-prescriptions" element={<Prescriptions />} />
+          <Route path="pharmacist/inventory-search" element={<InventoryPage />} />
+          <Route path="pharmacist/inventory-update" element={<UpdateInventory />} />
+          
+          {/* Add Doctor routes here following the same pattern */}
+
         </Route>
 
-        <Route 
-          path="/doctor/*"
-          element={user && user.role === 'Doctor' ? <MainLayout user={user} onLogout={handleLogout} /> : <Navigate to="/login" />}
-        >
-          <Route path="dashboard" element={<DoctorDashboard user={user} />} />
-          <Route path="schedule" element={<div><h1>My Schedule</h1></div>} />
-          <Route path="records" element={<div><h1>Patient Records</h1></div>} />
-          <Route path="profile" element={<ProfilePage user={user} />} />
-        </Route>
-
+        {/* Redirect logic for the root path and any other unhandled paths */}
         <Route 
           path="*" 
           element={
-            <Navigate to={user ? `/${(user.role === 'Student' || user.role === 'Staff') ? 'patient' : user.role.toLowerCase()}/dashboard` : "/login"} />
+            user
+              ? <Navigate to={`/${(user.role === 'Student' || user.role === 'Staff') ? 'patient' : user.role.toLowerCase()}/dashboard`} replace />
+              : <Navigate to="/login" replace />
           } 
         />
       </Routes>
