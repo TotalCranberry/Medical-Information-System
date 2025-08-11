@@ -1,117 +1,231 @@
 import React from "react";
-import {
-  Box, Typography, Paper, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Link, Grid, Divider
+import { Link as RouterLink } from "react-router-dom";
+import { Box, Typography, Paper, Table, TableBody, TableCell, 
+  TableContainer, TableHead, TableRow, Link, Grid, Divider, Chip,
 } from "@mui/material";
+import { useTheme } from "@mui/material/styles";
 
-const ReportsTab = ({ history = [], labs = [], prescriptions = [] }) => (
-  <Box>
-    <Typography variant="h4" color="primary" fontWeight={700} mb={4} textAlign={{ xs: "center", md: "left" }}>
-      Medical Reports
-    </Typography>
-    <Grid container spacing={4} justifyContent="center" alignItems="flex-start">
-      <Grid item xs={12}>
-        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
-          <Typography variant="h6" fontWeight={600} mb={2}>Medical History Summary</Typography>
-          <Divider sx={{ mb: 2 }} />
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Date</TableCell>
-                  <TableCell>Diagnosis</TableCell>
-                  <TableCell>Doctor Name</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {history.length === 0 ? (
+const ReportsTab = ({
+  diagnoses = [],
+  medicals = [],
+  prescriptions = [],
+  labReports = [],
+}) => {
+  const theme = useTheme();
+
+  // Helper function to get chip color based on status
+  const getStatusChipColor = (status) => {
+    if (!status) return "default";
+    const s = status.toLowerCase();
+    if (s === "completed" || s === "dispensed") return "success";
+    if (s === "pending" || s === "scheduled") return "warning";
+    if (s === "cancelled") return "error";
+    return "default";
+  };
+
+  return (
+    <Box>
+      <Typography
+        variant="h4"
+        color="primary.main"
+        fontWeight={700}
+        mb={4}
+        textAlign={{ xs: "center", md: "left" }}
+      >
+        Medical Reports
+      </Typography>
+
+      <Grid
+        container
+        spacing={4}
+        justifyContent="center"
+        alignItems="flex-start"
+      >
+        {/* Diagnosis History */}
+        <Grid item xs={12} md={6} sx={{ minWidth: 400 }}>
+          <Paper elevation={2} sx={{ p: 3, borderRadius: 4, width: "100%" }}>
+            <Typography variant="h6" fontWeight={600} mb={2}>
+              Diagnosis History
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <TableContainer sx={{ maxHeight: 300, width: "100%" }}>
+              <Table stickyHeader>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={3} align="center">No history found</TableCell>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Diagnosis</TableCell>
+                    <TableCell>Notes</TableCell>
                   </TableRow>
-                ) : (
-                  history.map(item => (
-                    <TableRow key={item.id || item.date}>
-                      <TableCell>{item.date}</TableCell>
-                      <TableCell>{item.diagnosis}</TableCell>
-                      <TableCell>{item.doctor}</TableCell>
-                    </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      </Grid>
-      <Grid item xs={12} md={6}>
-        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
-          <Typography variant="h6" fontWeight={600} mb={2}>Lab Results</Typography>
-          <Divider sx={{ mb: 2 }} />
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Test Type</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>View/Download</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {labs.length === 0 ? (
-                  <TableRow>
-                    <TableCell colSpan={3} align="center">No lab results</TableCell>
-                  </TableRow>
-                ) : (
-                  labs.map(lab => (
-                    <TableRow key={lab.id || lab.type}>
-                      <TableCell>{lab.type}</TableCell>
-                      <TableCell>{lab.date}</TableCell>
-                      <TableCell>
-                        <Link href="#" sx={{ color: 'secondary.main' }}>View</Link>
+                </TableHead>
+                <TableBody>
+                  {diagnoses.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} align="center">
+                        No diagnoses found
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
-      </Grid>
-      <Grid item xs={12} md={6}>
-        <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
-          <Typography variant="h6" fontWeight={600} mb={2}>Prescriptions</Typography>
-          <Divider sx={{ mb: 2 }} />
-          <TableContainer>
-            <Table>
-              <TableHead>
-                <TableRow>
-                  <TableCell>Issued By</TableCell>
-                  <TableCell>Date</TableCell>
-                  <TableCell>View/Download</TableCell>
-                </TableRow>
-              </TableHead>
-              <TableBody>
-                {prescriptions.length === 0 ? (
+                  ) : (
+                    diagnoses.map((item) => (
+                      <TableRow key={item.id} hover>
+                        <TableCell>
+                          {new Date(item.diagnosisDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{item.diagnosis}</TableCell>
+                        <TableCell>{item.notes || "N/A"}</TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Grid>
+
+        {/* Medical Certificates */}
+        <Grid item xs={12} md={6} sx={{ minWidth: 400 }}>
+          <Paper elevation={2} sx={{ p: 3, borderRadius: 4, width: "100%" }}>
+            <Typography variant="h6" fontWeight={600} mb={2}>
+              Medical Certificates
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <TableContainer sx={{ maxHeight: 300, width: "100%" }}>
+              <Table stickyHeader>
+                <TableHead>
                   <TableRow>
-                    <TableCell colSpan={3} align="center">No prescriptions</TableCell>
+                    <TableCell>Date Issued</TableCell>
+                    <TableCell>Recommendations</TableCell>
+                    <TableCell>View/Download</TableCell>
                   </TableRow>
-                ) : (
-                  prescriptions.map(rx => (
-                    <TableRow key={rx.id || rx.date}>
-                      <TableCell>{rx.doctor}</TableCell>
-                      <TableCell>{rx.date}</TableCell>
-                      <TableCell>
-                        <Link href="#" sx={{ color: 'secondary.main' }}>Download</Link>
+                </TableHead>
+                <TableBody>
+                  {medicals.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} align="center">
+                        No medicals found
                       </TableCell>
                     </TableRow>
-                  ))
-                )}
-              </TableBody>
-            </Table>
-          </TableContainer>
-        </Paper>
+                  ) : (
+                    medicals.map((medical) => (
+                      <TableRow key={medical.id} hover>
+                        <TableCell>
+                          {new Date(medical.medicalDate).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{medical.recommendations}</TableCell>
+                        <TableCell>
+                          <Link
+                            component={RouterLink}
+                            to={`/patient/view-medical/${medical.id}`}
+                            sx={{
+                              color: theme.palette.secondary.main,
+                              cursor: "pointer",
+                            }}
+                          >
+                            View
+                          </Link>
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Grid>
+
+        {/* Prescriptions */}
+        <Grid item xs={12} sx={{ minWidth: 700 }}>
+          <Paper elevation={2} sx={{ p: 3, borderRadius: 4, width: "100%" }}>
+            <Typography variant="h6" fontWeight={600} mb={2}>
+              Prescriptions
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <TableContainer sx={{ maxHeight: 300, width: "100%" }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Details</TableCell>
+                    <TableCell>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {prescriptions.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} align="center">
+                        No prescriptions found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    prescriptions.map((rx) => (
+                      <TableRow key={rx.id} hover>
+                        <TableCell>
+                          {new Date(rx.date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{rx.details || rx.medicine || "N/A"}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={rx.status || "Unknown"}
+                            size="small"
+                            color={getStatusChipColor(rx.status)}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Grid>
+
+        {/* Lab Reports */}
+        <Grid item xs={12} sx={{ minWidth: 700 }}>
+          <Paper elevation={2} sx={{ p: 3, borderRadius: 4, width: "100%" }}>
+            <Typography variant="h6" fontWeight={600} mb={2}>
+              Lab Reports
+            </Typography>
+            <Divider sx={{ mb: 2 }} />
+            <TableContainer sx={{ maxHeight: 300, width: "100%" }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell>Date</TableCell>
+                    <TableCell>Test Type</TableCell>
+                    <TableCell>Status</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {labReports.length === 0 ? (
+                    <TableRow>
+                      <TableCell colSpan={3} align="center">
+                        No lab reports found
+                      </TableCell>
+                    </TableRow>
+                  ) : (
+                    labReports.map((report) => (
+                      <TableRow key={report.id} hover>
+                        <TableCell>
+                          {new Date(report.date).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{report.testType || report.test || "N/A"}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={report.status || "Unknown"}
+                            size="small"
+                            color={getStatusChipColor(report.status)}
+                          />
+                        </TableCell>
+                      </TableRow>
+                    ))
+                  )}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </Paper>
+        </Grid>
       </Grid>
-    </Grid>
-  </Box>
-);
+    </Box>
+  );
+};
 
 export default ReportsTab;

@@ -50,3 +50,20 @@ export async function savePatientVitals(patientId, vitalsData) {
 export async function saveDiagnosis(patientId, diagnosisData) {
   return apiFetch(`/doctor/patients/${patientId}/diagnosis`, 'POST', diagnosisData, true);
 }
+
+// Medical functions for doctors
+export async function issueMedical(patientId, medicalData) {
+  return apiFetch(`/doctor/patients/${patientId}/medical`, 'POST', medicalData, true);
+}
+
+export async function fetchPatientMedicals(patientId) {
+  return apiFetch(`/doctor/patients/${patientId}/medicals`, 'GET', null, true);
+}
+
+export async function fetchMedical(medicalId) {
+  return apiFetch(`/doctor/medicals/${medicalId}`, 'GET', null, true);
+}
+
+export async function sendMedicalToCourseUnit(medicalId) {
+  return apiFetch(`/doctor/medicals/${medicalId}/send-to-course-unit`, 'PUT', null, true);
+}

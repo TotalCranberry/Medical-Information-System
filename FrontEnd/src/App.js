@@ -29,7 +29,7 @@ import BackgroundImg from './assets/Background.jpeg';
 // API
 import { getProfile } from "./api/auth";
 import { fetchAppointments, createAppointment, cancelAppointment } from "./api/appointments";
-import { fetchReports, fetchPrescriptions } from "./api/reports";
+import { fetchDiagnoses, fetchMedicals, fetchPrescriptions, fetchReports} from "./api/reports";
 
 // Patient pages
 import LoginPage from "./components/Patient/LoginPage";
@@ -53,6 +53,8 @@ import PatientsTab from './components/Doctor/PatientsTab';
 import PatientProfile from './components/Doctor/PatientProfile';
 import RequestLabTest from './components/Doctor/RequestLabTest';
 import PrescriptionsTab from './components/Doctor/PrescriptionsTab';
+import IssueMedical from './components/Doctor/IssueMedical';
+import ViewMedical from './components/Doctor/ViewMedical';
 
 // Laboratory pages
 import LabDashboard from './components/Laboratory/LabDashboard';
@@ -247,6 +249,8 @@ const MainLayout = ({ user, onLogout }) => {
 function App() {
   const [user, setUser] = useState(null);
   const [appointments, setAppointments] = useState([]);
+  const [diagnoses, setDiagnoses] = useState([]);
+  const [medicals, setMedicals] = useState([]);
   const [reports, setReports] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -272,16 +276,19 @@ function App() {
 
       // Load patient data if Student/Staff
       if (profileData.role === 'Student' || profileData.role === 'Staff') {
-        const [appointmentsData, reportsData, prescriptionsData] = await Promise.all([
+        const [appointmentsData, diagnosesData, medicalsData, reportsData, prescriptionsData] = await Promise.all([
           fetchAppointments(),
-          fetchReports(),
+          fetchDiagnoses(),
+          fetchMedicals(),
           fetchPrescriptions(),
+          fetchReports()
         ]);
         setAppointments(appointmentsData);
-        setReports(reportsData);
+        setDiagnoses(diagnosesData);
+        setMedicals(medicalsData);
         setPrescriptions(prescriptionsData);
+        setReports(reportsData); 
       }
-      // For Doctor/Pharmacist, data is either handled in their pages or via mocks above
     } catch (error) {
       console.error("Failed to fetch user data:", error);
       handleLogout();
@@ -366,9 +373,10 @@ function App() {
           <Route path="profile" element={<ProfilePage user={user} onProfileUpdate={handleProfileUpdate} />} />
 
           {/* Patient Routes */}
-          <Route path="patient/dashboard" element={<DashboardTab user={user} appointments={appointments} reports={reports} prescriptions={prescriptions} />} />
+          <Route path="patient/dashboard" element={<DashboardTab user={user} appointments={appointments} medicals={medicals} diagnoses={diagnoses} reports={reports} prescriptions={prescriptions} />} />
           <Route path="patient/appointments" element={<AppointmentsTab appointments={appointments} onBookSuccess={handleBookAppointment} onCancel={handleCancelAppointment} />} />
-          <Route path="patient/reports" element={<ReportsTab history={reports} labs={reports} prescriptions={prescriptions} />} />
+          <Route path="patient/reports" element={<ReportsTab diagnoses={diagnoses} medicals={medicals} prescriptions={prescriptions} />} />
+          <Route path="patient/view-medical/:medicalId" element={<ViewMedical />} />
           <Route path="patient/support" element={<SupportPage />} />
           <Route path="patient/faq" element={<FAQPage />} />
 
@@ -378,10 +386,12 @@ function App() {
           <Route path="pharmacist/inventory-search" element={<InventoryPage />} />
           <Route path="pharmacist/inventory-update" element={<UpdateInventory />} />
 
-          {/* Doctor Routes - FIXED */}
+          {/* Doctor Routes - UPDATED with Medical Routes */}
           <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />
           <Route path="doctor/patients" element={<PatientsTab patients={mockPatients} />} />
           <Route path="doctor/patients/:patientId" element={<PatientProfile />} />
+          <Route path="doctor/issue-medical/:patientId" element={<IssueMedical />} />
+          <Route path="doctor/view-medical/:medicalId" element={<ViewMedical />} />
           <Route path="doctor/request-test" element={<RequestLabTest pendingRequests={mockLabRequests} onSubmit={handleLabTestRequest} />} />
           <Route path="doctor/prescriptions" element={<PrescriptionsTab recentPrescriptions={mockPrescriptionHistory} onSubmit={handlePrescriptionSubmit} />} />
           <Route path="doctor/support" element={<SupportPage />} />
