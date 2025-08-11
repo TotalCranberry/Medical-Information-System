@@ -44,18 +44,6 @@ const DoctorDashboard = ({ doctor }) => {
       description: "Search and view patient records",
       icon: <PersonSearchIcon sx={{ fontSize: 40, color: "#45d27a" }} />,
       action: "patients"
-    },
-    {
-      title: "Request Lab Test",
-      description: "Order laboratory tests for patients",
-      icon: <ScienceIcon sx={{ fontSize: 40, color: "#45d27a" }} />,
-      action: "request-test"
-    },
-    {
-      title: "Write Prescription",
-      description: "Create new prescriptions",
-      icon: <MedicationIcon sx={{ fontSize: 40, color: "#45d27a" }} />,
-      action: "prescriptions"
     }
   ];
 
@@ -203,7 +191,7 @@ const DoctorDashboard = ({ doctor }) => {
           textAlign: { xs: "center", md: "left" }
         }}
       >
-        Welcome, {doctor?.name || "Dr. Name"}
+        Welcome, {"Dr. " +doctor?.name}
       </Typography>
 
       {error && (
