@@ -370,7 +370,7 @@ function App() {
 
           {/* Doctor Routes - UPDATED with Medical Routes */}
           <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />
-          <Route path="doctor/patients" element={<PatientsTab patients={mockPatients} />} />
+          <Route path="doctor/patients" element={<PatientsTab />} />
           <Route path="doctor/patients/:patientId" element={<PatientProfile />} />
           <Route path="doctor/issue-medical/:patientId" element={<IssueMedical />} />
           <Route path="doctor/view-medical/:medicalId" element={<ViewMedical />} />

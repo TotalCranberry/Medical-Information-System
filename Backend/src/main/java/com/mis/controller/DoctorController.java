@@ -3,11 +3,13 @@ package com.mis.controller;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
+import java.util.ArrayList;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -22,6 +24,7 @@ import org.springframework.web.bind.annotation.RestController;
 
 import com.mis.dto.DiagnosisRequest;
 import com.mis.dto.MedicalRequest;
+import com.mis.dto.PatientDTO;
 import com.mis.dto.VitalsRequest;
 import com.mis.model.Appointment;
 import com.mis.model.AppointmentStatus;
@@ -65,6 +68,50 @@ public class DoctorController {
         this.medicalRepository = medicalRepository;
         this.studentRepository = studentRepository;
         this.staffRepository = staffRepository;
+    }
+
+    // NEW: Get all patients (Students and Staff) for the doctor's patient search
+    @GetMapping("/patients")
+    public ResponseEntity<List<PatientDTO>> getAllPatients(Authentication authentication) {
+        try {
+            List<PatientDTO> allPatients = new ArrayList<>();
+            
+            // Get all students
+            List<Student> students = studentRepository.findAll();
+            for (Student student : students) {
+                PatientDTO patientDTO = new PatientDTO();
+                patientDTO.setId(student.getId());
+                patientDTO.setName(student.getUser().getName());
+                patientDTO.setEmail(student.getUser().getEmail());
+                patientDTO.setRole("Student");
+                patientDTO.setFaculty(student.getFaculty());
+                patientDTO.setAge(student.getAge()); // This will use the transient method
+                allPatients.add(patientDTO);
+            }
+            
+            // Get all staff
+            List<Staff> staff = staffRepository.findAll();
+            for (Staff staffMember : staff) {
+                PatientDTO patientDTO = new PatientDTO();
+                patientDTO.setId(staffMember.getId());
+                patientDTO.setName(staffMember.getUser().getName());
+                patientDTO.setEmail(staffMember.getUser().getEmail());
+                patientDTO.setRole("Staff");
+                patientDTO.setFaculty(staffMember.getFaculty());
+                patientDTO.setAge(staffMember.getAge()); // This will use the transient method
+                allPatients.add(patientDTO);
+            }
+            
+            // Sort by name for better user experience
+            allPatients = allPatients.stream()
+                .sorted((p1, p2) -> p1.getName().compareToIgnoreCase(p2.getName()))
+                .collect(Collectors.toList());
+            
+            return ResponseEntity.ok(allPatients);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(new ArrayList<>());
+        }
     }
 
     @GetMapping("/appointments/today")
