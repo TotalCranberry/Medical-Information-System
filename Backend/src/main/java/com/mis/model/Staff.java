@@ -12,11 +12,10 @@ import jakarta.persistence.Table;
 import jakarta.persistence.Transient;
 
 @Entity
-@Table(name = "students")
-public class Student {
-
+@Table(name = "staff")
+public class Staff {
     @Id
-    private String id;
+    private String id; 
 
     @OneToOne
     @JoinColumn(name = "id")
@@ -26,7 +25,7 @@ public class Student {
     private String faculty;
     private LocalDate dateOfBirth;
 
-    // FIX: Removed the 'age' field. It will be calculated instead.
+    // FIX: Removed the 'age' field.
 
     // Getters and Setters
     public String getId() { return id; }
@@ -40,11 +39,10 @@ public class Student {
 
     /**
      * FIX: Added a transient method to calculate age dynamically.
-     * The @Transient annotation tells JPA not to try to save this to the database.
      * @return The calculated age in years, or null if DOB is not set.
      */
     @Transient
-    public Integer getAge() {
+    public Integer getAge(){
         if (this.dateOfBirth == null) {
             return null;
         }

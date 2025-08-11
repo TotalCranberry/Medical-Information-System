@@ -18,17 +18,20 @@ import MedicalServicesIcon from '@mui/icons-material/MedicalServices';
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
 import InventoryIcon from "@mui/icons-material/Inventory";
 import EditNoteIcon from "@mui/icons-material/EditNote";
+import PeopleIcon from "@mui/icons-material/People";
+import ScienceIcon from "@mui/icons-material/Science";
+import MedicationIcon from "@mui/icons-material/Medication";
 
 // Assets
 import UOPLogo from './assets/UOP_logo.jpeg';
 import BackgroundImg from './assets/Background.jpeg';
 
 // API
-import { getProfile, updateProfile } from "./api/auth";
+import { getProfile } from "./api/auth";
 import { fetchAppointments, createAppointment, cancelAppointment } from "./api/appointments";
 import { fetchReports, fetchPrescriptions } from "./api/reports";
 
-// Pages
+// Patient pages
 import LoginPage from "./components/Patient/LoginPage";
 import SignupPage from "./components/Patient/SignupPage";
 import DashboardTab from "./components/Patient/DashboardTab";
@@ -38,11 +41,81 @@ import ProfilePage from "./components/Patient/ProfilePage";
 import SupportPage from "./components/Patient/SupportPage";
 import FAQPage from './components/Patient/FAQPage';
 
-//Pharmacy Pages
+// Pharmacy pages
 import PharmacyDashboard from "./components/Pharmacy/PharmacyDashboard";
 import InventoryPage from "./components/Pharmacy/Inventory";
 import Prescriptions from "./components/Pharmacy/Prescriptions";
 import UpdateInventory from "./components/Pharmacy/UpdateInventory";
+
+// Doctor pages
+import DoctorDashboard from './components/Doctor/DoctorDashboard';
+import PatientsTab from './components/Doctor/PatientsTab';
+import PatientProfile from './components/Doctor/PatientProfile';
+import RequestLabTest from './components/Doctor/RequestLabTest';
+import PrescriptionsTab from './components/Doctor/PrescriptionsTab';
+
+// Laboratory pages
+import LabDashboard from './components/Laboratory/LabDashboard';
+import LabRequests from './components/Laboratory/LabTests';
+import LabResults from './components/Laboratory/LabResults';
+
+// --- Doctor mock data & helpers ---
+const mockPatients = [
+  { id: 1, name: "John Doe", faculty: "Engineering", age: 22 },
+  { id: 2, name: "Jane Smith", faculty: "Medicine", age: 24 },
+  { id: 3, name: "Mike Johnson", faculty: "Science", age: 23 },
+  { id: 4, name: "Sarah Wilson", faculty: "Arts", age: 21 },
+  { id: 5, name: "David Brown", faculty: "Engineering", age: 25 }
+];
+
+const mockPatientDetails = {
+  id: 1,
+  name: "John Doe",
+  age: 24,
+  faculty: "Science Faculty",
+  conditions: ["Hypertension", "Diabetes Type 2"],
+  allergies: ["Penicillin", "Shellfish"],
+  diagnoses: [
+    { date: "2024-01-15", condition: "Common Cold" },
+    { date: "2024-01-10", condition: "Routine Checkup" }
+  ],
+  vitals: [
+    { date: "2024-01-15", bloodPressure: "120/80", temperature: "98.6" },
+    { date: "2024-01-10", bloodPressure: "118/78", temperature: "98.4" }
+  ],
+  weightChart: [
+    { date: "2024-01-15", weight: 75 },
+    { date: "2024-01-10", weight: 74.5 }
+  ],
+  medicalHistory: [
+    { type: "Diagnosis", date: "2024-01-15", description: "Common Cold" },
+    { type: "Prescription", date: "2024-01-12", description: "Amoxicillin" },
+    { type: "Lab Test", date: "2024-01-10", description: "CBC Test" },
+  ]
+};
+
+const mockTodaysAppointments = [
+  { id: 1, time: "09:00 AM", patientName: "John Doe", status: "Confirmed" },
+  { id: 2, time: "10:30 AM", patientName: "Jane Smith", status: "Pending" },
+  { id: 3, time: "02:00 PM", patientName: "Mike Johnson", status: "Confirmed" }
+];
+
+const mockRecentActivity = [
+  { description: "Prescription written for John Doe", timestamp: "2 hours ago" },
+  { description: "Lab test requested for Jane Smith", timestamp: "4 hours ago" },
+  { description: "Patient consultation completed", timestamp: "1 day ago" },
+  { description: "Medical report reviewed", timestamp: "2 days ago" }
+];
+
+const mockLabRequests = [
+  { id: 1, date: "2024-01-15", testType: "Blood Test", patientName: "John Doe", status: "Pending" },
+  { id: 2, date: "2024-01-14", testType: "X-Ray", patientName: "Jane Smith", status: "Completed" }
+];
+
+const mockPrescriptionHistory = [
+  { id: 1, date: "2024-01-15", time: "10:30 AM", patientName: "John Doe", status: "Dispensed" },
+  { id: 2, date: "2024-01-14", time: "02:15 PM", patientName: "Jane Smith", status: "Pending" }
+];
 
 // --- Role-Specific Navigation Links ---
 const navLinksConfig = {
@@ -54,20 +127,25 @@ const navLinksConfig = {
   ],
   doctor: [
     { label: "Dashboard", path: "/doctor/dashboard", icon: <DashboardIcon /> },
-    { label: "My Schedule", path: "/doctor/schedule", icon: <CalendarTodayIcon /> },
-    { label: "Patient Records", path: "/doctor/records", icon: <MedicalServicesIcon /> },
+    { label: "Patients", path: "/doctor/patients", icon: <PeopleIcon /> },
+    { label: "Request Test", path: "/doctor/request-test", icon: <ScienceIcon /> },
+    { label: "Prescriptions", path: "/doctor/prescriptions", icon: <MedicationIcon /> },
+    { label: "Support", path: "/doctor/support", icon: <ContactSupportIcon /> },
   ],
   pharmacist: [
     { label: "Dashboard", path: "/pharmacist/dashboard", icon: <DashboardIcon /> },
     { label: "View Prescriptions", path: "/pharmacist/view-prescriptions", icon: <ReceiptLongIcon /> },
     { label: "Inventory Search", path: "/pharmacist/inventory-search", icon: <InventoryIcon /> },
     { label: "Inventory Update", path: "/pharmacist/inventory-update", icon: <EditNoteIcon /> },
+  ],
+  labtechnician: [
+    { label: "Dashboard", path: "/labtechnician/dashboard", icon: <DashboardIcon /> },
+    { label: "Lab Requests", path: "/labtechnician/lab-requests", icon: <MedicalServicesIcon /> },
+    { label: "Lab Results", path: "/labtechnician/lab-results", icon: <DescriptionIcon /> },
   ]
 };
 
 // --- Main Layout Component ---
-// This component renders the shared UI elements like the navbar and sidebar.
-// The <Outlet /> component renders the active nested route.
 const MainLayout = ({ user, onLogout }) => {
   const location = useLocation();
   const navigate = useNavigate();
@@ -81,7 +159,7 @@ const MainLayout = ({ user, onLogout }) => {
   const handleDrawerToggle = () => setDrawerOpen(!drawerOpen);
   const handleAvatarClick = (event) => setProfileAnchor(event.currentTarget);
   const handleProfileMenuClose = () => setProfileAnchor(null);
-  
+
   const handleProfile = () => {
     handleProfileMenuClose();
     navigate('/profile');
@@ -89,13 +167,17 @@ const MainLayout = ({ user, onLogout }) => {
 
   const drawerContent = (
     <Box sx={{ width: 250, height: "100%", bgcolor: "#0c3c3c", color: "#fff" }} role="presentation">
-      <Box sx={{ display: "flex", alignItems: "center", p: 2, justifyContent: "center", mt: 2 }}>
-        <Box component="img" src={UOPLogo} alt="Logo" sx={{ height: 48, width: 48, borderRadius: '50%', p: '2px', bgcolor: 'white' }} />
-      </Box>
+      <Box sx={{ display: "flex", alignItems: "center", p: 2, justifyContent: "center", mt: 2 }} />
       <List sx={{ mt: 1 }}>
         {navLinks.map((link) => (
           <ListItem key={link.path} disablePadding>
-            <ListItemButton component={Link} to={link.path} selected={location.pathname === link.path} onClick={() => setDrawerOpen(false)} sx={{ "&.Mui-selected": { backgroundColor: "#173d3d" }, "&:hover": { backgroundColor: "#21867a22" } }}>
+            <ListItemButton
+              component={Link}
+              to={link.path}
+              selected={location.pathname === link.path}
+              onClick={() => setDrawerOpen(false)}
+              sx={{ "&.Mui-selected": { backgroundColor: "#173d3d" }, "&:hover": { backgroundColor: "#21867a22" } }}
+            >
               <ListItemIcon sx={{ color: "#45d27a" }}>{link.icon}</ListItemIcon>
               <ListItemText primary={link.label} />
             </ListItemButton>
@@ -120,7 +202,7 @@ const MainLayout = ({ user, onLogout }) => {
 
   return (
     <Box sx={{ display: 'flex', minHeight: '100vh' }}>
-      <AppBar position="fixed" color="primary" elevation={1} sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 }}>
+      <AppBar position="fixed" color="primary" elevation={1} sx={{ zIndex: (theme) => theme.zIndex.drawer + 1 , borderRadius: '0'}}>
         <Toolbar>
           <IconButton color="inherit" aria-label="open drawer" edge="start" onClick={handleDrawerToggle} sx={{ mr: 2, display: { md: 'none' } }}>
             <MenuIcon />
@@ -154,7 +236,7 @@ const MainLayout = ({ user, onLogout }) => {
       <Box component="main" sx={{ flexGrow: 1, p: 3, width: '100%' }}>
         <Toolbar />
         <Container maxWidth="lg">
-          <Outlet /> {/* Renders the matched child route */}
+          <Outlet />
         </Container>
       </Box>
     </Box>
@@ -187,7 +269,8 @@ function App() {
     try {
       const profileData = await getProfile();
       setUser(profileData);
-      
+
+      // Load patient data if Student/Staff
       if (profileData.role === 'Student' || profileData.role === 'Staff') {
         const [appointmentsData, reportsData, prescriptionsData] = await Promise.all([
           fetchAppointments(),
@@ -198,6 +281,7 @@ function App() {
         setReports(reportsData);
         setPrescriptions(prescriptionsData);
       }
+      // For Doctor/Pharmacist, data is either handled in their pages or via mocks above
     } catch (error) {
       console.error("Failed to fetch user data:", error);
       handleLogout();
@@ -208,7 +292,7 @@ function App() {
 
   useEffect(() => {
     fetchAllUserData();
-  }, []);
+  }, [fetchAllUserData]);
 
   const handleProfileUpdate = (updatedUser) => {
     setUser(currentUser => ({ ...currentUser, ...updatedUser }));
@@ -219,23 +303,34 @@ function App() {
       await createAppointment(newApp);
       const updatedAppointments = await fetchAppointments();
       setAppointments(updatedAppointments);
-      setFeedback({ text: "Appointment requested successfully!", type: "success" });
+      setFeedback?.({ text: "Appointment requested successfully!", type: "success" });
     } catch (error) {
       console.error("Booking failed:", error);
-      setFeedback({ text: error.message || "Failed to book appointment.", type: "error" });
+      setFeedback?.({ text: error.message || "Failed to book appointment.", type: "error" });
     }
   };
-    
+
   const handleCancelAppointment = async (appointmentId, setFeedback) => {
     try {
       await cancelAppointment(appointmentId);
       const updatedAppointments = await fetchAppointments();
       setAppointments(updatedAppointments);
-      setFeedback({ text: "Appointment cancelled successfully.", type: "success" });
+      setFeedback?.({ text: "Appointment cancelled successfully.", type: "success" });
     } catch (error) {
       console.error("Cancellation failed:", error);
-      setFeedback({ text: error.message || "Failed to cancel appointment.", type: "error" });
+      setFeedback?.({ text: error.message || "Failed to cancel appointment.", type: "error" });
     }
+  };
+
+  // Doctor actions (stubbed; replace with API calls later)
+  const handleLabTestRequest = (testData) => {
+    console.log("Lab test request submitted:", testData);
+    return Promise.resolve({ success: true, message: "Lab test request submitted successfully!" });
+  };
+
+  const handlePrescriptionSubmit = (prescriptionData) => {
+    console.log("Prescription submitted:", prescriptionData);
+    return Promise.resolve({ success: true, message: "Prescription submitted successfully!" });
   };
 
   if (loading) {
@@ -247,8 +342,8 @@ function App() {
   }
 
   return (
-    <Box sx={{ 
-      minHeight: '100vh', 
+    <Box sx={{
+      minHeight: '100vh',
       position: 'relative',
       '&::before': {
         content: '""',
@@ -262,14 +357,12 @@ function App() {
       }
     }}>
       <Routes>
-        {/* Public Routes */}
         <Route path="/login" element={<LoginPage onAuth={fetchAllUserData} />} />
         <Route path="/signup" element={<SignupPage />} />
 
-        {/* Protected Routes: All routes within this element will have the MainLayout */}
+        {/* Shared layout after login */}
         <Route element={user ? <MainLayout user={user} onLogout={handleLogout} /> : <Navigate to="/login" replace />}>
-          
-          {/* Profile Page (accessible to all authenticated users) */}
+          {/* Profile (common) */}
           <Route path="profile" element={<ProfilePage user={user} onProfileUpdate={handleProfileUpdate} />} />
 
           {/* Patient Routes */}
@@ -284,19 +377,31 @@ function App() {
           <Route path="pharmacist/view-prescriptions" element={<Prescriptions />} />
           <Route path="pharmacist/inventory-search" element={<InventoryPage />} />
           <Route path="pharmacist/inventory-update" element={<UpdateInventory />} />
-          
-          {/* Add Doctor routes here following the same pattern */}
+
+          {/* Doctor Routes - FIXED */}
+          <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />
+          <Route path="doctor/patients" element={<PatientsTab patients={mockPatients} />} />
+          <Route path="doctor/patients/:patientId" element={<PatientProfile />} />
+          <Route path="doctor/request-test" element={<RequestLabTest pendingRequests={mockLabRequests} onSubmit={handleLabTestRequest} />} />
+          <Route path="doctor/prescriptions" element={<PrescriptionsTab recentPrescriptions={mockPrescriptionHistory} onSubmit={handlePrescriptionSubmit} />} />
+          <Route path="doctor/support" element={<SupportPage />} />
+
+          {/* Laboratory Routes */}
+          <Route path="labtechnician/dashboard" element={<LabDashboard />} />
+          <Route path="labtechnician/lab-requests" element={<LabRequests requests={mockLabRequests} />} />
+          <Route path="labtechnician/lab-results" element={<LabResults results={mockLabRequests} />} />
+          <Route path="labtechnician/support" element={<SupportPage />} />
 
         </Route>
 
-        {/* Redirect logic for the root path and any other unhandled paths */}
-        <Route 
-          path="*" 
+        {/* Fallback redirect */}
+        <Route
+          path="*"
           element={
             user
               ? <Navigate to={`/${(user.role === 'Student' || user.role === 'Staff') ? 'patient' : user.role.toLowerCase()}/dashboard`} replace />
               : <Navigate to="/login" replace />
-          } 
+          }
         />
       </Routes>
     </Box>

@@ -91,8 +91,8 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                     </TableRow>
                   </TableHead>
                   <TableBody>
-                    {appointments && appointments.length > 0  ? (
-                      [...appointments] 
+                    {appointments && [...appointments].filter(app => app.status !== 'Cancelled').length > 0  ? (
+                      [...appointments]
                         .filter(app => app.status !== 'Cancelled')
                         .sort((a, b) => new Date(a.appointmentDateTime) - new Date(b.appointmentDateTime))
                         .map(app => (
@@ -116,7 +116,7 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                         ))
                     ) : (
                       <TableRow>
-                        <TableCell colSpan={3} align="center">No appointments found</TableCell>
+                        <TableCell colSpan={4} align="center">No appointments found</TableCell>
                       </TableRow>
                     )}
                   </TableBody>

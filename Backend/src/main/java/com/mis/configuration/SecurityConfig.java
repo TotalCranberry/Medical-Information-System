@@ -49,8 +49,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/support/tickets").hasAuthority("ROLE_Admin")
 
                 // Role-specific endpoints
-                .requestMatchers("/api/patient/**").hasAuthority("ROLE_Student")
+                .requestMatchers("/api/patient/**").hasAnyAuthority("ROLE_Student", "ROLE_Staff")
                 .requestMatchers("/api/doctor/**").hasAuthority("ROLE_Doctor")
+                    .requestMatchers("/api/medicines/**").hasAuthority("ROLE_Pharmacist")
 
                 // Any other request must be authenticated.
                 .anyRequest().authenticated()

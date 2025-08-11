@@ -22,11 +22,10 @@ const LoginPage = ({ onAuth }) => {
 
     switch (data.role) {
       case "Student":
-      case "Staff":
         navigate("/patient/dashboard");
         break;
-      case "Doctor":
-        navigate("/doctor/dashboard");
+      case "Staff":
+        navigate("/patient/dashboard");
         break;
       default:
         navigate(`/${data.role.toLowerCase()}/dashboard`);

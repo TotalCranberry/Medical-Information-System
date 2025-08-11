@@ -1,6 +1,7 @@
 import React, { useState, useEffect } from "react";
 import {
-  Button, TextField, Typography, Paper, Box, Switch, FormControlLabel, Divider, IconButton, InputAdornment, Snackbar, Alert
+  Button, TextField, Typography, Paper, Box, Switch, FormControlLabel, 
+  Divider, IconButton, InputAdornment, Snackbar, Alert
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { changePassword } from "../../api/auth"; 
@@ -8,6 +9,7 @@ import { updateProfile } from "../../api/auth";
 
 const ProfilePage = ({ user, onProfileUpdate }) => {
   const [name, setName] = useState("");
+  const [dateOfBirth, setDateOfBirth] = useState(null);
   const [notifications, setNotifications] = useState(true);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -18,17 +20,30 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
   useEffect(() => {
     if (user) {
       setName(user.name || "");
+      if (user.dateOfBirth) {
+        setDateOfBirth(new Date(user.dateOfBirth));
+      }
     }
   }, [user]);
 
   const handleProfileSave = async (e) => {
     e.preventDefault();
     setMessage({ text: "", type: "" });
+
     try {
-      const updatedUser = await updateProfile({ name }); // Pass only the fields to be updated
-      setMessage({ text: response.message || "Profile updated successfully!", type: "success" });
+      // Prepare data for update
+      const updateData = { name };
+      
+      // Include DOB for Student and Staff roles only if it's not already set
+      if ((user?.role === "Student" || user?.role === "Staff") && dateOfBirth && !user?.dateOfBirth) {
+        updateData.dateOfBirth = dateOfBirth.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+      }
+      
+      const { user: updatedUser, message } = await updateProfile(updateData); 
+      setMessage({ text: message || "Profile updated successfully!", type: "success" });
+
       if (onProfileUpdate) {
-        onProfileUpdate(updatedUser); // Notify parent component of the change
+        onProfileUpdate(updatedUser);
       }
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
@@ -69,6 +84,31 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
             margin="normal"
             variant="outlined"
           />
+          
+          {/* DOB Field for Student and Staff */}
+          {(user?.role === "Student" || user?.role === "Staff") && (
+            <TextField
+              label="Date of Birth"
+              type="date"
+              value={dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : ''}
+              onChange={(e) => {
+                // Only allow changing DOB if it's not already set
+                if (!user?.dateOfBirth) {
+                  setDateOfBirth(e.target.value ? new Date(e.target.value) : null);
+                }
+              }}
+              fullWidth
+              margin="normal"
+              variant="outlined"
+              InputLabelProps={{
+                shrink: true,
+              }}
+              // Disable the field if DOB is already set
+              disabled={!!user?.dateOfBirth}
+              helperText={user?.dateOfBirth ? "Date of birth cannot be changed once set" : ""}
+            />
+          )}
+          
           <TextField
             label="Email"
             value={user.email || ''}
