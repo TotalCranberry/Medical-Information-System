@@ -299,7 +299,7 @@ function App() {
 
   useEffect(() => {
     fetchAllUserData();
-  }, [fetchAllUserData]);
+  }, []);
 
   const handleProfileUpdate = (updatedUser) => {
     setUser(currentUser => ({ ...currentUser, ...updatedUser }));

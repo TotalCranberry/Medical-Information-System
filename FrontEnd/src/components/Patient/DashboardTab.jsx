@@ -16,11 +16,10 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
   const isDobSet = user?.dateOfBirth !== null && user?.dateOfBirth !== undefined;
   const showDobReminder = isDobRequired && !isDobSet;
 
-  // Define stat cards data for easy mapping and consistent colors/icons
   const statCards = [
     {
       label: "Appointments",
-      count: appointments.filter((app) => app.status !== "Cancelled").length,
+      count: appointments.filter((app) => app.status == "Scheduled").length,
       icon: CalendarTodayIcon,
       color: theme.palette.success.main, // green tone
       chipColor: "primary",
