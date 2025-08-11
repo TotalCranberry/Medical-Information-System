@@ -53,6 +53,8 @@ import PatientsTab from './components/Doctor/PatientsTab';
 import PatientProfile from './components/Doctor/PatientProfile';
 import RequestLabTest from './components/Doctor/RequestLabTest';
 import PrescriptionsTab from './components/Doctor/PrescriptionsTab';
+import IssueMedical from './components/Doctor/IssueMedical';
+import ViewMedical from './components/Doctor/ViewMedical';
 
 // --- Doctor mock data & helpers ---
 const mockPatients = [
@@ -366,10 +368,12 @@ function App() {
           <Route path="pharmacist/inventory-search" element={<InventoryPage />} />
           <Route path="pharmacist/inventory-update" element={<UpdateInventory />} />
 
-          {/* Doctor Routes - FIXED */}
+          {/* Doctor Routes - UPDATED with Medical Routes */}
           <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />
           <Route path="doctor/patients" element={<PatientsTab patients={mockPatients} />} />
           <Route path="doctor/patients/:patientId" element={<PatientProfile />} />
+          <Route path="doctor/issue-medical/:patientId" element={<IssueMedical />} />
+          <Route path="doctor/view-medical/:medicalId" element={<ViewMedical />} />
           <Route path="doctor/request-test" element={<RequestLabTest pendingRequests={mockLabRequests} onSubmit={handleLabTestRequest} />} />
           <Route path="doctor/prescriptions" element={<PrescriptionsTab recentPrescriptions={mockPrescriptionHistory} onSubmit={handlePrescriptionSubmit} />} />
           <Route path="doctor/support" element={<SupportPage />} />

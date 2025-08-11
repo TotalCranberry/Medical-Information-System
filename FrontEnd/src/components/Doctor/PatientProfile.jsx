@@ -13,14 +13,18 @@ import {
   Medication as MedicationIcon,
   Science as ScienceIcon,
   Person as PersonIcon,
-  LocalHospital as VitalsIcon
+  LocalHospital as VitalsIcon,
+  MedicalServices as MedicalIcon,
+  Visibility as ViewIcon,
+  Send as SendIcon
 } from "@mui/icons-material";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import {
   fetchPatientProfile,
   fetchPatientVitals,
   savePatientVitals,
-  saveDiagnosis
+  saveDiagnosis,
+  fetchPatientMedicals
 } from "../../api/appointments";
 
 const PatientProfile = () => {
@@ -31,9 +35,11 @@ const PatientProfile = () => {
   // Get patient data from navigation state if available
   const patientFromState = location.state?.patient;
   const currentAppointmentId = location.state?.appointmentId;
+  const medicalIssued = location.state?.medicalIssued;
   
   const [patientData, setPatientData] = useState(patientFromState || null);
   const [vitals, setVitals] = useState([]);
+  const [medicals, setMedicals] = useState([]);
   const [currentVitals, setCurrentVitals] = useState({
     heightCm: '',
     weightKg: '',
@@ -49,6 +55,7 @@ const PatientProfile = () => {
   const [diagnosisNotes, setDiagnosisNotes] = useState('');
   const [recentDiagnoses, setRecentDiagnoses] = useState([]);
   const [loading, setLoading] = useState(!patientFromState);
+  const [loadingMedicals, setLoadingMedicals] = useState(false);
   const [error, setError] = useState(null);
   const [editingVitals, setEditingVitals] = useState(false);
   const [saving, setSaving] = useState(false);
@@ -62,6 +69,15 @@ const PatientProfile = () => {
     }
   }, [patientId, patientFromState]);
 
+  useEffect(() => {
+    if (medicalIssued) {
+      // Show success message when redirected after issuing medical
+      setError(null);
+      // Clear the success flag from location state
+      window.history.replaceState({}, document.title);
+    }
+  }, [medicalIssued]);
+
   const loadPatientData = async () => {
     try {
       setLoading(true);
@@ -73,6 +89,9 @@ const PatientProfile = () => {
       setPatientData(profileData.patient || profileData);
       setVitals(vitalsData);
       setRecentDiagnoses(profileData.recentDiagnoses || []);
+      
+      // Load medicals
+      await loadMedicals();
       
       // If there are existing vitals, populate the form with the latest values
       if (profileData.latestVitals) {
@@ -114,6 +133,9 @@ const PatientProfile = () => {
       setVitals(vitalsData);
       setRecentDiagnoses(profileData.recentDiagnoses || []);
       
+      // Load medicals
+      await loadMedicals();
+      
       if (vitalsData.length > 0) {
         const latestVitals = vitalsData[0];
         setCurrentVitals({
@@ -136,6 +158,22 @@ const PatientProfile = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  const loadMedicals = async () => {
+    try {
+      setLoadingMedicals(true);
+      const medicalsData = await fetchPatientMedicals(patientId);
+      setMedicals(medicalsData || []);
+    } catch (err) {
+      console.error("Error loading medicals:", err);
+      // Don't show error for medicals if it's just not implemented yet
+      if (!err.message.includes('404') && !err.message.includes('Not Found')) {
+        console.error("Failed to load medicals:", err.message);
+      }
+    } finally {
+      setLoadingMedicals(false);
     }
   };
 
@@ -246,6 +284,19 @@ const PatientProfile = () => {
     });
   };
 
+  const handleIssueMedical = () => {
+    navigate(`/doctor/issue-medical/${patientId}`, { 
+      state: { 
+        patient: patientData,
+        appointmentId: currentAppointmentId
+      }
+    });
+  };
+
+  const handleViewMedical = (medicalId) => {
+    navigate(`/doctor/view-medical/${medicalId}`);
+  };
+
   const getPatientAge = () => {
     const details = patientData?.patientDetails || patientData;
     if (details?.dateOfBirth) {
@@ -325,6 +376,12 @@ const PatientProfile = () => {
         </Alert>
       )}
 
+      {medicalIssued && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Medical certificate has been issued successfully!
+        </Alert>
+      )}
+
       <Grid container spacing={3}>
         {/* Patient Information */}
         <Grid item xs={12} md={4}>
@@ -365,7 +422,7 @@ const PatientProfile = () => {
               Quick Actions
             </Typography>
             <Grid container spacing={2}>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
                 <Button
                   fullWidth
                   variant="contained"
@@ -379,7 +436,7 @@ const PatientProfile = () => {
                   Write Prescription
                 </Button>
               </Grid>
-              <Grid item xs={12} sm={6}>
+              <Grid item xs={12} sm={4}>
                 <Button
                   fullWidth
                   variant="outlined"
@@ -395,6 +452,20 @@ const PatientProfile = () => {
                   }}
                 >
                   Request Lab Test
+                </Button>
+              </Grid>
+              <Grid item xs={12} sm={4}>
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={<MedicalIcon />}
+                  onClick={handleIssueMedical}
+                  sx={{
+                    backgroundColor: "#2196F3",
+                    "&:hover": { backgroundColor: "#1976D2" }
+                  }}
+                >
+                  Issue Medical
                 </Button>
               </Grid>
             </Grid>
@@ -627,7 +698,7 @@ const PatientProfile = () => {
 
           {/* Recent Diagnoses - Show if API is available and data exists */}
           {apiAvailable && recentDiagnoses && recentDiagnoses.length > 0 && (
-            <Paper elevation={2} sx={{ p: 3 }}>
+            <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
               <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600, mb: 2 }}>
                 Recent Diagnoses
               </Typography>
@@ -665,6 +736,131 @@ const PatientProfile = () => {
               </List>
             </Paper>
           )}
+
+          {/* Medical Certificates Section */}
+          <Paper elevation={2} sx={{ p: 3 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Box display="flex" alignItems="center">
+                <MedicalIcon sx={{ fontSize: 30, color: "#45d27a", mr: 1 }} />
+                <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
+                  Medical Certificates
+                </Typography>
+              </Box>
+              {loadingMedicals && (
+                <CircularProgress size={24} sx={{ color: "#45d27a" }} />
+              )}
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+
+            {medicals && medicals.length > 0 ? (
+              <List>
+                {medicals.map((medical, index) => (
+                  <ListItem 
+                    key={medical.id} 
+                    divider={index < medicals.length - 1}
+                    sx={{ 
+                      border: '1px solid #e0e0e0', 
+                      borderRadius: 1, 
+                      mb: 1,
+                      backgroundColor: '#fafafa'
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            Medical Certificate
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={medical.isSentToCourseUnit ? "Sent to Course Unit" : "Not Sent"}
+                            color={medical.isSentToCourseUnit ? "success" : "default"}
+                            variant={medical.isSentToCourseUnit ? "filled" : "outlined"}
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            <strong>Date:</strong> {formatDate(medical.medicalDate)}
+                          </Typography>
+                          <Typography 
+                            variant="body2" 
+                            color="text.secondary" 
+                            sx={{ 
+                              maxWidth: '100%',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical'
+                            }}
+                          >
+                            <strong>Recommendations:</strong> {medical.recommendations}
+                          </Typography>
+                          {medical.additionalNotes && (
+                            <Typography 
+                              variant="body2" 
+                              color="text.secondary" 
+                              sx={{ 
+                                mt: 0.5,
+                                maxWidth: '100%',
+                                overflow: 'hidden',
+                                textOverflow: 'ellipsis',
+                                display: '-webkit-box',
+                                WebkitLineClamp: 1,
+                                WebkitBoxOrient: 'vertical'
+                              }}
+                            >
+                              <strong>Notes:</strong> {medical.additionalNotes}
+                            </Typography>
+                          )}
+                          <Box display="flex" gap={1} mt={2}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<ViewIcon />}
+                              onClick={() => handleViewMedical(medical.id)}
+                              sx={{
+                                borderColor: "#45d27a",
+                                color: "#45d27a",
+                                "&:hover": {
+                                  backgroundColor: "#45d27a",
+                                  color: "#fff"
+                                }
+                              }}
+                            >
+                              View
+                            </Button>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<SendIcon />}
+                              disabled={medical.isSentToCourseUnit}
+                              sx={{
+                                borderColor: medical.isSentToCourseUnit ? "#ccc" : "#2196F3",
+                                color: medical.isSentToCourseUnit ? "#ccc" : "#2196F3",
+                                "&:hover": !medical.isSentToCourseUnit ? {
+                                  backgroundColor: "#2196F3",
+                                  color: "#fff"
+                                } : {}
+                              }}
+                            >
+                              {medical.isSentToCourseUnit ? "Sent" : "Send to Course Unit"}
+                            </Button>
+                          </Box>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : !loadingMedicals ? (
+              <Alert severity="info">
+                No medical certificates have been issued for this patient yet.
+              </Alert>
+            ) : null}
+          </Paper>
         </Grid>
       </Grid>
     </Box>
