@@ -21,10 +21,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.mis.dto.DiagnosisRequest;
+import com.mis.dto.MedicalRequest;
 import com.mis.dto.VitalsRequest;
 import com.mis.model.Appointment;
 import com.mis.model.AppointmentStatus;
 import com.mis.model.Diagnosis;
+import com.mis.model.Medical;
 import com.mis.model.Role;
 import com.mis.model.Staff;
 import com.mis.model.Student;
@@ -32,6 +34,7 @@ import com.mis.model.User;
 import com.mis.model.Vitals;
 import com.mis.repository.AppointmentRepository;
 import com.mis.repository.DiagnosisRepository;
+import com.mis.repository.MedicalRepository;
 import com.mis.repository.StaffRepository;
 import com.mis.repository.StudentRepository;
 import com.mis.repository.UserRepository;
@@ -47,16 +50,19 @@ public class DoctorController {
     private final UserRepository userRepository;
     private final VitalsRepository vitalsRepository;
     private final DiagnosisRepository diagnosisRepository;
+    private final MedicalRepository medicalRepository;
     private final StudentRepository studentRepository;
     private final StaffRepository staffRepository;
 
     public DoctorController(AppointmentRepository appointmentRepository, UserRepository userRepository,
                           VitalsRepository vitalsRepository, DiagnosisRepository diagnosisRepository,
-                          StudentRepository studentRepository, StaffRepository staffRepository) {
+                          MedicalRepository medicalRepository, StudentRepository studentRepository, 
+                          StaffRepository staffRepository) {
         this.appointmentRepository = appointmentRepository;
         this.userRepository = userRepository;
         this.vitalsRepository = vitalsRepository;
         this.diagnosisRepository = diagnosisRepository;
+        this.medicalRepository = medicalRepository;
         this.studentRepository = studentRepository;
         this.staffRepository = staffRepository;
     }
@@ -161,11 +167,16 @@ public class DoctorController {
         List<Diagnosis> recentDiagnoses = diagnosisRepository.findByPatientOrderByDiagnosisDateDesc(patient)
                 .stream().limit(10).toList();
         
+        // Get recent medicals
+        List<Medical> recentMedicals = medicalRepository.findByPatientOrderByMedicalDateDesc(patient)
+                .stream().limit(10).toList();
+        
         Map<String, Object> profile = new HashMap<>();
         profile.put("patient", patient);
         profile.put("patientDetails", patientDetails);
         profile.put("latestVitals", latestVitals);
         profile.put("recentDiagnoses", recentDiagnoses);
+        profile.put("recentMedicals", recentMedicals);
         
         return ResponseEntity.ok(profile);
     }
@@ -243,5 +254,118 @@ public class DoctorController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Error saving diagnosis: " + e.getMessage()));
         }
+    }
+
+    // Medical Endpoints
+    @PostMapping("/patients/{patientId}/medical")
+    public ResponseEntity<?> issueMedical(Authentication authentication,
+                                        @PathVariable String patientId,
+                                        @RequestBody @Valid MedicalRequest request) {
+        try {
+            String doctorId = authentication.getName();
+            User patient = userRepository.findById(patientId)
+                    .orElseThrow(() -> new RuntimeException("Patient not found"));
+            
+            // Get patient details based on role
+            Integer patientAge = null;
+            String patientFaculty = null;
+            
+            if (patient.getRole() == Role.Student) {
+                Student studentDetails = studentRepository.findById(patientId).orElse(null);
+                if (studentDetails != null) {
+                    patientFaculty = studentDetails.getFaculty();
+                    patientAge = calculateAge(studentDetails.getDateOfBirth());
+                }
+            } else if (patient.getRole() == Role.Staff) {
+                Staff staffDetails = staffRepository.findById(patientId).orElse(null);
+                if (staffDetails != null) {
+                    patientFaculty = staffDetails.getFaculty();
+                    patientAge = calculateAge(staffDetails.getDateOfBirth());
+                }
+            }
+            
+            Medical medical = new Medical();
+            medical.setId(UUID.randomUUID().toString());
+            medical.setPatient(patient);
+            medical.setDoctorId(doctorId);
+            medical.setPatientName(patient.getName());
+            medical.setPatientAge(patientAge);
+            medical.setPatientEmail(patient.getEmail());
+            medical.setPatientFaculty(patientFaculty);
+            medical.setPatientRole(patient.getRole().toString());
+            medical.setRecommendations(request.getRecommendations());
+            medical.setAdditionalNotes(request.getAdditionalNotes());
+            medical.setMedicalDate(new Date());
+            medical.setCreatedAt(new Date());
+            
+            // Link to appointment if provided
+            if (request.getAppointmentId() != null && !request.getAppointmentId().trim().isEmpty()) {
+                Appointment appointment = appointmentRepository.findById(request.getAppointmentId()).orElse(null);
+                medical.setAppointment(appointment);
+            }
+            
+            Medical savedMedical = medicalRepository.save(medical);
+            return ResponseEntity.ok(savedMedical);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Error issuing medical: " + e.getMessage()));
+        }
+    }
+
+    @GetMapping("/patients/{patientId}/medicals")
+    public ResponseEntity<List<Medical>> getPatientMedicals(@PathVariable String patientId) {
+        User patient = userRepository.findById(patientId)
+                .orElseThrow(() -> new RuntimeException("Patient not found"));
+        
+        List<Medical> medicals = medicalRepository.findByPatientOrderByMedicalDateDesc(patient);
+        return ResponseEntity.ok(medicals);
+    }
+
+    @GetMapping("/medicals/{medicalId}")
+    public ResponseEntity<Medical> getMedical(@PathVariable String medicalId) {
+        Medical medical = medicalRepository.findById(medicalId)
+                .orElseThrow(() -> new RuntimeException("Medical not found"));
+        return ResponseEntity.ok(medical);
+    }
+
+    @PutMapping("/medicals/{medicalId}/send-to-course-unit")
+    public ResponseEntity<?> sendMedicalToCourseUnit(Authentication authentication, @PathVariable String medicalId) {
+        try {
+            Medical medical = medicalRepository.findById(medicalId)
+                    .orElseThrow(() -> new RuntimeException("Medical not found"));
+            
+            if (medical.getIsSentToCourseUnit()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Medical has already been sent to course unit"));
+            }
+            
+            medical.setIsSentToCourseUnit(true);
+            medical.setSentToCourseUnitAt(new Date());
+            
+            Medical updatedMedical = medicalRepository.save(medical);
+            return ResponseEntity.ok(Map.of(
+                "message", "Medical sent to course unit successfully",
+                "medical", updatedMedical
+            ));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Error sending medical to course unit: " + e.getMessage()));
+        }
+    }
+
+    // Helper method to calculate age from LocalDate
+    private Integer calculateAge(LocalDate dateOfBirth) {
+        if (dateOfBirth == null) return null;
+        
+        LocalDate currentDate = LocalDate.now();
+        return java.time.Period.between(dateOfBirth, currentDate).getYears();
+    }
+    
+    // Overloaded helper method to calculate age from Date (if needed elsewhere)
+    private Integer calculateAge(Date dateOfBirth) {
+        if (dateOfBirth == null) return null;
+        
+        LocalDate birthDate = dateOfBirth.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
+        return calculateAge(birthDate);
     }
 }
