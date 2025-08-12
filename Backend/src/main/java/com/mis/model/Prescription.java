@@ -14,7 +14,7 @@ public class Prescription {
 
     @ManyToOne
     @JoinColumn(name = "patient_id", nullable = false)
-    private Student patient;
+    private User patient;
 
     @ManyToOne
     @JoinColumn(name = "doctor_id", nullable = false)
@@ -39,11 +39,11 @@ public class Prescription {
         this.id = id;
     }
 
-    public Student getPatient() {
+    public User getPatient() {
         return patient;
     }
 
-    public void setPatient(Student patient) {
+    public void setPatient(User patient) {
         this.patient = patient;
     }
 
