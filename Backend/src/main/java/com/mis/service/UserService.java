@@ -2,6 +2,7 @@ package com.mis.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,7 +38,7 @@ public class UserService {
         this.staffRepository = staffRepository;
     }
 
-    @Transactional // Ensures all database operations succeed or fail together
+    @Transactional 
     public User register(User user, String rawPassword) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email already exists.");
@@ -192,15 +193,29 @@ public class UserService {
                 String domain = emailParts[1];
                 String[] domainParts = domain.split("\\.");
                 if (domainParts.length > 0) {
-                    return domainParts[0];
+                    String facultyCode = domainParts[0].toLowerCase();
+
+                    Map<String, String> facultyMap = Map.of(
+                        "agri", "Agriculture",
+                        "ahs", "Allied Health Sciences",
+                        "arts", "Arts",
+                        "dental", "Dental",
+                        "eng", "Engineering",
+                        "mgt", "Management",
+                        "med", "Medicine",
+                        "sci", "Science",
+                        "vet", "Veterinary Medicine and Animal Sciences"
+                    );
+
+                    return facultyMap.getOrDefault(facultyCode, facultyCode);
                 }
             }
         } catch (Exception e) {
-            // Log error
             System.err.println("Error extracting faculty from email: " + e.getMessage());
         }
         return null;
     }
+
 
     
     private Role determineRoleFromEmail(String email) {
