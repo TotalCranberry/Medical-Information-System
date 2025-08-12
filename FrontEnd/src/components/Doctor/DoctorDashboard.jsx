@@ -345,9 +345,6 @@ const DoctorDashboard = ({ doctor }) => {
                           <Typography variant="body2" sx={{ fontWeight: 500 }}>
                             {getPatientName(appointment.patient)}
                           </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            ID: {appointment.patient?.id || 'N/A'}
-                          </Typography>
                         </TableCell>
                         <TableCell>
                           <Typography variant="body2" noWrap sx={{ maxWidth: 200 }}>

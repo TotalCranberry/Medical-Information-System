@@ -1,0 +1,84 @@
+package com.mis.dto;
+
+public class PatientDTO {
+    private String id;
+    private String name;
+    private String email;
+    private String role;
+    private String faculty;
+    private Integer age;
+
+    // Default constructor
+    public PatientDTO() {}
+
+    // Constructor with all fields
+    public PatientDTO(String id, String name, String email, String role, String faculty, Integer age) {
+        this.id = id;
+        this.name = name;
+        this.email = email;
+        this.role = role;
+        this.faculty = faculty;
+        this.age = age;
+    }
+
+    // Getters and Setters
+    public String getId() {
+        return id;
+    }
+
+    public void setId(String id) {
+        this.id = id;
+    }
+
+    public String getName() {
+        return name;
+    }
+
+    public void setName(String name) {
+        this.name = name;
+    }
+
+    public String getEmail() {
+        return email;
+    }
+
+    public void setEmail(String email) {
+        this.email = email;
+    }
+
+    public String getRole() {
+        return role;
+    }
+
+    public void setRole(String role) {
+        this.role = role;
+    }
+
+    public String getFaculty() {
+        return faculty;
+    }
+
+    public void setFaculty(String faculty) {
+        this.faculty = faculty;
+    }
+
+    public Integer getAge() {
+        return age;
+    }
+
+    public void setAge(Integer age) {
+        this.age = age;
+    }
+
+    @Override
+    public String toString() {
+        return "PatientDTO{" +
+                "id='" + id + '\'' +
+                ", name='" + name + '\'' +
+                ", email='" + email + '\'' +
+                ", role='" + role + '\'' +
+                ", faculty='" + faculty + '\'' +
+                ", age=" + age +
+                '}';
+    }
+}

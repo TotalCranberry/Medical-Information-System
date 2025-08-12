@@ -1,20 +1,50 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box, Typography, Paper, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Grid, TextField,
-  Button, InputAdornment
+  Button, InputAdornment, CircularProgress, Alert, Chip
 } from "@mui/material";
-import SearchIcon from "@mui/icons-material/Search";
+import {
+  Search as SearchIcon,
+  Person as PersonIcon,
+  Visibility as ViewIcon,
+  ArrowBack as ArrowBackIcon
+} from "@mui/icons-material";
+import { useNavigate } from 'react-router-dom';
+import { fetchAllPatients } from "../../api/patients";
 
-const PatientsTab = ({ patients = [] }) => {
+const PatientsTab = () => {
+  const navigate = useNavigate();
   const [searchTerm, setSearchTerm] = useState("");
-  const [ageFilter, setAgeFilter] = useState("");
   const [facultyFilter, setFacultyFilter] = useState("");
-  const [filteredPatients, setFilteredPatients] = useState(patients);
+  const [allPatients, setAllPatients] = useState([]);
+  const [filteredPatients, setFilteredPatients] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [searchPerformed, setSearchPerformed] = useState(false);
+
+  useEffect(() => {
+    loadAllPatients();
+  }, []);
+
+  const loadAllPatients = async () => {
+    try {
+      setLoading(true);
+      const patientsData = await fetchAllPatients();
+      setAllPatients(patientsData);
+      setFilteredPatients(patientsData);
+      setError(null);
+    } catch (err) {
+      setError(err.message);
+      console.error("Error loading patients:", err);
+    } finally {
+      setLoading(false);
+    }
+  };
 
   // Handle search functionality
   const handleSearch = () => {
-    let filtered = patients;
+    let filtered = allPatients;
 
     // Filter by search term (name)
     if (searchTerm.trim()) {
@@ -23,29 +53,23 @@ const PatientsTab = ({ patients = [] }) => {
       );
     }
 
-    // Filter by age
-    if (ageFilter.trim()) {
-      filtered = filtered.filter(patient =>
-        patient.age.toString().includes(ageFilter)
-      );
-    }
-
     // Filter by faculty
     if (facultyFilter.trim()) {
       filtered = filtered.filter(patient =>
-        patient.faculty.toLowerCase().includes(facultyFilter.toLowerCase())
+        patient.faculty && patient.faculty.toLowerCase().includes(facultyFilter.toLowerCase())
       );
     }
 
     setFilteredPatients(filtered);
+    setSearchPerformed(true);
   };
 
   // Handle clear filters
   const handleClear = () => {
     setSearchTerm("");
-    setAgeFilter("");
     setFacultyFilter("");
-    setFilteredPatients(patients);
+    setFilteredPatients(allPatients);
+    setSearchPerformed(false);
   };
 
   // Handle enter key press in search fields
@@ -55,8 +79,51 @@ const PatientsTab = ({ patients = [] }) => {
     }
   };
 
+  const handleViewPatientProfile = (patient) => {
+    navigate(`/doctor/patients/${patient.id}`, {
+      state: { 
+        patient: patient
+      }
+    });
+  };
+
+  const getRoleChipColor = (role) => {
+    switch (role?.toLowerCase()) {
+      case 'student':
+        return 'primary';
+      case 'staff':
+        return 'secondary';
+      default:
+        return 'default';
+    }
+  };
+
+  const formatAge = (age) => {
+    if (age === null || age === undefined) return 'N/A';
+    return `${age} years`;
+  };
+
+  if (loading) {
+    return (
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={60} sx={{ color: "#45d27a" }} />
+      </Box>
+    );
+  }
+
   return (
     <Box>
+      {/* Header with Back Button */}
+      <Box display="flex" alignItems="center" mb={1}>
+        <Button
+          startIcon={<ArrowBackIcon />}
+          onClick={() => navigate('/doctor/dashboard')}
+          sx={{ mr: 2 }}
+        >
+          Back to Dashboard
+        </Button>
+      </Box>
+
       <Typography
         variant="h4"
         gutterBottom
@@ -68,8 +135,14 @@ const PatientsTab = ({ patients = [] }) => {
           textAlign: { xs: "center", md: "left" }
         }}
       >
-        Patients
+        Find Patients
       </Typography>
+
+      {error && (
+        <Alert severity="error" sx={{ mb: 3 }}>
+          {error}
+        </Alert>
+      )}
 
       <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
         {/* Search Bar */}
@@ -77,7 +150,7 @@ const PatientsTab = ({ patients = [] }) => {
           <Grid item xs={12} md={8}>
             <TextField
               fullWidth
-              placeholder="Search Patient name"
+              placeholder="Search by patient name"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={handleKeyPress}
@@ -108,18 +181,18 @@ const PatientsTab = ({ patients = [] }) => {
             <Button
               variant="contained"
               onClick={handleSearch}
+              fullWidth
               sx={{
                 backgroundColor: "#45d27a",
                 color: "#fff",
                 fontWeight: 600,
-                px: 4,
                 py: 1.5,
                 "&:hover": {
                   backgroundColor: "#3bc169",
                 },
               }}
             >
-              Search
+              Search Patients
             </Button>
           </Grid>
         </Grid>
@@ -136,41 +209,14 @@ const PatientsTab = ({ patients = [] }) => {
           >
             Search Filters
           </Typography>
-          <Grid container spacing={2}>
-            <Grid item xs={12} sm={6} md={3}>
-              <Typography variant="body2" sx={{ mb: 1, color: "#6c6b6b" }}>
-                Age
-              </Typography>
-              <TextField
-                fullWidth
-                placeholder="Enter age"
-                value={ageFilter}
-                onChange={(e) => setAgeFilter(e.target.value)}
-                onKeyPress={handleKeyPress}
-                type="number"
-                sx={{
-                  '& .MuiOutlinedInput-root': {
-                    backgroundColor: '#f8f9fa',
-                    '& fieldset': {
-                      borderColor: '#e0e0e0',
-                    },
-                    '&:hover fieldset': {
-                      borderColor: '#45d27a',
-                    },
-                    '&.Mui-focused fieldset': {
-                      borderColor: '#45d27a',
-                    },
-                  },
-                }}
-              />
-            </Grid>
-            <Grid item xs={12} sm={6} md={3}>
+          <Grid container spacing={2} alignItems="end">
+            <Grid item xs={12} sm={6} md={4}>
               <Typography variant="body2" sx={{ mb: 1, color: "#6c6b6b" }}>
                 Faculty
               </Typography>
               <TextField
                 fullWidth
-                placeholder="Enter faculty"
+                placeholder="Enter faculty name"
                 value={facultyFilter}
                 onChange={(e) => setFacultyFilter(e.target.value)}
                 onKeyPress={handleKeyPress}
@@ -191,23 +237,22 @@ const PatientsTab = ({ patients = [] }) => {
               />
             </Grid>
             <Grid item xs={12} sm={6} md={3}>
-              <Box sx={{ mt: { xs: 1, md: 3.5 } }}>
-                <Button
-                  variant="outlined"
-                  onClick={handleClear}
-                  sx={{
-                    borderColor: "#6c6b6b",
-                    color: "#6c6b6b",
-                    fontWeight: 500,
-                    "&:hover": {
-                      borderColor: "#45d27a",
-                      color: "#45d27a",
-                    },
-                  }}
-                >
-                  Clear Filters
-                </Button>
-              </Box>
+              <Button
+                variant="outlined"
+                onClick={handleClear}
+                sx={{
+                  borderColor: "#6c6b6b",
+                  color: "#6c6b6b",
+                  fontWeight: 500,
+                  height: "56px",
+                  "&:hover": {
+                    borderColor: "#45d27a",
+                    color: "#45d27a",
+                  },
+                }}
+              >
+                Clear Filters
+              </Button>
             </Grid>
           </Grid>
         </Box>
@@ -215,12 +260,28 @@ const PatientsTab = ({ patients = [] }) => {
 
       {/* Patients Table */}
       <Paper elevation={2} sx={{ p: 3 }}>
-        <TableContainer>
-          <Table>
+        <Box display="flex" alignItems="center" mb={2}>
+          <PersonIcon sx={{ fontSize: 30, color: "#45d27a", mr: 1 }} />
+          <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
+            {searchPerformed 
+              ? `Search Results (${filteredPatients.length} found)` 
+              : `All Patients (${filteredPatients.length})`
+            }
+          </Typography>
+        </Box>
+
+        <TableContainer sx={{ maxHeight: 600 }}>
+          <Table stickyHeader>
             <TableHead>
               <TableRow sx={{ backgroundColor: '#f8f9fa' }}>
                 <TableCell sx={{ fontWeight: 700, color: "#0c3c3c" }}>
                   Name
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, color: "#0c3c3c" }}>
+                  Email
+                </TableCell>
+                <TableCell sx={{ fontWeight: 700, color: "#0c3c3c" }}>
+                  Role
                 </TableCell>
                 <TableCell sx={{ fontWeight: 700, color: "#0c3c3c" }}>
                   Faculty
@@ -236,8 +297,14 @@ const PatientsTab = ({ patients = [] }) => {
             <TableBody>
               {filteredPatients.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center" sx={{ py: 4, color: "#6c6b6b" }}>
-                    {patients.length === 0 ? "No patients found" : "No patients match your search criteria"}
+                  <TableCell colSpan={6} align="center" sx={{ py: 4, color: "#6c6b6b" }}>
+                    {loading ? (
+                      <CircularProgress size={24} sx={{ color: "#45d27a" }} />
+                    ) : searchPerformed ? (
+                      "No patients match your search criteria"
+                    ) : (
+                      "No patients found in the system"
+                    )}
                   </TableCell>
                 </TableRow>
               ) : (
@@ -252,33 +319,49 @@ const PatientsTab = ({ patients = [] }) => {
                     }}
                   >
                     <TableCell sx={{ fontWeight: 500 }}>
-                      {patient.name}
+                      <Typography variant="body2" sx={{ fontWeight: 600 }}>
+                        {patient.name}
+                      </Typography>
                     </TableCell>
                     <TableCell sx={{ color: "#6c6b6b" }}>
-                      {patient.faculty}
+                      <Typography variant="body2">
+                        {patient.email || 'N/A'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell>
+                      <Chip
+                        label={patient.role}
+                        color={getRoleChipColor(patient.role)}
+                        size="small"
+                        variant="outlined"
+                      />
                     </TableCell>
                     <TableCell sx={{ color: "#6c6b6b" }}>
-                      {patient.age}
+                      <Typography variant="body2">
+                        {patient.faculty || 'N/A'}
+                      </Typography>
+                    </TableCell>
+                    <TableCell sx={{ color: "#6c6b6b" }}>
+                      <Typography variant="body2">
+                        {formatAge(patient.age)}
+                      </Typography>
                     </TableCell>
                     <TableCell>
                       <Button
                         size="small"
                         variant="contained"
-                        onClick={() => {
-                          // Handle view patient details
-                          console.log("View patient:", patient);
-                        }}
+                        startIcon={<ViewIcon />}
+                        onClick={() => handleViewPatientProfile(patient)}
                         sx={{
                           backgroundColor: "#45d27a",
                           color: "#fff",
                           fontWeight: 500,
-                          minWidth: "80px",
                           "&:hover": {
                             backgroundColor: "#3bc169",
                           },
                         }}
                       >
-                        View
+                        View Profile
                       </Button>
                     </TableCell>
                   </TableRow>
