@@ -5,8 +5,8 @@ import {
   Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Chip
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
-import { LocalizationProvider, DatePicker, TimePicker } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+//import { LocalizationProvider, DatePicker, TimePicker } from "@mui/x-date-pickers";
+//import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
 
 const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
   const [date, setDate] = useState(null);
