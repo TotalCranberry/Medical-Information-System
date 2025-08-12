@@ -30,8 +30,6 @@ public class ProfileController {
     public ResponseEntity<?> updateProfile(Authentication authentication, @Valid @RequestBody ProfileUpdateRequest request) {
         try {
             String userId = authentication.getName();
-            // FIX: Removed the unused 'updatedUser' variable.
-            // The service method is called, and then the response is fetched separately.
             userService.updateUserProfile(userId, request);
             UserResponse response = userService.getUserResponse(userId);
             return ResponseEntity.ok(

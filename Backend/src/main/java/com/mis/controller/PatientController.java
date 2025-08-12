@@ -68,19 +68,18 @@ public class PatientController {
         }
 
         Instant instant = request.getAppointmentDateTime().toInstant();
-        // Using a specific timezone is more reliable, e.g., ZoneId.of("Asia/Colombo")
         ZoneId zoneId = ZoneId.systemDefault(); 
         LocalDateTime ldt = instant.atZone(zoneId).toLocalDateTime();
 
         DayOfWeek day = ldt.getDayOfWeek();
         LocalTime time = ldt.toLocalTime();
 
-        // 2. Check for weekends
+        // Check for weekends
         if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {
             return ResponseEntity.badRequest().body(Map.of("message","Appointments cannot be booked on weekends."));
         }
 
-        // 3. Check for valid clinic hours
+        // Check for valid clinic hours
         LocalTime morningStart = LocalTime.of(9, 0);
         LocalTime morningEnd = LocalTime.of(12, 0);
         LocalTime afternoonStart = LocalTime.of(13, 30);
@@ -93,7 +92,7 @@ public class PatientController {
             return ResponseEntity.badRequest().body("Invalid appointment time. Please book between 9:00 AM - 12:00 PM or 1:30 PM - 4:00 PM.");
         }
 
-        // --- If all checks pass, create the appointment ---
+        // If all checks pass, create the appointment 
         String userId = authentication.getName();
         User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
 
