@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -26,11 +25,15 @@ import com.mis.dto.AppointmentRequest;
 import com.mis.model.Appointment;
 import com.mis.model.AppointmentStatus;
 import com.mis.model.Diagnosis;
+import com.mis.model.LabResult;
 import com.mis.model.Medical;
+import com.mis.model.Prescription;
 import com.mis.model.User;
 import com.mis.repository.AppointmentRepository;
 import com.mis.repository.DiagnosisRepository;
+import com.mis.repository.LabResultRepository;
 import com.mis.repository.MedicalRepository;
+import com.mis.repository.PrescriptionRepository;
 import com.mis.repository.UserRepository;
 
 import jakarta.validation.Valid;
@@ -42,14 +45,19 @@ public class PatientController {
     private final UserRepository userRepository;
     private final DiagnosisRepository diagnosisRepository;
     private final MedicalRepository medicalRepository;
+    private final PrescriptionRepository prescriptionRepository;
+    private final LabResultRepository labResultRepository;
 
-    public PatientController(AppointmentRepository appointmentRepository, UserRepository userRepository,
-                             DiagnosisRepository diagnosisRepository, MedicalRepository medicalRepository) {
+    public PatientController(AppointmentRepository appointmentRepository, DiagnosisRepository diagnosisRepository, LabResultRepository labResultRepository, MedicalRepository medicalRepository, PrescriptionRepository prescriptionRepository, UserRepository userRepository) {
         this.appointmentRepository = appointmentRepository;
-        this.userRepository = userRepository;
         this.diagnosisRepository = diagnosisRepository;
+        this.labResultRepository = labResultRepository;
         this.medicalRepository = medicalRepository;
+        this.prescriptionRepository = prescriptionRepository;
+        this.userRepository = userRepository;
     }
+
+    
 
     @GetMapping("/appointments")
     public ResponseEntity<List<?>> getAppointments(Authentication authentication) {
@@ -133,19 +141,20 @@ public class PatientController {
         return ResponseEntity.ok().body(Map.of("message","Appointment cancelled successfully."));
     }
 
-    // Placeholder for fetching prescriptions.
     @GetMapping("/prescriptions")
-    public ResponseEntity<List<?>> getPrescriptions() {
-        // TODO: Add logic to fetch real prescription data.
-        System.out.println("GET /api/patient/prescriptions was called");
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<List<Prescription>> getPrescriptions(Authentication authentication) {
+        String userId = authentication.getName();
+        User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
+        List<Prescription> prescriptions = prescriptionRepository.findByPatientOrderByCreatedAtDesc(patient);
+        return ResponseEntity.ok(prescriptions);
     }
 
     @GetMapping("/reports")
-    public ResponseEntity<List<?>> getReports(Authentication authentication) {
-        // TODO: Add logic to fetch real reports data.
-        System.out.println("GET /api/patient/reports was called");
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<List<LabResult>> getReports(Authentication authentication) {
+        String userId = authentication.getName();
+        User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
+        List<LabResult> labResults = labResultRepository.findByPatientOrderByCreatedAtDesc(patient); 
+        return ResponseEntity.ok(labResults);
     }
 
     @GetMapping("/reports/diagnoses")
