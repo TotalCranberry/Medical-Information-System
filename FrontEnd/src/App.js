@@ -29,7 +29,7 @@ import BackgroundImg from './assets/Background.jpeg';
 // API
 import { getProfile } from "./api/auth";
 import { fetchAppointments, createAppointment, cancelAppointment } from "./api/appointments";
-import { fetchReports, fetchPrescriptions } from "./api/reports";
+import { fetchDiagnoses, fetchMedicals, fetchPrescriptions, fetchReports} from "./api/reports";
 
 // Patient pages
 import LoginPage from "./components/Patient/LoginPage";
@@ -247,6 +247,8 @@ const MainLayout = ({ user, onLogout }) => {
 function App() {
   const [user, setUser] = useState(null);
   const [appointments, setAppointments] = useState([]);
+  const [diagnoses, setDiagnoses] = useState([]);
+  const [medicals, setMedicals] = useState([]);
   const [reports, setReports] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -272,16 +274,19 @@ function App() {
 
       // Load patient data if Student/Staff
       if (profileData.role === 'Student' || profileData.role === 'Staff') {
-        const [appointmentsData, reportsData, prescriptionsData] = await Promise.all([
+        const [appointmentsData, diagnosesData, medicalsData, reportsData, prescriptionsData] = await Promise.all([
           fetchAppointments(),
-          fetchReports(),
+          fetchDiagnoses(),
+          fetchMedicals(),
           fetchPrescriptions(),
+          fetchReports()
         ]);
         setAppointments(appointmentsData);
-        setReports(reportsData);
+        setDiagnoses(diagnosesData);
+        setMedicals(medicalsData);
         setPrescriptions(prescriptionsData);
+        setReports(reportsData); 
       }
-      // For Doctor/Pharmacist, data is either handled in their pages or via mocks above
     } catch (error) {
       console.error("Failed to fetch user data:", error);
       handleLogout();
@@ -292,7 +297,7 @@ function App() {
 
   useEffect(() => {
     fetchAllUserData();
-  }, [fetchAllUserData]);
+  }, []);
 
   const handleProfileUpdate = (updatedUser) => {
     setUser(currentUser => ({ ...currentUser, ...updatedUser }));
@@ -366,9 +371,10 @@ function App() {
           <Route path="profile" element={<ProfilePage user={user} onProfileUpdate={handleProfileUpdate} />} />
 
           {/* Patient Routes */}
-          <Route path="patient/dashboard" element={<DashboardTab user={user} appointments={appointments} reports={reports} prescriptions={prescriptions} />} />
+          <Route path="patient/dashboard" element={<DashboardTab user={user} appointments={appointments} medicals={medicals} diagnoses={diagnoses} reports={reports} prescriptions={prescriptions} />} />
           <Route path="patient/appointments" element={<AppointmentsTab appointments={appointments} onBookSuccess={handleBookAppointment} onCancel={handleCancelAppointment} />} />
-          <Route path="patient/reports" element={<ReportsTab history={reports} labs={reports} prescriptions={prescriptions} />} />
+          <Route path="patient/reports" element={<ReportsTab diagnoses={diagnoses} medicals={medicals} prescriptions={prescriptions} />} />
+          <Route path="patient/view-medical/:medicalId" element={<ViewMedical />} />
           <Route path="patient/support" element={<SupportPage />} />
           <Route path="patient/faq" element={<FAQPage />} />
 
