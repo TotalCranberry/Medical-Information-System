@@ -61,7 +61,43 @@ const PatientProfile = () => {
   const [saving, setSaving] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(true);
 
+  // Helper function to safely get patient information with multiple fallbacks
+  const getPatientInfo = (field) => {
+    if (!patientData) return 'N/A';
+    
+    // Try direct access first
+    if (patientData[field] !== undefined && patientData[field] !== null) {
+      return patientData[field];
+    }
+    
+    // Try patientDetails nested object
+    if (patientData.patientDetails && patientData.patientDetails[field] !== undefined && patientData.patientDetails[field] !== null) {
+      return patientData.patientDetails[field];
+    }
+    
+    // Try user nested object (in case patient data is nested under user)
+    if (patientData.user && patientData.user[field] !== undefined && patientData.user[field] !== null) {
+      return patientData.user[field];
+    }
+
+    // Special handling for faculty - might be stored as different property names
+    if (field === 'faculty') {
+      return patientData.Faculty || patientData.department || patientData.patientDetails?.Faculty || patientData.patientDetails?.department || 'N/A';
+    }
+
+    // Special handling for age - might need calculation from dateOfBirth
+    if (field === 'age') {
+      const age = getPatientAge();
+      return age !== null ? age : 'N/A';
+    }
+
+    return 'N/A';
+  };
+
   useEffect(() => {
+    console.log('Patient data from state:', patientFromState);
+    console.log('Patient ID from params:', patientId);
+    
     if (!patientFromState) {
       loadPatientData();
     } else {
@@ -85,6 +121,8 @@ const PatientProfile = () => {
         fetchPatientProfile(patientId),
         fetchPatientVitals(patientId)
       ]);
+      
+      console.log('Loaded patient profile data:', profileData);
       
       setPatientData(profileData.patient || profileData);
       setVitals(vitalsData);
@@ -125,10 +163,24 @@ const PatientProfile = () => {
 
   const loadAdditionalData = async () => {
     try {
+      console.log('Loading additional data for patient:', patientData);
+      
       const [profileData, vitalsData] = await Promise.all([
         fetchPatientProfile(patientId),
         fetchPatientVitals(patientId)
       ]);
+      
+      console.log('Additional profile data loaded:', profileData);
+      
+      // Merge the data from API with the data from state
+      const mergedPatientData = {
+        ...patientData, // Start with state data
+        ...profileData.patient, // Override with API data if available
+        ...profileData, // In case the patient data is at root level
+      };
+      
+      console.log('Merged patient data:', mergedPatientData);
+      setPatientData(mergedPatientData);
       
       setVitals(vitalsData);
       setRecentDiagnoses(profileData.recentDiagnoses || []);
@@ -298,10 +350,19 @@ const PatientProfile = () => {
   };
 
   const getPatientAge = () => {
-    const details = patientData?.patientDetails || patientData;
-    if (details?.dateOfBirth) {
+    if (!patientData) return null;
+    
+    // Try to get age directly
+    const directAge = patientData.age || patientData.patientDetails?.age || patientData.user?.age;
+    if (directAge !== undefined && directAge !== null) {
+      return directAge;
+    }
+    
+    // Try to calculate from dateOfBirth
+    const dob = patientData.dateOfBirth || patientData.patientDetails?.dateOfBirth || patientData.user?.dateOfBirth;
+    if (dob) {
       const today = new Date();
-      const birthDate = new Date(details.dateOfBirth);
+      const birthDate = new Date(dob);
       let age = today.getFullYear() - birthDate.getFullYear();
       const monthDiff = today.getMonth() - birthDate.getMonth();
       if (monthDiff < 0 || (monthDiff === 0 && today.getDate() < birthDate.getDate())) {
@@ -309,7 +370,8 @@ const PatientProfile = () => {
       }
       return age;
     }
-    return details?.age || null;
+    
+    return null;
   };
 
   const formatDate = (dateString) => {
@@ -395,25 +457,22 @@ const PatientProfile = () => {
             <Divider sx={{ mb: 2 }} />
             
             <Typography variant="body1" gutterBottom>
-              <strong>Name:</strong> {patientData?.name || 'N/A'}
+              <strong>Name:</strong> {getPatientInfo('name')}
             </Typography>
             <Typography variant="body1" gutterBottom>
-              <strong>Email:</strong> {patientData?.email || 'N/A'}
+              <strong>Email:</strong> {getPatientInfo('email')}
             </Typography>
             <Typography variant="body1" gutterBottom>
-              <strong>Role:</strong> {patientData?.role || 'N/A'}
+              <strong>Role:</strong> {getPatientInfo('role')}
             </Typography>
             <Typography variant="body1" gutterBottom>
-              <strong>Faculty:</strong> {patientData?.faculty || patientData?.patientDetails?.faculty || 'N/A'}
+              <strong>Faculty:</strong> {getPatientInfo('faculty')}
             </Typography>
-            {getPatientAge() && (
-              <Typography variant="body1" gutterBottom>
-                <strong>Age:</strong> {getPatientAge()} years
-              </Typography>
-            )}
+            <Typography variant="body1" gutterBottom>
+              <strong>Age:</strong> {getPatientInfo('age')}
+            </Typography>
           </Paper>
         </Grid>
-
         {/* Main Content */}
         <Grid item xs={12} md={8}>
           {/* Action Buttons */}
