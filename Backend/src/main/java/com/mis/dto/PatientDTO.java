@@ -8,10 +8,8 @@ public class PatientDTO {
     private String faculty;
     private Integer age;
 
-    // Default constructor
     public PatientDTO() {}
 
-    // Constructor with all fields
     public PatientDTO(String id, String name, String email, String role, String faculty, Integer age) {
         this.id = id;
         this.name = name;
@@ -21,7 +19,6 @@ public class PatientDTO {
         this.age = age;
     }
 
-    // Getters and Setters
     public String getId() {
         return id;
     }

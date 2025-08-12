@@ -11,10 +11,8 @@ public class ProfileUpdateRequest {
     
     private LocalDate dateOfBirth;
     
-    // Constructors
     public ProfileUpdateRequest() {}
     
-    // Getters and Setters
     public String getName() {
         return name;
     }
