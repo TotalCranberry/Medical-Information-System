@@ -145,7 +145,7 @@ public class PatientController {
     public ResponseEntity<List<Prescription>> getPrescriptions(Authentication authentication) {
         String userId = authentication.getName();
         User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
-        List<Prescription> prescriptions = prescriptionRepository.findByPatientOrderByCreatedAtDesc(patient);
+        List<Prescription> prescriptions = prescriptionRepository.findByPatient(patient);
         return ResponseEntity.ok(prescriptions);
     }
 

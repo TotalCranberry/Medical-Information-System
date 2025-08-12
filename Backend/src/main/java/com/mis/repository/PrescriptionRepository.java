@@ -11,5 +11,4 @@ import com.mis.model.User;
 public interface PrescriptionRepository extends JpaRepository<Prescription, Long> {
     List<Prescription> findByPatient(User patient);
     List<Prescription> findByDoctor(Doctor doctor);
-    List<Prescription> findByPatientOrderByCreatedAtDesc(User patient);
 }
