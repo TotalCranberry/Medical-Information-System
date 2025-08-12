@@ -13,7 +13,6 @@ const ReportsTab = ({
 }) => {
   const theme = useTheme();
 
-  // Helper function to get chip color based on status
   const getStatusChipColor = (status) => {
     if (!status) return "default";
     const s = status.toLowerCase();
