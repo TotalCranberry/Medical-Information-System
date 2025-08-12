@@ -25,8 +25,12 @@ import org.springframework.web.bind.annotation.RestController;
 import com.mis.dto.AppointmentRequest;
 import com.mis.model.Appointment;
 import com.mis.model.AppointmentStatus;
+import com.mis.model.Diagnosis;
+import com.mis.model.Medical;
 import com.mis.model.User;
 import com.mis.repository.AppointmentRepository;
+import com.mis.repository.DiagnosisRepository;
+import com.mis.repository.MedicalRepository;
 import com.mis.repository.UserRepository;
 
 import jakarta.validation.Valid;
@@ -36,10 +40,15 @@ public class PatientController {
 
     private final AppointmentRepository appointmentRepository;
     private final UserRepository userRepository;
+    private final DiagnosisRepository diagnosisRepository;
+    private final MedicalRepository medicalRepository;
 
-    public PatientController(AppointmentRepository appointmentRepository, UserRepository userRepository) {
+    public PatientController(AppointmentRepository appointmentRepository, UserRepository userRepository,
+                             DiagnosisRepository diagnosisRepository, MedicalRepository medicalRepository) {
         this.appointmentRepository = appointmentRepository;
         this.userRepository = userRepository;
+        this.diagnosisRepository = diagnosisRepository;
+        this.medicalRepository = medicalRepository;
     }
 
     @GetMapping("/appointments")
@@ -132,11 +141,35 @@ public class PatientController {
         System.out.println("GET /api/patient/prescriptions was called");
         return ResponseEntity.ok(Collections.emptyList());
     }
+
     @GetMapping("/reports")
-    public ResponseEntity<List<?>> getPatientReports() {
-        // TODO: Add logic here to fetch real medical reports from the database.
+    public ResponseEntity<List<?>> getReports(Authentication authentication) {
+        // TODO: Add logic to fetch real reports data.
         System.out.println("GET /api/patient/reports was called");
         return ResponseEntity.ok(Collections.emptyList());
+    }
+
+    @GetMapping("/reports/diagnoses")
+    public ResponseEntity<List<Diagnosis>> getPatientDiagnoses(Authentication authentication) {
+        String userId = authentication.getName();
+        User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
+        List<Diagnosis> diagnoses = diagnosisRepository.findByPatientOrderByDiagnosisDateDesc(patient);
+        return ResponseEntity.ok(diagnoses);
+    }
+
+    @GetMapping("/reports/medicals")
+    public ResponseEntity<List<Medical>> getPatientMedicals(Authentication authentication) {
+        String userId = authentication.getName();
+        User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
+        List<Medical> medicals = medicalRepository.findByPatientOrderByMedicalDateDesc(patient);
+        return ResponseEntity.ok(medicals);
+    }
+
+    @GetMapping("/view-medical/{medicalId}")
+    public ResponseEntity<Medical> getMedical(@PathVariable String medicalId) {
+        Medical medical = medicalRepository.findById(medicalId)
+                .orElseThrow(() -> new RuntimeException("Medical not found"));
+        return ResponseEntity.ok(medical);
     }
 
 }

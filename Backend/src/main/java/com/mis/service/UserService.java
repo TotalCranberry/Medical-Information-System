@@ -2,6 +2,7 @@ package com.mis.service;
 
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
@@ -37,7 +38,7 @@ public class UserService {
         this.staffRepository = staffRepository;
     }
 
-    @Transactional // Ensures all database operations succeed or fail together
+    @Transactional 
     public User register(User user, String rawPassword) {
         if (userRepository.findByEmail(user.getEmail()).isPresent()) {
             throw new IllegalArgumentException("Email already exists.");
@@ -48,16 +49,15 @@ public class UserService {
         user.setLastLogin(LocalDateTime.now());
         User savedUser = userRepository.save(user);
 
-        // FIX: Create the corresponding Student or Staff record upon registration
         String faculty = extractFacultyFromEmail(savedUser.getEmail());
         if (savedUser.getRole() == Role.Student) {
             Student student = new Student();
-            student.setUser(savedUser); // This links the student to the user
+            student.setUser(savedUser); 
             student.setFaculty(faculty);
             studentRepository.save(student);
         } else if (savedUser.getRole() == Role.Staff) {
             Staff staff = new Staff();
-            staff.setUser(savedUser); // This links the staff to the user
+            staff.setUser(savedUser); 
             staff.setFaculty(faculty);
             staffRepository.save(staff);
         }
@@ -145,7 +145,6 @@ public class UserService {
             staff = staffRepository.findById(user.getId()).orElse(null);
         }
         
-        // FIX: Call the new mapper method with all the necessary data
         return UserMapper.toUserResponse(user, student, staff);
     }
 
@@ -187,11 +186,6 @@ public class UserService {
         userRepository.save(user);
     }
 
-    /**
-     * Extracts faculty from email domain (first part before first dot)
-     * @param email The user's email
-     * @return The faculty code
-     */
     private String extractFacultyFromEmail(String email) {
         try {
             String[] emailParts = email.split("@");
@@ -199,29 +193,41 @@ public class UserService {
                 String domain = emailParts[1];
                 String[] domainParts = domain.split("\\.");
                 if (domainParts.length > 0) {
-                    return domainParts[0];
+                    String facultyCode = domainParts[0].toLowerCase();
+
+                    Map<String, String> facultyMap = Map.of(
+                        "agri", "Agriculture",
+                        "ahs", "Allied Health Sciences",
+                        "arts", "Arts",
+                        "dental", "Dental",
+                        "eng", "Engineering",
+                        "mgt", "Management",
+                        "med", "Medicine",
+                        "sci", "Science",
+                        "vet", "Veterinary Medicine and Animal Sciences"
+                    );
+
+                    return facultyMap.getOrDefault(facultyCode, facultyCode);
                 }
             }
         } catch (Exception e) {
-            // Log error
             System.err.println("Error extracting faculty from email: " + e.getMessage());
         }
         return null;
     }
 
-    /**
-     * Determines role based on email prefix (contains numbers = Student, no numbers = Staff)
-     * @param email The user's email
-     * @return The determined role
-     */
+
+    
     private Role determineRoleFromEmail(String email) {
         try {
             String localPart = email.split("@")[0];
-            boolean isStudent = localPart.matches(".*\\d.*");
+            // Check for 5 consecutive digits
+            boolean isStudent = localPart.matches(".*\\d{5}.*");
             return isStudent ? Role.Student : Role.Staff;
         } catch (Exception e) {
             // Default to Student if unable to determine
             return Role.Student;
         }
     }
+
 }
