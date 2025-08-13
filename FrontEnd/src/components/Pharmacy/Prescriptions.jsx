@@ -4,7 +4,7 @@ import {
   Table, TableHead, TableRow, TableCell, TableBody, Checkbox
 } from "@mui/material";
 
-// Inventory object
+
 const initialInventory = {
   Paracetamol: {
     stock: 1200,
@@ -20,7 +20,7 @@ const initialInventory = {
   }
 };
 
-// Initial request time is captured when component loads
+
 const initialRequests = [
   {
     id: 1,
@@ -115,7 +115,7 @@ const PrescriptionsPage = () => {
         Prescriptions
       </Typography>
 
-      {/* Summary Cards */}
+
       <Grid container spacing={4} justifyContent="center" mb={5}>
         {Object.entries(summary).map(([key, value]) => (
           <Grid item key={key}>
@@ -131,7 +131,7 @@ const PrescriptionsPage = () => {
         ))}
       </Grid>
 
-      {/* Tabs */}
+
       <Box display="flex" justifyContent="center" mb={3} gap={2}>
         {["Requests", "Pending", "Fulfilled"].map((label) => (
           <Button
@@ -151,11 +151,11 @@ const PrescriptionsPage = () => {
         ))}
       </Box>
 
-      {/* Main Table */}
+
       <Paper elevation={4} sx={{ p: 4, borderRadius: 3 }}>
         {tab === "Pending" && selectedPrescription ? (
           <>
-            {/* Prescription Preview */}
+
             <Box ref={printRef} sx={{ border: "1px solid #ccc", borderRadius: 2, padding: 4, backgroundColor: "#fdfdfd", mb: 4 }}>
               <Typography variant="h6">Prescription for {selectedPrescription.name}</Typography>
               <Typography><strong>Patient ID:</strong> P-{selectedPrescription.id.toString().padStart(4, "0")}</Typography>
@@ -204,7 +204,6 @@ const PrescriptionsPage = () => {
               </Box>
             </Box>
 
-            {/* Checkboxes */}
             <Box mb={3}>
               <Typography variant="h6">Dispense Medicines</Typography>
               {selectedPrescription.prescription.map((item, i) => {
@@ -225,7 +224,7 @@ const PrescriptionsPage = () => {
               })}
             </Box>
 
-            {/* Inventory Auto-suggest + Table */}
+
             <Box mb={4}>
               <Typography variant="h6" gutterBottom>Search Inventory</Typography>
               <Box sx={{ position: "relative", mb: 2 }}>
@@ -269,7 +268,7 @@ const PrescriptionsPage = () => {
               </Table>
             </Box>
 
-            {/* Remarks + Buttons */}
+
             <Box mb={4}>
               <Typography variant="h6">Remarks</Typography>
               <textarea

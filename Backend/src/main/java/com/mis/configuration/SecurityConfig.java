@@ -6,6 +6,8 @@ import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import static org.springframework.security.config.Customizer.withDefaults;
+
+import org.springframework.http.HttpMethod;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -29,34 +31,50 @@ public class SecurityConfig {
     @Bean
     public SecurityFilterChain filterChain(HttpSecurity http) throws Exception {
         http
-            .cors(withDefaults())
-            .csrf(csrf -> csrf.disable())
-            .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
-            .authorizeHttpRequests(auth -> auth
-                // Public authentication endpoints
-                .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/google").permitAll()
-                
-                // Public error page
-                .requestMatchers("/error").permitAll()
+                .cors(withDefaults())
+                .csrf(csrf -> csrf.disable())
+                .sessionManagement(session -> session.sessionCreationPolicy(SessionCreationPolicy.STATELESS))
+                .authorizeHttpRequests(auth -> auth
+                        // Public authentication endpoints
+                        .requestMatchers("/api/auth/login", "/api/auth/register", "/api/auth/google").permitAll()
 
-                // Profile endpoints accessible by any authenticated user
-                .requestMatchers("/api/auth/profile", "/api/profile/**").authenticated()
+                        // Public error page
+                        .requestMatchers("/error").permitAll()
 
-                // Support request endpoint accessible by any authenticated user
-                .requestMatchers("/api/support/**").authenticated()
+                        // Profile endpoints accessible by any authenticated user
+                        .requestMatchers("/api/auth/profile", "/api/profile/**").authenticated()
 
-                // Admin-specific endpoints
-                .requestMatchers("/api/support/tickets").hasAuthority("ROLE_Admin")
+                        // Support request endpoint accessible by any authenticated user
+                        .requestMatchers("/api/support/**").authenticated()
 
-                // Role-specific endpoints
-                .requestMatchers("/api/patient/**").hasAnyAuthority("ROLE_Student", "ROLE_Staff")
-                .requestMatchers("/api/doctor/**").hasAuthority("ROLE_Doctor")
-                    .requestMatchers("/api/medicines/**").hasAuthority("ROLE_Pharmacist")
+                        // Admin-specific endpoints
+                        .requestMatchers("/api/support/tickets").hasAuthority("ROLE_Admin")
 
-                // Any other request must be authenticated.
-                .anyRequest().authenticated()
-            )
-            .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
+                        // Role-specific endpoints
+                        .requestMatchers("/api/patient/**").hasAnyAuthority("ROLE_Student", "ROLE_Staff")
+                        .requestMatchers("/api/doctor/**").hasAuthority("ROLE_Doctor")
+
+                        // Medicine endpoints (Pharmacist only)
+                        .requestMatchers("/api/medicines/**").hasAuthority("ROLE_Pharmacist")
+                        .requestMatchers(HttpMethod.GET, "/api/medicines/**")
+                        .hasAnyAuthority("ROLE_Doctor", "ROLE_Pharmacist")
+
+                        // Prescription endpoints (Doctor and Pharmacist)
+                        .requestMatchers("/api/prescriptions/create").hasAuthority("ROLE_Doctor")
+                        .requestMatchers("/api/prescriptions/doctor/**").hasAuthority("ROLE_Doctor")
+                        .requestMatchers("/api/prescriptions/patient/**").hasAuthority("ROLE_Doctor")
+                        .requestMatchers("/api/prescriptions/appointment/**").hasAuthority("ROLE_Doctor")
+                        .requestMatchers("/api/prescriptions/pharmacy/**").hasAuthority("ROLE_Pharmacist")
+                        .requestMatchers("/api/prescriptions/status/**").hasAuthority("ROLE_Pharmacist")
+                        .requestMatchers("/api/prescriptions/*/status").hasAuthority("ROLE_Pharmacist")
+                        .requestMatchers("/api/prescriptions/overdue").hasAuthority("ROLE_Pharmacist")
+                        .requestMatchers("/api/prescriptions/statistics").hasAuthority("ROLE_Pharmacist")
+                        .requestMatchers("/api/prescriptions/**").hasAnyAuthority("ROLE_Doctor", "ROLE_Pharmacist")
+
+                        // Any other request must be authenticated.
+                        .anyRequest().authenticated()
+                )
+                .addFilterBefore(jwtTokenFilter, UsernamePasswordAuthenticationFilter.class);
 
         return http.build();
     }
