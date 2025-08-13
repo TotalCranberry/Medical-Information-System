@@ -18,7 +18,7 @@ public class Prescription {
 
     @ManyToOne
     @JoinColumn(name = "doctor_id", nullable = false)
-    private Doctor doctor;
+    private User doctor;
 
     @Column(name = "issued_at", nullable = false)
     private LocalDateTime issuedAt;
@@ -47,11 +47,11 @@ public class Prescription {
         this.patient = patient;
     }
 
-    public Doctor getDoctor() {
+    public User getDoctor() {
         return doctor;
     }
 
-    public void setDoctor(Doctor doctor) {
+    public void setDoctor(User doctor) {
         this.doctor = doctor;
     }
 
