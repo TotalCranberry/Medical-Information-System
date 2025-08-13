@@ -130,8 +130,6 @@ const navLinksConfig = {
   doctor: [
     { label: "Dashboard", path: "/doctor/dashboard", icon: <DashboardIcon /> },
     { label: "Patients", path: "/doctor/patients", icon: <PeopleIcon /> },
-    { label: "Request Test", path: "/doctor/request-test", icon: <ScienceIcon /> },
-    { label: "Prescriptions", path: "/doctor/prescriptions", icon: <MedicationIcon /> },
     { label: "Support", path: "/doctor/support", icon: <ContactSupportIcon /> },
   ],
   pharmacist: [
