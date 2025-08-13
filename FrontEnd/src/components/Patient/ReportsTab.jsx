@@ -93,7 +93,6 @@ const ReportsTab = ({
                   <TableRow>
                     <TableCell>Date Issued</TableCell>
                     <TableCell>Recommendations</TableCell>
-                    <TableCell>View/Download</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
@@ -110,18 +109,6 @@ const ReportsTab = ({
                           {new Date(medical.medicalDate).toLocaleDateString()}
                         </TableCell>
                         <TableCell>{medical.recommendations}</TableCell>
-                        <TableCell>
-                          <Link
-                            component={RouterLink}
-                            to={`/patient/view-medical/${medical.id}`}
-                            sx={{
-                              color: theme.palette.secondary.main,
-                              cursor: "pointer",
-                            }}
-                          >
-                            View
-                          </Link>
-                        </TableCell>
                       </TableRow>
                     ))
                   )}

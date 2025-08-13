@@ -42,7 +42,7 @@ public class LabResult {
     @Enumerated(EnumType.STRING)
     private LabStatus status;
 
-    @ManyToOne
+    @ManyToOne 
     @JoinColumn(name = "patient_id", nullable = false)
     private User patient;
 

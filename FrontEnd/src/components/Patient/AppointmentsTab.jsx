@@ -60,14 +60,13 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
     handleCloseCancelDialog();
   };
 
-  // Disable weekends and past dates
   const disableWeekends = (date) => {
     const today = new Date();
     today.setHours(0, 0, 0, 0);
     const day = date.getDay();
     return (
-      date < today || // disable past dates
-      day === 0 || day === 6 // disable Sunday(0) and Saturday(6)
+      date < today || 
+      day === 0 || day === 6 
     );
   };
 
@@ -126,7 +125,7 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                     ampm={false}
                     slotProps={{
                       textField: {
-                        helperText: "Select a time between 8:00 AM - 12:00 PM and 1:00 PM - 4:00 PM",
+                        helperText: "Select a time between 9:00 AM - 12:00 PM and 1:00 PM - 4:00 PM",
                         required: true,
                         sx: { flexGrow: 1, minWidth: 120 },
                       },

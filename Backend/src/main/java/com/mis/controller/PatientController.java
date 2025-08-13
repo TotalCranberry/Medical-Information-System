@@ -72,7 +72,7 @@ public class PatientController {
     public ResponseEntity<?> createAppointment(Authentication authentication, @Valid @RequestBody AppointmentRequest request) {
         if (appointmentRepository.existsByAppointmentDateTime(request.getAppointmentDateTime())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("message","An appointment already exists at this time slot. Please choose another."));
+                    .body("An appointment already exists at this time slot. Please choose another.");
         }
 
         Instant instant = request.getAppointmentDateTime().toInstant();
