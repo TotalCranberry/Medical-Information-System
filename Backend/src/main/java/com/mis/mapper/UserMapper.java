@@ -17,7 +17,6 @@ public class UserMapper {
         return user;
     }
     
-    // FIX: This method is now overloaded to handle role-specific data
     public static UserResponse toUserResponse(User user, Student student, Staff staff) {
         UserResponse dto = new UserResponse();
         dto.setId(user.getId());
@@ -26,17 +25,15 @@ public class UserMapper {
         dto.setRole(user.getRole());
         dto.setAuthMethod(user.getAuthMethod());
 
-        // Populate fields from the Student object if it exists
         if (student != null) {
             dto.setFaculty(student.getFaculty());
             dto.setDateOfBirth(student.getDateOfBirth());
-            dto.setAge(student.getAge()); // This calls the dynamic getAge() method
+            dto.setAge(student.getAge()); 
         } 
-        // Populate fields from the Staff object if it exists
         else if (staff != null) {
             dto.setFaculty(staff.getFaculty());
             dto.setDateOfBirth(staff.getDateOfBirth());
-            dto.setAge(staff.getAge()); // This calls the dynamic getAge() method
+            dto.setAge(staff.getAge()); 
         }
         
         return dto;

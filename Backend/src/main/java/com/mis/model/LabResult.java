@@ -25,7 +25,7 @@ public class LabResult {
 
     @ManyToOne
     @JoinColumn(name = "uploaded_by", nullable = false)
-    private LabTechnician uploadedBy;
+    private User uploadedBy;
 
     @Column(columnDefinition = "TEXT")
     private String result;
@@ -42,9 +42,9 @@ public class LabResult {
     @Enumerated(EnumType.STRING)
     private LabStatus status;
 
-    @ManyToOne
+    @ManyToOne 
     @JoinColumn(name = "patient_id", nullable = false)
-    private Student patient;
+    private User patient;
 
     public Long getId() {
         return id;
@@ -62,11 +62,11 @@ public class LabResult {
         this.testName = testName;
     }
 
-    public LabTechnician getUploadedBy() {
+    public User getUploadedBy() {
         return uploadedBy;
     }
 
-    public void setUploadedBy(LabTechnician uploadedBy) {
+    public void setUploadedBy(User uploadedBy) {
         this.uploadedBy = uploadedBy;
     }
 
@@ -118,14 +118,14 @@ public class LabResult {
         this.status = status;
     }
 
-    public Student getPatient() {
+    public User getPatient() {
         return patient;
     }
 
-    public void setPatient(Student patient) {
+    public void setPatient(User patient) {
         this.patient = patient;
     }
 
-    // Getters & Setters
+    
     
 }

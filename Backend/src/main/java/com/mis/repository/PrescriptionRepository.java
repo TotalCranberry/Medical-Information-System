@@ -87,4 +87,7 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Stri
             "COUNT(CASE WHEN p.status = 'COMPLETED' THEN 1 END) as completed " +
             "FROM Prescription p WHERE p.doctorId = :doctorId AND p.isActive = true")
     Object[] getDoctorPrescriptionStatistics(@Param("doctorId") String doctorId);
+
+    List<Prescription> findByPatient(User patient);
 }
+

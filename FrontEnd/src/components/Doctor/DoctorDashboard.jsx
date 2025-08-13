@@ -41,7 +41,7 @@ const DoctorDashboard = ({ doctor }) => {
   const quickActions = [
     {
       title: "Find Patient",
-      description: "Search and view patient records",
+      description: "Search and view patient profiles",
       icon: <PersonSearchIcon sx={{ fontSize: 40, color: "#45d27a" }} />,
       action: "patients"
     }
@@ -197,7 +197,7 @@ const DoctorDashboard = ({ doctor }) => {
           textAlign: { xs: "center", md: "left" }
         }}
       >
-        Welcome, {"Dr. " +doctor?.name}
+        Welcome, {"Dr. "+doctor?.name}
       </Typography>
 
       {error && (
@@ -338,9 +338,6 @@ const DoctorDashboard = ({ doctor }) => {
                         <TableCell>
                           <Typography variant="body2" sx={{ fontWeight: 500 }}>
                             {getPatientName(appointment.patient)}
-                          </Typography>
-                          <Typography variant="caption" color="text.secondary">
-                            ID: {appointment.patient?.id || 'N/A'}
                           </Typography>
                         </TableCell>
                         <TableCell>

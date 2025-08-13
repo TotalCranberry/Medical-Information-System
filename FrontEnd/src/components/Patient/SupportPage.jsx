@@ -3,7 +3,7 @@ import {
   Typography, Paper, Box, List, ListItem, ListItemText, TextField, Button, Divider, Snackbar, Alert, Dialog, DialogTitle, DialogContent, DialogActions, ListItemButton
 } from "@mui/material";
 import { submitSupportRequest } from "../../api/support";
-import { useNavigate } from "react-router-dom";
+import { Link as RouterLink, useNavigate } from "react-router-dom"; 
 
 const SupportPage = () => {
   const [message, setMessage] = useState("");
@@ -38,7 +38,7 @@ const SupportPage = () => {
                 secondary="Information on screen reader, high-contrast mode, and keyboard navigation support."
               />
             </ListItemButton>
-            <ListItemButton onClick={() => navigate('../faq')}>
+            <ListItemButton component={RouterLink} to="/patient/faq">
               <ListItemText
                 primary="Help Center / FAQ"
                 secondary="Find answers to common questions in our resource library."

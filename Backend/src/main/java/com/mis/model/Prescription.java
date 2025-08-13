@@ -36,9 +36,18 @@ public class Prescription {
     @Column(name = "patient_name", nullable = false, length = 120)
     private String patientName;
 
+
     @Column(name = "doctor_name", nullable = false, length = 120)
     private String doctorName;
 
+    @ManyToOne
+    @JoinColumn(name = "patient_id", nullable = false)
+    private User patient;
+
+    @ManyToOne
+    @JoinColumn(name = "doctor_id", nullable = false)
+    private User doctor;
+  
 
     @OneToMany(
             mappedBy = "prescription",
@@ -85,6 +94,23 @@ public class Prescription {
 
     @Column(name = "pharmacy_notes", columnDefinition = "TEXT")
     private String pharmacyNotes;
+
+    public User getPatient() {
+        return patient;
+    }
+
+    public void setPatient(User patient) {
+        this.patient = patient;
+    }
+
+    public User getDoctor() {
+        return doctor;
+    }
+
+    public void setDoctor(User doctor) {
+        this.doctor = doctor;
+    }
+
 
     @Column(name = "is_active", nullable = false)
     private Boolean isActive = true;

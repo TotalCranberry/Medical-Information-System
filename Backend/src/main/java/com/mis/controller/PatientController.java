@@ -5,7 +5,6 @@ import java.time.Instant;
 import java.time.LocalDateTime;
 import java.time.LocalTime;
 import java.time.ZoneId;
-import java.util.Collections;
 import java.util.Date;
 import java.util.List;
 import java.util.Map;
@@ -25,8 +24,16 @@ import org.springframework.web.bind.annotation.RestController;
 import com.mis.dto.AppointmentRequest;
 import com.mis.model.Appointment;
 import com.mis.model.AppointmentStatus;
+import com.mis.model.Diagnosis;
+import com.mis.model.LabResult;
+import com.mis.model.Medical;
+import com.mis.model.Prescription;
 import com.mis.model.User;
 import com.mis.repository.AppointmentRepository;
+import com.mis.repository.DiagnosisRepository;
+import com.mis.repository.LabResultRepository;
+import com.mis.repository.MedicalRepository;
+import com.mis.repository.PrescriptionRepository;
 import com.mis.repository.UserRepository;
 
 import jakarta.validation.Valid;
@@ -36,11 +43,21 @@ public class PatientController {
 
     private final AppointmentRepository appointmentRepository;
     private final UserRepository userRepository;
+    private final DiagnosisRepository diagnosisRepository;
+    private final MedicalRepository medicalRepository;
+    private final PrescriptionRepository prescriptionRepository;
+    private final LabResultRepository labResultRepository;
 
-    public PatientController(AppointmentRepository appointmentRepository, UserRepository userRepository) {
+    public PatientController(AppointmentRepository appointmentRepository, DiagnosisRepository diagnosisRepository, LabResultRepository labResultRepository, MedicalRepository medicalRepository, PrescriptionRepository prescriptionRepository, UserRepository userRepository) {
         this.appointmentRepository = appointmentRepository;
+        this.diagnosisRepository = diagnosisRepository;
+        this.labResultRepository = labResultRepository;
+        this.medicalRepository = medicalRepository;
+        this.prescriptionRepository = prescriptionRepository;
         this.userRepository = userRepository;
     }
+
+    
 
     @GetMapping("/appointments")
     public ResponseEntity<List<?>> getAppointments(Authentication authentication) {
@@ -55,23 +72,22 @@ public class PatientController {
     public ResponseEntity<?> createAppointment(Authentication authentication, @Valid @RequestBody AppointmentRequest request) {
         if (appointmentRepository.existsByAppointmentDateTime(request.getAppointmentDateTime())) {
             return ResponseEntity.status(HttpStatus.CONFLICT)
-                    .body(Map.of("message","An appointment already exists at this time slot. Please choose another."));
+                    .body("An appointment already exists at this time slot. Please choose another.");
         }
 
         Instant instant = request.getAppointmentDateTime().toInstant();
-        // Using a specific timezone is more reliable, e.g., ZoneId.of("Asia/Colombo")
         ZoneId zoneId = ZoneId.systemDefault(); 
         LocalDateTime ldt = instant.atZone(zoneId).toLocalDateTime();
 
         DayOfWeek day = ldt.getDayOfWeek();
         LocalTime time = ldt.toLocalTime();
 
-        // 2. Check for weekends
+        // Check for weekends
         if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {
             return ResponseEntity.badRequest().body(Map.of("message","Appointments cannot be booked on weekends."));
         }
 
-        // 3. Check for valid clinic hours
+        // Check for valid clinic hours
         LocalTime morningStart = LocalTime.of(9, 0);
         LocalTime morningEnd = LocalTime.of(12, 0);
         LocalTime afternoonStart = LocalTime.of(13, 30);
@@ -81,10 +97,10 @@ public class PatientController {
         boolean isAfternoonSlot = !time.isBefore(afternoonStart) && time.isBefore(afternoonEnd);
 
         if (!isMorningSlot && !isAfternoonSlot) {
-            return ResponseEntity.badRequest().body(Map.of("message","Invalid appointment time. Please book between 9:00 AM - 12:00 PM or 1:30 PM - 4:00 PM."));
+            return ResponseEntity.badRequest().body("Invalid appointment time. Please book between 9:00 AM - 12:00 PM or 1:30 PM - 4:00 PM.");
         }
 
-        // --- If all checks pass, create the appointment ---
+        // If all checks pass, create the appointment 
         String userId = authentication.getName();
         User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
 
@@ -125,18 +141,43 @@ public class PatientController {
         return ResponseEntity.ok().body(Map.of("message","Appointment cancelled successfully."));
     }
 
-    // Placeholder for fetching prescriptions.
     @GetMapping("/prescriptions")
-    public ResponseEntity<List<?>> getPrescriptions() {
-        // TODO: Add logic to fetch real prescription data.
-        System.out.println("GET /api/patient/prescriptions was called");
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<List<Prescription>> getPrescriptions(Authentication authentication) {
+        String userId = authentication.getName();
+        User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
+        List<Prescription> prescriptions = prescriptionRepository.findByPatient(patient);
+        return ResponseEntity.ok(prescriptions);
     }
+
     @GetMapping("/reports")
-    public ResponseEntity<List<?>> getPatientReports() {
-        // TODO: Add logic here to fetch real medical reports from the database.
-        System.out.println("GET /api/patient/reports was called");
-        return ResponseEntity.ok(Collections.emptyList());
+    public ResponseEntity<List<LabResult>> getReports(Authentication authentication) {
+        String userId = authentication.getName();
+        User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
+        List<LabResult> labResults = labResultRepository.findByPatientOrderByCreatedAtDesc(patient); 
+        return ResponseEntity.ok(labResults);
+    }
+
+    @GetMapping("/reports/diagnoses")
+    public ResponseEntity<List<Diagnosis>> getPatientDiagnoses(Authentication authentication) {
+        String userId = authentication.getName();
+        User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
+        List<Diagnosis> diagnoses = diagnosisRepository.findByPatientOrderByDiagnosisDateDesc(patient);
+        return ResponseEntity.ok(diagnoses);
+    }
+
+    @GetMapping("/reports/medicals")
+    public ResponseEntity<List<Medical>> getPatientMedicals(Authentication authentication) {
+        String userId = authentication.getName();
+        User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
+        List<Medical> medicals = medicalRepository.findByPatientOrderByMedicalDateDesc(patient);
+        return ResponseEntity.ok(medicals);
+    }
+
+    @GetMapping("/view-medical/{medicalId}")
+    public ResponseEntity<Medical> getMedical(@PathVariable String medicalId) {
+        Medical medical = medicalRepository.findById(medicalId)
+                .orElseThrow(() -> new RuntimeException("Medical not found"));
+        return ResponseEntity.ok(medical);
     }
 
 }
