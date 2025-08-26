@@ -31,6 +31,7 @@ public class LabResult {
     private Boolean isCritical;
     
     @Enumerated(EnumType.STRING)
+
     private LabResultStatus status;
     
     @Column(name = "created_at")
@@ -42,6 +43,7 @@ public class LabResult {
     
     // Relationship to Patient (User entity)
     @ManyToOne(fetch = FetchType.LAZY)
+
     @JoinColumn(name = "patient_id", nullable = false)
     private User patient;
     

@@ -32,7 +32,7 @@ const UpdateInventoryPage = () => {
         unitPrice: ""
     });
 
-    // Fixed fetchInventory function with proper async/await
+
     const fetchInventory = async () => {
         try {
             const data = await getAllMedicines();
@@ -130,7 +130,7 @@ const UpdateInventoryPage = () => {
             });
     };
 
-    // Handle cancel - reset form and switch to add mode
+
     const handleCancel = () => {
         setFormData({
             generic: "",
@@ -154,40 +154,37 @@ const UpdateInventoryPage = () => {
         });
     };
 
-    // FIXED DELETE HANDLER - Simplified approach
+
     const handleDelete = async (id) => {
         if (window.confirm("Are you sure you want to delete this medicine?")) {
             try {
-                // Call delete API
+
                 await deleteMedicine(id);
 
-                // If we reach this point, deletion was successful
-                // Immediately update local state to remove the deleted item
+
                 setInventory(prevInventory => prevInventory.filter(medicine => medicine.id !== id));
 
-                // Show success message
+
                 setSnackbar({ open: true, success: true, message: "Medicine deleted successfully!" });
 
             } catch (error) {
                 console.error("Delete error:", error);
 
-                // Since the deletion might have actually succeeded despite the error,
-                // let's refresh the inventory to check the current state
                 try {
                     const refreshedData = await getAllMedicines();
                     setInventory(refreshedData);
 
-                    // Check if the item was actually deleted
+
                     const itemStillExists = refreshedData.some(medicine => medicine.id === id);
                     if (!itemStillExists) {
-                        // Item was deleted successfully despite the error
+
                         setSnackbar({ open: true, success: true, message: "Medicine deleted successfully!" });
                     } else {
-                        // Item still exists, so deletion actually failed
+
                         setSnackbar({ open: true, success: false, message: "Delete failed!" });
                     }
                 } catch (refreshError) {
-                    // If we can't refresh, assume deletion failed
+
                     setSnackbar({ open: true, success: false, message: "Delete failed!" });
                 }
             }
@@ -196,7 +193,7 @@ const UpdateInventoryPage = () => {
 
     const suggestions = [...new Set(inventory.map((m) => m[searchFilter]?.toString() || ""))];
 
-    // Helper function to format field labels
+
     const formatLabel = (field) => {
         const labelMap = {
             generic: "Generic Name",
@@ -214,7 +211,7 @@ const UpdateInventoryPage = () => {
         return labelMap[field] || field.charAt(0).toUpperCase() + field.slice(1);
     };
 
-    // Field order for form rendering
+
     const formFields = ["generic", "name", "form", "strength", "batch", "manufacturer", "category"];
     const dateFields = ["mfg", "expiry"];
 
@@ -233,7 +230,7 @@ const UpdateInventoryPage = () => {
                 Update Inventory
             </Typography>
 
-            {/* Search Section */}
+
             <Paper
                 elevation={4}
                 sx={{
@@ -378,7 +375,7 @@ const UpdateInventoryPage = () => {
                 </Grid>
             </Paper>
 
-            {/* Form Section */}
+
             <Paper
                 elevation={4}
                 sx={{
@@ -421,7 +418,7 @@ const UpdateInventoryPage = () => {
                         </Grid>
                     ))}
 
-                    {/* Date fields */}
+
                     {dateFields.map((field) => (
                         <Grid item xs={12} sm={6} md={4} key={field}>
                             <TextField
@@ -441,7 +438,7 @@ const UpdateInventoryPage = () => {
                         </Grid>
                     ))}
 
-                    {/* Stock field */}
+
                     <Grid item xs={12} sm={6} md={4}>
                         <TextField
                             fullWidth
@@ -523,7 +520,7 @@ const UpdateInventoryPage = () => {
                 </Box>
             </Paper>
 
-            {/* Inventory Table */}
+
             <Paper
                 elevation={4}
                 sx={{
@@ -630,7 +627,7 @@ const UpdateInventoryPage = () => {
                 </Box>
             </Paper>
 
-            {/* Snackbar */}
+
             <Snackbar
                 open={snackbar.open}
                 autoHideDuration={4000}

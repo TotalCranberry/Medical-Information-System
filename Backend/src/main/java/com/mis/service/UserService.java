@@ -6,9 +6,14 @@ import java.util.Map;
 import java.util.Optional;
 import java.util.UUID;
 
+import org.springframework.security.core.userdetails.UserDetails;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
+import org.springframework.security.core.Authentication;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.core.userdetails.UserDetails;
+import org.springframework.stereotype.Service;
 
 import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
 import com.mis.dto.ProfileUpdateRequest;
@@ -230,4 +235,32 @@ public class UserService {
         }
     }
 
+
+    public User getCurrentUser() {
+        Authentication auth = SecurityContextHolder.getContext().getAuthentication();
+        if (auth == null) {
+            throw new IllegalStateException("No authentication found in security context.");
+        }
+
+        String username;
+        Object principal = auth.getPrincipal();
+
+        if (principal instanceof UserDetails ud) {
+            username = ud.getUsername();
+        } else if (principal instanceof String s) {
+            // Sometimes Spring stores just the username string
+            username = s;
+        } else {
+            throw new IllegalStateException("Unsupported principal type: " + principal.getClass());
+        }
+
+        // 🔁 PICK ONE that matches your schema:
+        // If you log in with email:
+        return userRepository.findByEmail(username)
+                .orElseThrow(() -> new IllegalStateException("Logged-in user not found by email: " + username));
+
+        // If you log in with username (UNCOMMENT this and REMOVE the email block above):
+        // return userRepository.findByUsername(username)
+        //         .orElseThrow(() -> new IllegalStateException("Logged-in user not found by username: " + username));
+    }
 }

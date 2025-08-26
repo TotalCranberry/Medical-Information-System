@@ -23,7 +23,7 @@ import {
     Cell
 } from "recharts";
 
-// Sample data
+
 const prescriptions = [
     { time: "10:30 AM", patient: "John Doe" },
     { time: "11:00 AM", patient: "Jane Smith" },
@@ -57,7 +57,7 @@ const colors = [
 ];
 
 const PharmacyDashboard = ({ user }) => {
-    // Get logged in user name - you can pass this as a prop or get it from your auth context
+
     const pharmacistName = user?.name || user?.username || user?.firstName || 'Pharmacist';
 
     return (
@@ -69,7 +69,7 @@ const PharmacyDashboard = ({ user }) => {
                 mx: "auto"
             }}
         >
-            {/* Welcome Message - Left aligned with boxes */}
+
             <Typography
                 variant="h4"
                 sx={{
@@ -84,7 +84,6 @@ const PharmacyDashboard = ({ user }) => {
                 Welcome, {pharmacistName}
             </Typography>
 
-            {/* All three boxes in one row */}
             <Grid
                 container
                 spacing={{ xs: 2, md: 3, lg: 4 }}
@@ -92,7 +91,7 @@ const PharmacyDashboard = ({ user }) => {
                 alignItems="stretch"
                 mb={4}
             >
-                {/* Pending Prescriptions */}
+
                 <Grid item xs={12} md={4}>
                     <Paper
                         elevation={4}
@@ -174,7 +173,7 @@ const PharmacyDashboard = ({ user }) => {
                     </Paper>
                 </Grid>
 
-                {/* Inventory Status */}
+
                 <Grid item xs={12} md={4}>
                     <Paper
                         elevation={4}
@@ -263,7 +262,7 @@ const PharmacyDashboard = ({ user }) => {
                     </Paper>
                 </Grid>
 
-                {/* Weekly Patient Count */}
+
                 <Grid item xs={12} md={4}>
                     <Paper
                         elevation={4}
