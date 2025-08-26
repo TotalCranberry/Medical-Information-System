@@ -8,4 +8,5 @@ import com.mis.model.User;
 
 public interface UserRepository extends JpaRepository<User, String> {
     Optional<User> findByEmail(String email);
+    Optional<User> findById(String id);
 }

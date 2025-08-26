@@ -16,7 +16,7 @@ public class MedicineController {
 
     private final MedicineService medicineService;
 
-    // 🔐 Only Pharmacist can access
+
     @PreAuthorize("hasRole('PHARMACIST')")
     @GetMapping("/all")
     public ResponseEntity<List<MedicineDTO>> getAll() {

@@ -41,7 +41,7 @@ const DoctorDashboard = ({ doctor }) => {
   const quickActions = [
     {
       title: "Find Patient",
-      description: "Search and view patient records",
+      description: "Search and view patient profiles",
       icon: <PersonSearchIcon sx={{ fontSize: 40, color: "#45d27a" }} />,
       action: "patients"
     }
@@ -96,24 +96,30 @@ const DoctorDashboard = ({ doctor }) => {
 
   // Fixed navigation function - this is the key fix
   const handleViewPatientProfile = (appointment) => {
-    console.log("Navigating to patient profile:", appointment.patient?.id);
-    
-    // Get patient ID from appointment
-    const patientId = appointment.patient?.id;
-    
+    const patientId = appointment?.patient?.id;
+    const apptId =
+        appointment?.id ||
+        appointment?.appointmentId || // in case your API uses this name
+        appointment?._id;
+
     if (!patientId) {
       setError("Patient ID not found in appointment data");
       return;
     }
+    if (!apptId) {
+      setError("Appointment ID not found in appointment data");
+      return;
+    }
 
-    // Navigate to patient profile with the correct route
-    navigate(`/doctor/patients/${patientId}`, {
-      state: { 
+    navigate(`/doctor/patients/${patientId}?appointmentId=${apptId}`, {
+      state: {
         patient: appointment.patient,
-        appointment: appointment
-      }
+        appointmentId: apptId,
+        appointment, // optional, if you want the whole object
+      },
     });
   };
+
 
   const getStatusColor = (status) => {
     switch (status?.toLowerCase()) {
