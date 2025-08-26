@@ -5,9 +5,8 @@ import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-import static org.springframework.security.config.Customizer.withDefaults;
-
 import org.springframework.http.HttpMethod;
+import static org.springframework.security.config.Customizer.withDefaults;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.http.SessionCreationPolicy;
 import org.springframework.security.crypto.bcrypt.BCryptPasswordEncoder;
@@ -55,7 +54,6 @@ public class SecurityConfig {
                         .requestMatchers("/api/doctor/**").hasAuthority("ROLE_Doctor")
 
                         // Medicine endpoints (Pharmacist only)
-                        .requestMatchers("/api/medicines/**").hasAuthority("ROLE_Pharmacist")
                         .requestMatchers(HttpMethod.GET, "/api/medicines/**")
                         .hasAnyAuthority("ROLE_Doctor", "ROLE_Pharmacist")
 
@@ -70,6 +68,7 @@ public class SecurityConfig {
                         .requestMatchers("/api/prescriptions/overdue").hasAuthority("ROLE_Pharmacist")
                         .requestMatchers("/api/prescriptions/statistics").hasAuthority("ROLE_Pharmacist")
                         .requestMatchers("/api/prescriptions/**").hasAnyAuthority("ROLE_Doctor", "ROLE_Pharmacist")
+                        .requestMatchers("/api/medicines/**").hasAnyAuthority("ROLE_Pharmacist", "ROLE_Doctor")
 
                         // Any other request must be authenticated.
                         .anyRequest().authenticated()
