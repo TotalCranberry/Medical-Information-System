@@ -1,4 +1,4 @@
-package com.mis.dto.Prescription;
+package com.mis.dto.prescription;
 
 import com.mis.model.enums.RouteOfAdministration;
 import com.mis.model.enums.TimeOfDay;

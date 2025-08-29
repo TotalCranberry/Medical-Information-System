@@ -1,7 +1,7 @@
 package com.mis.controller.Prescription;
 
-import com.mis.dto.Prescription.PrescriptionCreateRequest;
-import com.mis.dto.Prescription.PrescriptionResponse;
+import com.mis.dto.prescription.PrescriptionCreateRequest;
+import com.mis.dto.prescription.PrescriptionResponse;
 import com.mis.mapper.Prescription.PrescriptionMapper;
 import com.mis.model.User;
 import com.mis.repository.UserRepository;
