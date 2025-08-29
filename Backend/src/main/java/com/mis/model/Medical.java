@@ -2,6 +2,7 @@ package com.mis.model;
 
 import java.util.Date;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.Id;
@@ -25,6 +26,7 @@ public class Medical {
     @Column(name = "doctor_id", nullable = false)
     private String doctorId;
 
+    @JsonIgnore
     @ManyToOne
     @JoinColumn(name = "appointment_id")
     private Appointment appointment;

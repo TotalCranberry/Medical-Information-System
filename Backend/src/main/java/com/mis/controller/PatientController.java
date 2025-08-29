@@ -27,13 +27,13 @@ import com.mis.model.AppointmentStatus;
 import com.mis.model.Diagnosis;
 import com.mis.model.LabResult;
 import com.mis.model.Medical;
-import com.mis.model.Prescription;
+import com.mis.model.Prescription.Prescription;
 import com.mis.model.User;
 import com.mis.repository.AppointmentRepository;
 import com.mis.repository.DiagnosisRepository;
 import com.mis.repository.LabResultRepository;
 import com.mis.repository.MedicalRepository;
-import com.mis.repository.PrescriptionRepository;
+import com.mis.repository.Prescription.PrescriptionRepository;
 import com.mis.repository.UserRepository;
 
 import jakarta.validation.Valid;

@@ -74,23 +74,73 @@ export const formatPrescriptionForSubmission = (formData) => {
         patientName: formData.patientName,
         appointmentId: formData.appointmentId,
         generalNotes: formData.notes || "",
-        medications: validMedications.map(med => ({
-            medicineId: med.medicineId,
-            medicineName: med.medicine,
-            dosage: med.dosage,
-            durationDays: parseInt(med.days),
-            timings: {
-                morning: med.timings?.morning || false,
-                afternoon: med.timings?.afternoon || false,
-                evening: med.timings?.evening || false,
-                night: med.timings?.night || false
-            },
-            mealTiming: med.mealTiming || "",
-            administrationMethod: med.method || "",
-            remarks: med.remarks || "",
-            // Remove quantityPrescribed from submission data since it's optional
-            // quantityPrescribed: med.quantityPrescribed ? parseInt(med.quantityPrescribed) : null
-        }))
+        medications: validMedications.map(med => {
+            // Convert timings object to timeOfDay array
+            const timeOfDay = [];
+            if (med.timings?.morning) timeOfDay.push("MORNING");
+            if (med.timings?.afternoon) timeOfDay.push("AFTERNOON");
+            if (med.timings?.evening) timeOfDay.push("EVENING");
+            if (med.timings?.night) timeOfDay.push("NIGHT");
+
+            // Map administration method to RouteOfAdministration enum
+            let route = null;
+            if (med.method) {
+                switch (med.method.toUpperCase()) {
+                    case "ORAL":
+                    case "BY MOUTH":
+                        route = "ORAL";
+                        break;
+                    case "INTRAVENOUS":
+                    case "IV":
+                        route = "INTRAVENOUS";
+                        break;
+                    case "INTRAMUSCULAR":
+                    case "IM":
+                        route = "INTRAMUSCULAR";
+                        break;
+                    case "SUBCUTANEOUS":
+                    case "SUBCUT":
+                        route = "SUBCUTANEOUS";
+                        break;
+                    case "TOPICAL":
+                        route = "TOPICAL";
+                        break;
+                    case "INHALATION":
+                    case "INHALER":
+                        route = "INHALATION";
+                        break;
+                    case "RECTAL":
+                        route = "RECTAL";
+                        break;
+                    case "VAGINAL":
+                        route = "VAGINAL";
+                        break;
+                    case "OPHTHALMIC":
+                    case "EYE":
+                        route = "OPHTHALMIC";
+                        break;
+                    case "OTIC":
+                    case "EAR":
+                        route = "OTIC";
+                        break;
+                    default:
+                        route = "ORAL"; // Default to ORAL if not recognized
+                }
+            }
+
+            return {
+                medicineId: med.medicineId,
+                medicineName: med.medicine,
+                dosage: med.dosage,
+                timesPerDay: med.timesPerDay || "1",
+                durationDays: med.days,
+                route: route, // Use the mapped route enum value
+                timeOfDay: timeOfDay, // Use the converted timeOfDay array
+                instructions: med.remarks || "",
+                // Remove quantityPrescribed from submission data since it's optional
+                // quantityPrescribed: med.quantityPrescribed ? parseInt(med.quantityPrescribed) : null
+            };
+        })
     };
 };
 
