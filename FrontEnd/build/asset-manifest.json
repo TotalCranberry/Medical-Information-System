@@ -1,7 +1,9 @@
 {
   "files": {
     "main.css": "/static/css/main.d3f61127.css",
-    "main.js": "/static/js/main.f3c1e460.js",
+    "main.js": "/static/js/main.7b849d58.js",
+    "static/media/Background.jpeg": "/static/media/Background.0e2e27e00275c0f4d865.jpeg",
+    "static/media/UOP_logo.jpeg": "/static/media/UOP_logo.1909cbbcd5a1518d9d96.jpeg",
     "static/media/poppins-devanagari-400-normal.woff": "/static/media/poppins-devanagari-400-normal.421fe9869ff4b58e2d7b.woff",
     "static/media/poppins-devanagari-300-normal.woff": "/static/media/poppins-devanagari-300-normal.62c0b320ffa12beb056b.woff",
     "static/media/poppins-devanagari-500-normal.woff": "/static/media/poppins-devanagari-500-normal.6b76e7a3d1cf1d155387.woff",
@@ -28,10 +30,10 @@
     "static/media/poppins-latin-ext-700-normal.woff2": "/static/media/poppins-latin-ext-700-normal.51cc1e159ae5f0b8ec5c.woff2",
     "index.html": "/index.html",
     "main.d3f61127.css.map": "/static/css/main.d3f61127.css.map",
-    "main.f3c1e460.js.map": "/static/js/main.f3c1e460.js.map"
+    "main.7b849d58.js.map": "/static/js/main.7b849d58.js.map"
   },
   "entrypoints": [
     "static/css/main.d3f61127.css",
-    "static/js/main.f3c1e460.js"
+    "static/js/main.7b849d58.js"
   ]
 }

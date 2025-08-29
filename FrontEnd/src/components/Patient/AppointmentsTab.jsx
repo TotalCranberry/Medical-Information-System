@@ -5,12 +5,15 @@ import {
   Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle, Chip
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+
+// ✅ MUI X Date Pickers (v5/v6) + Dayjs adapter
 import { LocalizationProvider, DatePicker, TimePicker } from "@mui/x-date-pickers";
-import { AdapterDateFns } from "@mui/x-date-pickers/AdapterDateFns";
+import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
+import dayjs from "dayjs";
 
 const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
-  const [date, setDate] = useState(null);
-  const [time, setTime] = useState(null);
+  const [date, setDate] = useState(null); // Dayjs | null
+  const [time, setTime] = useState(null); // Dayjs | null
   const [reason, setReason] = useState("");
   const [feedback, setFeedback] = useState({ text: "", type: "" });
   const theme = useTheme();
@@ -25,16 +28,15 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
       setFeedback({ text: "Please select both date and time.", type: "warning" });
       return;
     }
-    // Combine date and time into one Date object
-    const appointmentDateTime = new Date(
-      date.getFullYear(),
-      date.getMonth(),
-      date.getDate(),
-      time.getHours(),
-      time.getMinutes(),
-      0,
-      0
-    );
+
+    // Combine selected date + time (both are Dayjs) into one JS Date
+    const appointmentDateTime = dayjs(date)
+      .hour(time.hour())
+      .minute(time.minute())
+      .second(0)
+      .millisecond(0)
+      .toDate();
+
     if (onBookSuccess) {
       onBookSuccess({ appointmentDateTime, reason }, setFeedback);
     }
@@ -60,19 +62,18 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
     handleCloseCancelDialog();
   };
 
-  const disableWeekends = (date) => {
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
-    const day = date.getDay();
-    return (
-      date < today || 
-      day === 0 || day === 6 
-    );
+  // Disable weekends and past days
+  const disableWeekends = (d) => {
+    if (!d) return false;
+    const today = dayjs().startOf("day");
+    const isPast = d.isBefore(today, "day");
+    const isWeekend = d.day() === 0 || d.day() === 6;
+    return isPast || isWeekend;
   };
 
   return (
     <>
-      <LocalizationProvider dateAdapter={AdapterDateFns}>
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
         <Box>
           <Typography
             variant="h4"
@@ -82,6 +83,7 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
           >
             Appointments
           </Typography>
+
           <Grid container spacing={4} justifyContent="center" alignItems="flex-start">
             <Grid item xs={12} md={6} sx={{ minWidth: 400 }}>
               <Paper elevation={2} sx={{ p: 3, borderRadius: 4 }}>
@@ -93,6 +95,7 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                 >
                   Book a New Appointment
                 </Typography>
+
                 <Box
                   component="form"
                   onSubmit={handleSubmit}
@@ -110,7 +113,7 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                     shouldDisableDate={disableWeekends}
                     slotProps={{
                       textField: {
-                        helperText: "Select a weekday (Mon-Fri) for your appointment",
+                        helperText: "Select a weekday (Mon–Fri) for your appointment",
                         required: true,
                         sx: { flexGrow: 1, minWidth: 140 },
                       },
@@ -125,7 +128,8 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                     ampm={false}
                     slotProps={{
                       textField: {
-                        helperText: "Select a time between 9:00 AM - 12:00 PM and 1:00 PM - 4:00 PM",
+                        helperText:
+                          "Select a time between 9:00–12:00 and 13:00–16:00",
                         required: true,
                         sx: { flexGrow: 1, minWidth: 120 },
                       },
@@ -142,6 +146,7 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                     multiline
                     rows={2}
                   />
+
                   <Button
                     type="submit"
                     variant="contained"
@@ -163,6 +168,7 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                 <Typography variant="h6" fontWeight={600} mb={2} color="primary.main">
                   My Appointments
                 </Typography>
+
                 <TableContainer sx={{ maxHeight: 300, width: "100%" }}>
                   <Table stickyHeader>
                     <TableHead>
@@ -175,9 +181,9 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                     </TableHead>
 
                     <TableBody>
-                      {appointments && appointments.filter((app) => app.status == "Scheduled").length > 0 ? (
+                      {appointments && appointments.filter((app) => app.status === "Scheduled").length > 0 ? (
                         appointments
-                          .filter((app) => app.status == "Scheduled")
+                          .filter((app) => app.status === "Scheduled")
                           .sort(
                             (a, b) =>
                               new Date(a.appointmentDateTime) -
@@ -189,13 +195,10 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                                 {new Date(app.appointmentDateTime).toLocaleDateString()}
                               </TableCell>
                               <TableCell>
-                                {new Date(app.appointmentDateTime).toLocaleTimeString(
-                                  [],
-                                  {
-                                    hour: "2-digit",
-                                    minute: "2-digit",
-                                  }
-                                )}
+                                {new Date(app.appointmentDateTime).toLocaleTimeString([], {
+                                  hour: "2-digit",
+                                  minute: "2-digit",
+                                })}
                               </TableCell>
                               <TableCell>
                                 <Chip

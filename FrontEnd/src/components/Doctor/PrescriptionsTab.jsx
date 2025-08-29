@@ -86,10 +86,10 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
 
     try {
       const response = await searchMedicines(searchTerm, "name");
-      if (response.success) {
+      if (response && Array.isArray(response)) {
         setMedicineSearchResults(prev => ({
           ...prev,
-          [index]: response.data || []
+          [index]: response || []
         }));
       } else {
         setMedicineSearchResults(prev => ({
@@ -219,7 +219,7 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
 
       const response = await createPrescription(submissionData);
 
-      if (response.success) {
+      if (response && response.id) {
         showAlertMessage("Prescription created successfully!");
 
 
@@ -251,16 +251,14 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
         setMedicineSearchResults({});
 
 
-        if (patientFromState && finalPatientId) {
-          setTimeout(() => {
-            navigate(`/doctor/patients/${finalPatientId}`, {
-              state: {
-                patient: patientFromState,
-                successMessage: "Prescription submitted successfully!"
-              }
-            });
-          }, 2000);
-        }
+        // Redirect to doctor's dashboard after successful prescription creation
+        setTimeout(() => {
+          navigate("/doctor/dashboard", {
+            state: {
+              successMessage: "Prescription created successfully!"
+            }
+          });
+        }, 2000);
       } else {
         showAlertMessage(response.message || "Failed to create prescription", "error");
       }
@@ -443,10 +441,10 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
                       {medication.medicineDetails && (
                           <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                             <Chip
-                                label={`Stock: ${medication.medicineDetails.stockQuantity}`}
+                                label={`Stock: ${medication.medicineDetails.stock}`}
                                 size="small"
-                                color={medication.medicineDetails.stockQuantity > 50 ? "success" :
-                                    medication.medicineDetails.stockQuantity > 10 ? "warning" : "error"}
+                                color={medication.medicineDetails.stock > 50 ? "success" :
+                                    medication.medicineDetails.stock > 10 ? "warning" : "error"}
                                 variant="outlined"
                             />
                             <Chip

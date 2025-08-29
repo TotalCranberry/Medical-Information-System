@@ -17,19 +17,19 @@ public class MedicineController {
     private final MedicineService medicineService;
 
 
-    @PreAuthorize("hasRole('PHARMACIST')")
+    @PreAuthorize("hasRole('Pharmacist') or hasRole('Doctor')")
     @GetMapping("/all")
     public ResponseEntity<List<MedicineDTO>> getAll() {
         return ResponseEntity.ok(medicineService.getAllMedicines());
     }
 
-    @PreAuthorize("hasRole('PHARMACIST')")
+    @PreAuthorize("hasRole('Pharmacist')")
     @PostMapping("/save")
     public ResponseEntity<MedicineDTO> save(@RequestBody MedicineDTO dto) {
         return ResponseEntity.ok(medicineService.addOrUpdateMedicine(dto));
     }
 
-    @PreAuthorize("hasRole('PHARMACIST')")
+    @PreAuthorize("hasRole('Pharmacist') or hasRole('Doctor')")
     @GetMapping("/search")
     public ResponseEntity<List<MedicineDTO>> search(
             @RequestParam("name") String value,
@@ -38,7 +38,7 @@ public class MedicineController {
         return ResponseEntity.ok(medicineService.search(field, value));
     }
 
-    @PreAuthorize("hasRole('PHARMACIST')")
+    @PreAuthorize("hasRole('Pharmacist')")
     @DeleteMapping("/delete/{id}")
     public ResponseEntity<String> delete(@PathVariable Long id) {
         medicineService.deleteMedicine(id);
@@ -46,7 +46,7 @@ public class MedicineController {
     }
 
 
-    @PreAuthorize("hasRole('PHARMACIST')")
+    @PreAuthorize("hasRole('Pharmacist') or hasRole('Doctor')")
     @GetMapping("/search/by-name-and-manufacturer")
     public ResponseEntity<MedicineDTO> findByNameAndManufacturer(
             @RequestParam String name,
