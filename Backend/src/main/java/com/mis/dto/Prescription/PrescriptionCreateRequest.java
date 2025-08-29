@@ -1,4 +1,4 @@
-package com.mis.dto.Prescription;
+package com.mis.dto.prescription;
 
 import lombok.*;
 import java.util.List;

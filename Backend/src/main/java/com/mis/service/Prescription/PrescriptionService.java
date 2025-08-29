@@ -1,7 +1,7 @@
 package com.mis.service.Prescription;
 
-import com.mis.dto.Prescription.PrescriptionCreateRequest;
-import com.mis.dto.Prescription.PrescriptionItemRequest;
+import com.mis.dto.prescription.PrescriptionCreateRequest;
+import com.mis.dto.prescription.PrescriptionItemRequest;
 import com.mis.model.Prescription.Prescription;
 import com.mis.model.Prescription.PrescriptionItem;
 import com.mis.model.User;
