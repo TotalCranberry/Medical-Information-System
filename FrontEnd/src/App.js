@@ -46,6 +46,8 @@ import PharmacyDashboard from "./components/Pharmacy/PharmacyDashboard";
 import InventoryPage from "./components/Pharmacy/Inventory";
 import Prescriptions from "./components/Pharmacy/Prescriptions";
 import UpdateInventory from "./components/Pharmacy/UpdateInventory";
+import PrescriptionPrint from "./components/Pharmacy/PrescriptionPrint";
+import Invoice from "./components/Pharmacy/Invoice";
 
 // Doctor pages
 import DoctorDashboard from './components/Doctor/DoctorDashboard';
@@ -379,10 +381,12 @@ function App() {
           <Route path="patient/faq" element={<FAQPage />} />
 
           {/* Pharmacist Routes */}
-          <Route path="pharmacist/dashboard" element={<PharmacyDashboard />} />
+          <Route path="pharmacist/dashboard" element={<PharmacyDashboard user={user} />} />
           <Route path="pharmacist/view-prescriptions" element={<Prescriptions />} />
           <Route path="pharmacist/inventory-search" element={<InventoryPage />} />
           <Route path="pharmacist/inventory-update" element={<UpdateInventory />} />
+          <Route path="pharmacist/prescription-print" element={<PrescriptionPrint user={user} />} />
+          <Route path="invoice/:prescriptionId" element={<Invoice />} />
 
           {/* Doctor Routes - UPDATED with Medical Routes */}
           <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />

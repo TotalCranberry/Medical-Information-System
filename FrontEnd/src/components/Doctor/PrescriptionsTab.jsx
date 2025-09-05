@@ -29,27 +29,29 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
   const finalAppointmentId = appointmentIdFromState || appointmentIdFromUrl;
   const finalPatientId = patientIdFromState || patientFromState?.id;
 
+  // Ensure each medication row has a stable unique key to avoid React reusing inputs
+  const newMedication = () => ({
+    rowId: `${Date.now()}_${Math.random().toString(36).slice(2)}`,
+    medicine: "",
+    dosage: "",
+    medicineId: null,
+    medicineDetails: null,
+    timings: {
+      morning: false,
+      afternoon: false,
+      evening: false,
+      night: false
+    },
+    mealTiming: "",
+    method: "",
+    days: "",
+    remarks: ""
+  });
   const [formData, setFormData] = useState({
     patientId: finalPatientId,
     patientName: patientFromState?.name || "",
     appointmentId: finalAppointmentId,
-    medications: [{
-      medicine: "",
-      dosage: "",
-      medicineId: null,
-      medicineDetails: null,
-      timings: {
-        morning: false,
-        afternoon: false,
-        evening: false,
-        night: false
-      },
-      mealTiming: "",
-      method: "",
-      days: "",
-      remarks: "",
-      // Remove quantityPrescribed from initial state
-    }],
+    medications: [newMedication()],
     notes: ""
   });
 
@@ -148,27 +150,11 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
   };
 
   const addMedicationRow = () => {
-    setFormData(prev => ({
-      ...prev,
-      medications: [...prev.medications, {
-        medicine: "",
-        dosage: "",
-        medicineId: null,
-        medicineDetails: null,
-        timings: {
-          morning: false,
-          afternoon: false,
-          evening: false,
-          night: false
-        },
-        mealTiming: "",
-        method: "",
-        days: "",
-        remarks: "",
-
-      }]
-    }));
-  };
+  setFormData(prev => ({
+    ...prev,
+    medications: [...prev.medications, newMedication()]
+  }));
+};
 
   const removeMedicationRow = (index) => {
     if (formData.medications.length > 1) {
@@ -227,23 +213,7 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
           patientId: finalPatientId,
           patientName: patientFromState?.name || "",
           appointmentId: finalAppointmentId,
-          medications: [{
-            medicine: "",
-            dosage: "",
-            medicineId: null,
-            medicineDetails: null,
-            timings: {
-              morning: false,
-              afternoon: false,
-              evening: false,
-              night: false
-            },
-            mealTiming: "",
-            method: "",
-            days: "",
-            remarks: "",
-
-          }],
+          medications: [newMedication()],
           notes: ""
         });
 
@@ -351,7 +321,7 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
             </Typography>
 
             {formData.medications.map((medication, index) => (
-                <Paper key={index} elevation={1} sx={{ p: 3, mb: 2, border: '1px solid #e0e0e0' }}>
+                <Paper key={medication.rowId || index} elevation={1} sx={{ p: 3, mb: 2, border: '1px solid #e0e0e0' }}>
                   {/* Medication Header */}
                   <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', mb: 2 }}>
                     <Typography variant="subtitle2" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
@@ -396,10 +366,10 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
                               <Box component="li" {...props}>
                                 <Box>
                                   <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {option.name} - {option.strength}{option.unit}
+                                    {option.name} - {option.strength}{option.unit || ''}
                                   </Typography>
                                   <Typography variant="caption" sx={{ color: '#666' }}>
-                                    {option.brand} • {option.category} • Stock: {option.stockQuantity}
+                                    {option.form} • {option.brand} • {option.category} • Stock: {option.stockQuantity}
                                   </Typography>
                                 </Box>
                               </Box>

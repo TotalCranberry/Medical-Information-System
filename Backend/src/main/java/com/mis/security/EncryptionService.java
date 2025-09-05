@@ -51,8 +51,22 @@ public class EncryptionService {
 
     public String decrypt(String ciphertextB64) {
         if (ciphertextB64 == null) return null;
+
+        // Check if data looks like it might already be unencrypted
+        if (!isBase64Encoded(ciphertextB64)) {
+            System.err.println("Data does not appear to be Base64 encoded, returning as-is: " + ciphertextB64);
+            return ciphertextB64;
+        }
+
         try {
             byte[] in = Base64.getDecoder().decode(ciphertextB64);
+
+            // Validate minimum length (IV + at least 1 byte of encrypted data + GCM tag)
+            if (in.length < IV_BYTES + 1 + GCM_TAG_BITS/8) {
+                System.err.println("Encrypted data too short, returning as-is: " + ciphertextB64);
+                return ciphertextB64;
+            }
+
             byte[] iv = java.util.Arrays.copyOfRange(in, 0, IV_BYTES);
             byte[] ct = java.util.Arrays.copyOfRange(in, IV_BYTES, in.length);
             Cipher cipher = Cipher.getInstance(TRANSFORMATION);
@@ -64,6 +78,24 @@ public class EncryptionService {
             // This allows the application to continue working with existing data
             System.err.println("Decryption failed for data: " + ciphertextB64 + ". Returning as-is. Error: " + e.getMessage());
             return ciphertextB64;
+        }
+    }
+
+    /**
+     * Check if a string appears to be Base64 encoded
+     */
+    private boolean isBase64Encoded(String data) {
+        if (data == null || data.length() == 0) return false;
+
+        // Base64 strings should have length divisible by 4 (after padding)
+        if (data.length() % 4 != 0) return false;
+
+        // Try to decode to check if it's valid Base64
+        try {
+            Base64.getDecoder().decode(data);
+            return true;
+        } catch (IllegalArgumentException e) {
+            return false;
         }
     }
 }
