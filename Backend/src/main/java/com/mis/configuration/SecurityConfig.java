@@ -96,6 +96,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/prescriptions/**")
                     .hasAnyAuthority("ROLE_Doctor", "ROLE_Pharmacist")
 
+                // ===== Invoices =====
+                .requestMatchers("/api/invoices/**").hasAuthority("ROLE_Pharmacist")
+
                 // Any other request must be authenticated
                 .anyRequest().authenticated()
             )
