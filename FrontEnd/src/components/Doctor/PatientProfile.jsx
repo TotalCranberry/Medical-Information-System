@@ -31,28 +31,29 @@ const PatientProfile = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  
-  // Get patient data from navigation state if available
+
   const patientFromState = location.state?.patient;
-  const currentAppointmentId = location.state?.appointmentId;
+  const currentAppointmentId =
+    location.state?.appointmentId ||
+    new URLSearchParams(location.search).get("appointmentId");
   const medicalIssued = location.state?.medicalIssued;
-  
+
   const [patientData, setPatientData] = useState(patientFromState || null);
   const [vitals, setVitals] = useState([]);
   const [medicals, setMedicals] = useState([]);
   const [currentVitals, setCurrentVitals] = useState({
-    heightCm: '',
-    weightKg: '',
-    temperatureC: '',
-    systolicBp: '',
-    diastolicBp: '',
-    heartRate: '',
-    respiratoryRate: '',
-    oxygenSaturation: '',
-    notes: ''
+    heightCm: "",
+    weightKg: "",
+    temperatureC: "",
+    systolicBp: "",
+    diastolicBp: "",
+    heartRate: "",
+    respiratoryRate: "",
+    oxygenSaturation: "",
+    notes: ""
   });
-  const [diagnosis, setDiagnosis] = useState('');
-  const [diagnosisNotes, setDiagnosisNotes] = useState('');
+  const [diagnosis, setDiagnosis] = useState("");
+  const [diagnosisNotes, setDiagnosisNotes] = useState("");
   const [recentDiagnoses, setRecentDiagnoses] = useState([]);
   const [loading, setLoading] = useState(!patientFromState);
   const [loadingMedicals, setLoadingMedicals] = useState(false);
@@ -95,9 +96,6 @@ const PatientProfile = () => {
   };
 
   useEffect(() => {
-    console.log('Patient data from state:', patientFromState);
-    console.log('Patient ID from params:', patientId);
-    
     if (!patientFromState) {
       loadPatientData();
     } else {
@@ -107,9 +105,7 @@ const PatientProfile = () => {
 
   useEffect(() => {
     if (medicalIssued) {
-      // Show success message when redirected after issuing medical
-      setError(null);
-      // Clear the success flag from location state
+      // Clear the success flag from location state after showing the message
       window.history.replaceState({}, document.title);
     }
   }, [medicalIssued]);
@@ -121,36 +117,32 @@ const PatientProfile = () => {
         fetchPatientProfile(patientId),
         fetchPatientVitals(patientId)
       ]);
-      
-      console.log('Loaded patient profile data:', profileData);
-      
+
       setPatientData(profileData.patient || profileData);
       setVitals(vitalsData);
       setRecentDiagnoses(profileData.recentDiagnoses || []);
       
-      // Load medicals
       await loadMedicals();
       
-      // If there are existing vitals, populate the form with the latest values
       if (profileData.latestVitals) {
         setCurrentVitals({
-          heightCm: profileData.latestVitals.heightCm || '',
-          weightKg: profileData.latestVitals.weightKg || '',
-          temperatureC: profileData.latestVitals.temperatureC || '',
-          systolicBp: profileData.latestVitals.systolicBp || '',
-          diastolicBp: profileData.latestVitals.diastolicBp || '',
-          heartRate: profileData.latestVitals.heartRate || '',
-          respiratoryRate: profileData.latestVitals.respiratoryRate || '',
-          oxygenSaturation: profileData.latestVitals.oxygenSaturation || '',
-          notes: profileData.latestVitals.notes || ''
+          heightCm: profileData.latestVitals.heightCm || "",
+          weightKg: profileData.latestVitals.weightKg || "",
+          temperatureC: profileData.latestVitals.temperatureC || "",
+          systolicBp: profileData.latestVitals.systolicBp || "",
+          diastolicBp: profileData.latestVitals.diastolicBp || "",
+          heartRate: profileData.latestVitals.heartRate || "",
+          respiratoryRate: profileData.latestVitals.respiratoryRate || "",
+          oxygenSaturation: profileData.latestVitals.oxygenSaturation || "",
+          notes: profileData.latestVitals.notes || ""
         });
       }
-      
+
       setError(null);
       setApiAvailable(true);
     } catch (err) {
       console.error("Error loading patient data:", err);
-      if (err.message.includes('404') || err.message.includes('Not Found')) {
+      if (err.message.includes("404") || err.message.includes("Not Found")) {
         setApiAvailable(false);
         setError("Patient data API endpoints are not yet implemented. Using basic patient information.");
       } else {
@@ -163,49 +155,41 @@ const PatientProfile = () => {
 
   const loadAdditionalData = async () => {
     try {
-      console.log('Loading additional data for patient:', patientData);
-      
       const [profileData, vitalsData] = await Promise.all([
         fetchPatientProfile(patientId),
         fetchPatientVitals(patientId)
       ]);
-      
-      console.log('Additional profile data loaded:', profileData);
-      
-      // Merge the data from API with the data from state
+
       const mergedPatientData = {
-        ...patientData, // Start with state data
-        ...profileData.patient, // Override with API data if available
-        ...profileData, // In case the patient data is at root level
+        ...patientData, 
+        ...profileData.patient, 
+        ...profileData, 
       };
       
-      console.log('Merged patient data:', mergedPatientData);
       setPatientData(mergedPatientData);
-      
       setVitals(vitalsData);
       setRecentDiagnoses(profileData.recentDiagnoses || []);
       
-      // Load medicals
       await loadMedicals();
       
       if (vitalsData.length > 0) {
         const latestVitals = vitalsData[0];
         setCurrentVitals({
-          heightCm: latestVitals.heightCm || '',
-          weightKg: latestVitals.weightKg || '',
-          temperatureC: latestVitals.temperatureC || '',
-          systolicBp: latestVitals.systolicBp || '',
-          diastolicBp: latestVitals.diastolicBp || '',
-          heartRate: latestVitals.heartRate || '',
-          respiratoryRate: latestVitals.respiratoryRate || '',
-          oxygenSaturation: latestVitals.oxygenSaturation || '',
-          notes: latestVitals.notes || ''
+          heightCm: latestVitals.heightCm || "",
+          weightKg: latestVitals.weightKg || "",
+          temperatureC: latestVitals.temperatureC || "",
+          systolicBp: latestVitals.systolicBp || "",
+          diastolicBp: latestVitals.diastolicBp || "",
+          heartRate: latestVitals.heartRate || "",
+          respiratoryRate: latestVitals.respiratoryRate || "",
+          oxygenSaturation: latestVitals.oxygenSaturation || "",
+          notes: latestVitals.notes || ""
         });
       }
       setApiAvailable(true);
     } catch (err) {
       console.error("Error loading additional patient data:", err);
-      if (err.message.includes('404') || err.message.includes('Not Found')) {
+      if (err.message.includes("404") || err.message.includes("Not Found")) {
         setApiAvailable(false);
       }
     } finally {
@@ -220,7 +204,6 @@ const PatientProfile = () => {
       setMedicals(medicalsData || []);
     } catch (err) {
       console.error("Error loading medicals:", err);
-      // Don't show error for medicals if it's just not implemented yet
       if (!err.message.includes('404') && !err.message.includes('Not Found')) {
         console.error("Failed to load medicals:", err.message);
       }
@@ -244,13 +227,12 @@ const PatientProfile = () => {
 
     try {
       setSaving(true);
-      
-      // Filter out empty values and convert to appropriate types, but allow null values
+
       const vitalsToSave = {};
       Object.keys(currentVitals).forEach(key => {
         const value = currentVitals[key];
-        if (value !== '' && value !== null && value !== undefined) {
-          if (key === 'notes') {
+        if (value !== "" && value !== null && value !== undefined) {
+          if (key === "notes") {
             vitalsToSave[key] = value;
           } else {
             const numValue = parseFloat(value);
@@ -260,12 +242,9 @@ const PatientProfile = () => {
           }
         }
       });
-      
+
       await savePatientVitals(patientId, vitalsToSave);
-      
-      // Reload data after saving
       await loadAdditionalData();
-      
       setEditingVitals(false);
       setError(null);
     } catch (err) {
@@ -293,20 +272,16 @@ const PatientProfile = () => {
         diagnosis: diagnosis.trim(),
         notes: diagnosisNotes.trim()
       };
-      
-      // Add appointment ID if available
+
       if (currentAppointmentId) {
         diagnosisData.appointmentId = currentAppointmentId;
       }
-      
+
       await saveDiagnosis(patientId, diagnosisData);
-      
-      setDiagnosis('');
-      setDiagnosisNotes('');
-      
-      // Reload data to show the new diagnosis
+
+      setDiagnosis("");
+      setDiagnosisNotes("");
       await loadAdditionalData();
-      
       setError(null);
     } catch (err) {
       setError(err.message);
@@ -317,21 +292,27 @@ const PatientProfile = () => {
   };
 
   const handleWritePrescription = () => {
-    navigate(`/doctor/prescriptions`, { 
-      state: { 
+    const apptId = currentAppointmentId;
+    if (!apptId) {
+      alert("No appointment selected. Open this profile from an appointment, or include ?appointmentId=...");
+      return;
+    }
+    navigate(`/doctor/prescriptions?appointmentId=${apptId}`, {
+      state: {
+        appointmentId: apptId,
         patient: patientData,
-        patientId: patientId,
-        patientName: patientData?.name || 'Unknown Patient'
+        patientId,
+        patientName: patientData?.name || "Unknown Patient"
       }
     });
   };
 
   const handleRequestLabTest = () => {
-    navigate(`/doctor/request-test`, { 
-      state: { 
+    navigate(`/doctor/request-test`, {
+      state: {
         patient: patientData,
-        patientId: patientId,
-        patientName: patientData?.name || 'Unknown Patient'
+        patientId,
+        patientName: patientData?.name || "Unknown Patient"
       }
     });
   };
@@ -352,13 +333,11 @@ const PatientProfile = () => {
   const getPatientAge = () => {
     if (!patientData) return null;
     
-    // Try to get age directly
     const directAge = patientData.age || patientData.patientDetails?.age || patientData.user?.age;
     if (directAge !== undefined && directAge !== null) {
       return directAge;
     }
     
-    // Try to calculate from dateOfBirth
     const dob = patientData.dateOfBirth || patientData.patientDetails?.dateOfBirth || patientData.user?.dateOfBirth;
     if (dob) {
       const today = new Date();
@@ -375,42 +354,42 @@ const PatientProfile = () => {
   };
 
   const formatDate = (dateString) => {
-    if (!dateString) return 'N/A';
+    if (!dateString) return "N/A";
     try {
-      return new Date(dateString).toLocaleDateString('en-US', {
-        year: 'numeric',
-        month: 'short',
-        day: 'numeric',
-        hour: '2-digit',
-        minute: '2-digit'
+      return new Date(dateString).toLocaleDateString("en-US", {
+        year: "numeric",
+        month: "short",
+        day: "numeric",
+        hour: "2-digit",
+        minute: "2-digit"
       });
     } catch {
-      return 'Invalid Date';
+      return "Invalid Date";
     }
   };
 
   if (loading) {
     return (
-      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
-        <CircularProgress size={60} sx={{ color: "#45d27a" }} />
-      </Box>
+        <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+          <CircularProgress size={60} sx={{ color: "#45d27a" }} />
+        </Box>
     );
   }
 
   if (!patientData) {
     return (
-      <Box p={3}>
-        <Alert severity="error">
-          Patient data not found. Please go back and try again.
-        </Alert>
-        <Button
-          startIcon={<ArrowBackIcon />}
-          onClick={() => navigate('/doctor/dashboard')}
-          sx={{ mt: 2 }}
-        >
-          Back to Dashboard
-        </Button>
-      </Box>
+        <Box p={3}>
+          <Alert severity="error">
+            Patient data not found. Please go back and try again.
+          </Alert>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={() => navigate("/doctor/dashboard")}
+            sx={{ mt: 2 }}
+          >
+            Back to Dashboard
+          </Button>
+        </Box>
     );
   }
 
@@ -540,162 +519,146 @@ const PatientProfile = () => {
                 </Typography>
               </Box>
               {apiAvailable && (
-                !editingVitals ? (
-                  <Button
-                    startIcon={<EditIcon />}
-                    onClick={() => setEditingVitals(true)}
-                    variant="outlined"
-                    size="small"
-                  >
-                    Edit Vitals
-                  </Button>
-                ) : (
-                  <Box>
-                    <Button
-                      startIcon={<SaveIcon />}
-                      onClick={handleSaveVitals}
-                      variant="contained"
-                      size="small"
-                      disabled={saving}
-                      sx={{ mr: 1 }}
-                    >
-                      Save
-                    </Button>
-                    <Button
-                      startIcon={<CancelIcon />}
-                      onClick={() => setEditingVitals(false)}
-                      variant="outlined"
-                      size="small"
-                    >
-                      Cancel
-                    </Button>
-                  </Box>
-                )
+                  !editingVitals ? (
+                      <Button
+                          startIcon={<EditIcon />}
+                          onClick={() => setEditingVitals(true)}
+                          variant="outlined"
+                          size="small"
+                      >
+                        Edit Vitals
+                      </Button>
+                  ) : (
+                      <Box>
+                        <Button
+                            startIcon={<SaveIcon />}
+                            onClick={handleSaveVitals}
+                            variant="contained"
+                            size="small"
+                            disabled={saving}
+                            sx={{ mr: 1 }}
+                        >
+                          Save
+                        </Button>
+                        <Button
+                            startIcon={<CancelIcon />}
+                            onClick={() => setEditingVitals(false)}
+                            variant="outlined"
+                            size="small"
+                        >
+                          Cancel
+                        </Button>
+                      </Box>
+                  )
               )}
             </Box>
             <Divider sx={{ mb: 2 }} />
 
             {!apiAvailable && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                Vitals functionality will be available once the backend API endpoints are implemented.
-              </Alert>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Vitals functionality will be available once the backend API endpoints are implemented.
+                </Alert>
             )}
 
             <Grid container spacing={2}>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  fullWidth
-                  label="Height"
-                  value={currentVitals.heightCm}
-                  onChange={(e) => handleVitalsChange('heightCm', e.target.value)}
-                  disabled={!editingVitals || !apiAvailable}
-                  type="number"
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">cm</InputAdornment>
-                  }}
+                    fullWidth
+                    label="Height"
+                    value={currentVitals.heightCm}
+                    onChange={(e) => handleVitalsChange("heightCm", e.target.value)}
+                    disabled={!editingVitals || !apiAvailable}
+                    type="number"
+                    InputProps={{ endAdornment: <InputAdornment position="end">cm</InputAdornment> }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  fullWidth
-                  label="Weight"
-                  value={currentVitals.weightKg}
-                  onChange={(e) => handleVitalsChange('weightKg', e.target.value)}
-                  disabled={!editingVitals || !apiAvailable}
-                  type="number"
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">kg</InputAdornment>
-                  }}
+                    fullWidth
+                    label="Weight"
+                    value={currentVitals.weightKg}
+                    onChange={(e) => handleVitalsChange("weightKg", e.target.value)}
+                    disabled={!editingVitals || !apiAvailable}
+                    type="number"
+                    InputProps={{ endAdornment: <InputAdornment position="end">kg</InputAdornment> }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  fullWidth
-                  label="Temperature"
-                  value={currentVitals.temperatureC}
-                  onChange={(e) => handleVitalsChange('temperatureC', e.target.value)}
-                  disabled={!editingVitals || !apiAvailable}
-                  type="number"
-                  step="0.1"
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">°C</InputAdornment>
-                  }}
+                    fullWidth
+                    label="Temperature"
+                    value={currentVitals.temperatureC}
+                    onChange={(e) => handleVitalsChange("temperatureC", e.target.value)}
+                    disabled={!editingVitals || !apiAvailable}
+                    type="number"
+                    step="0.1"
+                    InputProps={{ endAdornment: <InputAdornment position="end">°C</InputAdornment> }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  fullWidth
-                  label="Heart Rate"
-                  value={currentVitals.heartRate}
-                  onChange={(e) => handleVitalsChange('heartRate', e.target.value)}
-                  disabled={!editingVitals || !apiAvailable}
-                  type="number"
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">bpm</InputAdornment>
-                  }}
+                    fullWidth
+                    label="Heart Rate"
+                    value={currentVitals.heartRate}
+                    onChange={(e) => handleVitalsChange("heartRate", e.target.value)}
+                    disabled={!editingVitals || !apiAvailable}
+                    type="number"
+                    InputProps={{ endAdornment: <InputAdornment position="end">bpm</InputAdornment> }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  fullWidth
-                  label="Systolic BP"
-                  value={currentVitals.systolicBp}
-                  onChange={(e) => handleVitalsChange('systolicBp', e.target.value)}
-                  disabled={!editingVitals || !apiAvailable}
-                  type="number"
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">mmHg</InputAdornment>
-                  }}
+                    fullWidth
+                    label="Systolic BP"
+                    value={currentVitals.systolicBp}
+                    onChange={(e) => handleVitalsChange("systolicBp", e.target.value)}
+                    disabled={!editingVitals || !apiAvailable}
+                    type="number"
+                    InputProps={{ endAdornment: <InputAdornment position="end">mmHg</InputAdornment> }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  fullWidth
-                  label="Diastolic BP"
-                  value={currentVitals.diastolicBp}
-                  onChange={(e) => handleVitalsChange('diastolicBp', e.target.value)}
-                  disabled={!editingVitals || !apiAvailable}
-                  type="number"
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">mmHg</InputAdornment>
-                  }}
+                    fullWidth
+                    label="Diastolic BP"
+                    value={currentVitals.diastolicBp}
+                    onChange={(e) => handleVitalsChange("diastolicBp", e.target.value)}
+                    disabled={!editingVitals || !apiAvailable}
+                    type="number"
+                    InputProps={{ endAdornment: <InputAdornment position="end">mmHg</InputAdornment> }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  fullWidth
-                  label="Respiratory Rate"
-                  value={currentVitals.respiratoryRate}
-                  onChange={(e) => handleVitalsChange('respiratoryRate', e.target.value)}
-                  disabled={!editingVitals || !apiAvailable}
-                  type="number"
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">/min</InputAdornment>
-                  }}
+                    fullWidth
+                    label="Respiratory Rate"
+                    value={currentVitals.respiratoryRate}
+                    onChange={(e) => handleVitalsChange("respiratoryRate", e.target.value)}
+                    disabled={!editingVitals || !apiAvailable}
+                    type="number"
+                    InputProps={{ endAdornment: <InputAdornment position="end">/min</InputAdornment> }}
                 />
               </Grid>
               <Grid item xs={12} sm={6}>
                 <TextField
-                  fullWidth
-                  label="Oxygen Saturation"
-                  value={currentVitals.oxygenSaturation}
-                  onChange={(e) => handleVitalsChange('oxygenSaturation', e.target.value)}
-                  disabled={!editingVitals || !apiAvailable}
-                  type="number"
-                  InputProps={{
-                    endAdornment: <InputAdornment position="end">%</InputAdornment>
-                  }}
+                    fullWidth
+                    label="Oxygen Saturation"
+                    value={currentVitals.oxygenSaturation}
+                    onChange={(e) => handleVitalsChange("oxygenSaturation", e.target.value)}
+                    disabled={!editingVitals || !apiAvailable}
+                    type="number"
+                    InputProps={{ endAdornment: <InputAdornment position="end">%</InputAdornment> }}
                 />
               </Grid>
               <Grid item xs={12}>
                 <TextField
-                  fullWidth
-                  label="Notes"
-                  value={currentVitals.notes}
-                  onChange={(e) => handleVitalsChange('notes', e.target.value)}
-                  disabled={!editingVitals || !apiAvailable}
-                  multiline
-                  rows={2}
+                    fullWidth
+                    label="Notes"
+                    value={currentVitals.notes}
+                    onChange={(e) => handleVitalsChange("notes", e.target.value)}
+                    disabled={!editingVitals || !apiAvailable}
+                    multiline
+                    rows={2}
                 />
               </Grid>
             </Grid>
@@ -707,47 +670,44 @@ const PatientProfile = () => {
               Today's Diagnosis
             </Typography>
             <Divider sx={{ mb: 2 }} />
-            
+
             {!apiAvailable && (
-              <Alert severity="info" sx={{ mb: 2 }}>
-                Diagnosis functionality will be available once the backend API endpoints are implemented.
-              </Alert>
+                <Alert severity="info" sx={{ mb: 2 }}>
+                  Diagnosis functionality will be available once the backend API endpoints are implemented.
+                </Alert>
             )}
-            
+
             <Grid container spacing={2}>
               <Grid item xs={12}>
                 <TextField
-                  fullWidth
-                  label="Diagnosis"
-                  value={diagnosis}
-                  onChange={(e) => setDiagnosis(e.target.value)}
-                  multiline
-                  rows={3}
-                  placeholder="Enter diagnosis for today's consultation..."
-                  disabled={!apiAvailable}
+                    fullWidth
+                    label="Diagnosis"
+                    value={diagnosis}
+                    onChange={(e) => setDiagnosis(e.target.value)}
+                    multiline
+                    rows={3}
+                    placeholder="Enter diagnosis for today's consultation..."
+                    disabled={!apiAvailable}
                 />
               </Grid>
               <Grid item xs={12}>
                 <TextField
-                  fullWidth
-                  label="Additional Notes"
-                  value={diagnosisNotes}
-                  onChange={(e) => setDiagnosisNotes(e.target.value)}
-                  multiline
-                  rows={2}
-                  placeholder="Additional notes or recommendations..."
-                  disabled={!apiAvailable}
+                    fullWidth
+                    label="Additional Notes"
+                    value={diagnosisNotes}
+                    onChange={(e) => setDiagnosisNotes(e.target.value)}
+                    multiline
+                    rows={2}
+                    placeholder="Additional notes or recommendations..."
+                    disabled={!apiAvailable}
                 />
               </Grid>
               <Grid item xs={12}>
                 <Button
-                  onClick={handleSaveDiagnosis}
-                  variant="contained"
-                  disabled={saving || !diagnosis.trim() || !apiAvailable}
-                  sx={{
-                    backgroundColor: "#45d27a",
-                    "&:hover": { backgroundColor: "#3ab86a" }
-                  }}
+                    onClick={handleSaveDiagnosis}
+                    variant="contained"
+                    disabled={saving || !diagnosis.trim() || !apiAvailable}
+                    sx={{ backgroundColor: "#45d27a", "&:hover": { backgroundColor: "#3ab86a" } }}
                 >
                   Save Diagnosis
                 </Button>
@@ -755,45 +715,45 @@ const PatientProfile = () => {
             </Grid>
           </Paper>
 
-          {/* Recent Diagnoses - Show if API is available and data exists */}
+          {/* Recent Diagnoses */}
           {apiAvailable && recentDiagnoses && recentDiagnoses.length > 0 && (
-            <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-              <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600, mb: 2 }}>
-                Recent Diagnoses
-              </Typography>
-              <Divider sx={{ mb: 2 }} />
-              
-              <List>
-                {recentDiagnoses.map((diag, index) => (
-                  <ListItem key={index} divider={index < recentDiagnoses.length - 1}>
-                    <ListItemText
-                      primary={
-                        <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
-                          {diag.diagnosis}
-                        </Typography>
-                      }
-                      secondary={
-                        <Box>
-                          <Typography variant="body2" color="text.secondary">
-                            <strong>Date:</strong> {formatDate(diag.diagnosisDate)}
-                          </Typography>
-                          {diag.notes && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                              <strong>Notes:</strong> {diag.notes}
-                            </Typography>
-                          )}
-                          {diag.appointment && (
-                            <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
-                              <strong>Appointment:</strong> {formatDate(diag.appointment.appointmentDateTime)}
-                            </Typography>
-                          )}
-                        </Box>
-                      }
-                    />
-                  </ListItem>
-                ))}
-              </List>
-            </Paper>
+              <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+                <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600, mb: 2 }}>
+                  Recent Diagnoses
+                </Typography>
+                <Divider sx={{ mb: 2 }} />
+
+                <List>
+                  {recentDiagnoses.map((diag, index) => (
+                      <ListItem key={index} divider={index < recentDiagnoses.length - 1}>
+                        <ListItemText
+                            primary={
+                              <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                                {diag.diagnosis}
+                              </Typography>
+                            }
+                            secondary={
+                              <Box>
+                                <Typography variant="body2" color="text.secondary">
+                                  <strong>Date:</strong> {formatDate(diag.diagnosisDate)}
+                                </Typography>
+                                {diag.notes && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                      <strong>Notes:</strong> {diag.notes}
+                                    </Typography>
+                                )}
+                                {diag.appointment && (
+                                    <Typography variant="body2" color="text.secondary" sx={{ mt: 0.5 }}>
+                                      <strong>Appointment:</strong> {formatDate(diag.appointment.appointmentDateTime)}
+                                    </Typography>
+                                )}
+                              </Box>
+                            }
+                        />
+                      </ListItem>
+                  ))}
+                </List>
+              </Paper>
           )}
 
           {/* Medical Certificates Section */}

@@ -83,7 +83,6 @@ public class AuthController {
             String role = user.getRole().name();
             LoginResponse response = new LoginResponse(appToken, "Login successful", role);
             return ResponseEntity.ok(response);
-        // FIX: Replaced generic 'Exception' with more specific exceptions for better error handling.
         } catch (GeneralSecurityException | IOException e) {
             return ResponseEntity.status(HttpStatus.UNAUTHORIZED).body(Map.of("message", "Google authentication failed: " + e.getMessage()));
         }

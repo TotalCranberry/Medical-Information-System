@@ -2,6 +2,7 @@ package com.mis.model;
 
 import java.time.LocalDateTime;
 
+import com.fasterxml.jackson.annotation.JsonIgnoreProperties;
 import jakarta.persistence.Column;
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
@@ -10,7 +11,8 @@ import jakarta.persistence.Id;
 import jakarta.persistence.Table;
 
 @Entity
-@Table(name = "users") 
+@Table(name = "users")
+@JsonIgnoreProperties({"appointments", "prescriptions", "diagnoses", "medicals", "vitals", "hibernateLazyInitializer", "handler"})
 public class User {
 
     @Id

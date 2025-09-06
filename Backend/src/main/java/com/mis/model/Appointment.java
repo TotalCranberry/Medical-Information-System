@@ -2,6 +2,7 @@ package com.mis.model;
 
 import java.util.Date;
 
+import com.fasterxml.jackson.annotation.JsonIgnore;
 import jakarta.persistence.Column; // Use java.util.Date for better compatibility with JSON
 import jakarta.persistence.Entity;
 import jakarta.persistence.EnumType;
