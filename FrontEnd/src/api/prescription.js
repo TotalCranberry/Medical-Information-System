@@ -1,290 +1,317 @@
 import apiFetch from "./api";
 
-// ✅ Create a new prescription (Doctor only)
+/* -------------------- Doctor & Common -------------------- */
+
+// Create a new prescription (Doctor only)
 export const createPrescription = (prescriptionData) =>
-    apiFetch("/prescriptions/create", "POST", prescriptionData, true);
+  apiFetch("/prescriptions/create", "POST", prescriptionData, true);
 
-// ✅ Get prescription by ID
+// Get prescription by ID (also used by Pharmacy “View”)
 export const getPrescriptionById = (prescriptionId) =>
-    apiFetch(`/prescriptions/${prescriptionId}`, "GET", null, true);
+  apiFetch(`/prescriptions/${prescriptionId}`, "GET", null, true);
 
-// ✅ Get all prescriptions by current doctor
+// Get all prescriptions by current doctor
 export const getMyPrescriptions = () =>
-    apiFetch("/prescriptions/doctor/my-prescriptions", "GET", null, true);
+  apiFetch("/prescriptions/doctor/my-prescriptions", "GET", null, true);
 
-// ✅ Get recent prescriptions by current doctor (last 30 days)
+// Get recent prescriptions by current doctor (last 30 days)
 export const getRecentPrescriptions = () =>
-    apiFetch("/prescriptions/doctor/recent", "GET", null, true);
+  apiFetch("/prescriptions/doctor/recent", "GET", null, true);
 
-// ✅ Get prescriptions by patient ID
+// Get prescriptions by patient ID
 export const getPrescriptionsByPatientId = (patientId) =>
-    apiFetch(`/prescriptions/patient/${patientId}`, "GET", null, true);
+  apiFetch(`/prescriptions/patient/${patientId}`, "GET", null, true);
 
-// ✅ Get prescription by appointment ID
+// Get prescription by appointment ID
 export const getPrescriptionByAppointmentId = (appointmentId) =>
-    apiFetch(`/prescriptions/appointment/${appointmentId}`, "GET", null, true);
+  apiFetch(`/prescriptions/appointment/${appointmentId}`, "GET", null, true);
 
-// ✅ Get prescriptions for pharmacy queue (Pharmacist only) - Updated to match backend
+/* -------------------- Pharmacy (Queue / Dispense) -------------------- */
+
+// ✅ PENDING QUEUE (Pharmacist only) — matches backend: GET /api/prescriptions/pharmacy/pending
 export const getPrescriptionsForPharmacy = () =>
-    apiFetch("/prescriptions/pharmacist/queue", "GET", null, true);
+  apiFetch("/prescriptions/pharmacy/pending", "GET", null, true);
 
-// ✅ Get prescriptions by status with pagination (Pharmacist only)
-export const getPrescriptionsByStatus = (status, page = 0, size = 10, sortBy = "requestDate") =>
-    apiFetch(`/prescriptions/status/${status}?page=${page}&size=${size}&sortBy=${sortBy}`, "GET", null, true);
+// ✅ COMPLETED PRESCRIPTIONS (Pharmacist only) — matches backend: GET /api/prescriptions/pharmacy/completed
+export const getCompletedPrescriptionsForPharmacy = () =>
+  apiFetch("/prescriptions/pharmacy/completed", "GET", null, true);
+// ✅ DISPENSE (auto-decrement inventory + mark inactive)
+export const dispensePrescription = (prescriptionId) =>
+  apiFetch(`/prescriptions/${prescriptionId}/dispense`, "POST", null, true);
 
-// ✅ Update prescription status (Pharmacist only)
+/* -------------------- Optional / Legacy (only if endpoints exist) -------------------- */
+
+// These require matching endpoints on the backend. Keep if you plan to add them.
+// Get prescriptions by status with pagination (Pharmacist only)
+export const getPrescriptionsByStatus = (
+  status,
+  page = 0,
+  size = 10,
+  sortBy = "requestDate"
+) =>
+  apiFetch(
+    `/prescriptions/status/${status}?page=${page}&size=${size}&sortBy=${sortBy}`,
+    "GET",
+    null,
+    true
+  );
+
+// Update prescription status (Pharmacist only)
 export const updatePrescriptionStatus = (prescriptionId, statusData) =>
-    apiFetch(`/prescriptions/${prescriptionId}/status`, "PUT", statusData, true);
+  apiFetch(`/prescriptions/${prescriptionId}/status`, "PUT", statusData, true);
 
-// ✅ Search prescriptions by patient name
+// Search prescriptions by patient name
 export const searchPrescriptionsByPatientName = (patientName) =>
-    apiFetch(`/prescriptions/search?patientName=${encodeURIComponent(patientName)}`, "GET", null, true);
+  apiFetch(
+    `/prescriptions/search?patientName=${encodeURIComponent(patientName)}`,
+    "GET",
+    null,
+    true
+  );
 
-// ✅ Get doctor's prescription statistics - Updated to match backend
+// Doctor’s prescription statistics (if implemented)
 export const getDoctorPrescriptionStatistics = (doctorId) =>
-    apiFetch(`/prescriptions/doctor/${doctorId}/statistics`, "GET", null, true);
+  apiFetch(`/prescriptions/doctor/${doctorId}/statistics`, "GET", null, true);
 
-// ✅ Get overall prescription statistics (Pharmacist only)
+// Overall prescription statistics (Pharmacist only; if implemented)
 export const getOverallPrescriptionStatistics = () =>
-    apiFetch("/prescriptions/statistics", "GET", null, true);
+  apiFetch("/prescriptions/statistics", "GET", null, true);
 
-// ✅ Get overdue prescriptions (Pharmacist only) - This endpoint doesn't exist in your backend, but we'll keep it
+// Overdue prescriptions (if implemented)
 export const getOverduePrescriptions = () =>
-    apiFetch("/prescriptions/overdue", "GET", null, true);
+  apiFetch("/prescriptions/overdue", "GET", null, true);
 
-// ✅ Delete prescription (Doctor only - soft delete)
+// Delete prescription (Doctor only - soft delete, if implemented)
 export const deletePrescription = (prescriptionId) =>
-    apiFetch(`/prescriptions/${prescriptionId}`, "DELETE", null, true);
+  apiFetch(`/prescriptions/${prescriptionId}`, "DELETE", null, true);
 
-// ✅ Get available prescription statuses - This endpoint doesn't exist in your backend
+// Available statuses (if implemented)
 export const getPrescriptionStatuses = () =>
-    apiFetch("/prescriptions/statuses", "GET", null, true);
+  apiFetch("/prescriptions/statuses", "GET", null, true);
 
-// Helper functions for prescription management
+/* -------------------- Helpers -------------------- */
 
-// ✅ Format prescription data for submission (without quantity requirements)
+// Format payload for POST /prescriptions/create
 export const formatPrescriptionForSubmission = (formData) => {
-    // Filter out empty medications
-    const validMedications = formData.medications.filter(med =>
-        med.medicine.trim() && med.dosage.trim() && med.days.trim()
-    );
+  const validMedications = (formData.medications || []).filter(
+    (med) => med.medicine?.trim() && med.dosage?.trim() && med.days?.trim()
+  );
 
-    return {
-        patientId: formData.patientId,
-        patientName: formData.patientName,
-        appointmentId: formData.appointmentId,
-        generalNotes: formData.notes || "",
-        medications: validMedications.map(med => {
-            // Convert timings object to timeOfDay array
-            const timeOfDay = [];
-            if (med.timings?.morning) timeOfDay.push("MORNING");
-            if (med.timings?.afternoon) timeOfDay.push("AFTERNOON");
-            if (med.timings?.evening) timeOfDay.push("EVENING");
-            if (med.timings?.night) timeOfDay.push("NIGHT");
+  return {
+    patientId: formData.patientId,
+    patientName: formData.patientName,
+    appointmentId: formData.appointmentId,
+    generalNotes: formData.notes || "",
+    medications: validMedications.map((med) => {
+      // Convert UI timings object -> enum array
+      const timeOfDay = [];
+      if (med.timings?.morning) timeOfDay.push("MORNING");
+      if (med.timings?.afternoon) timeOfDay.push("AFTERNOON");
+      if (med.timings?.evening) timeOfDay.push("EVENING");
+      if (med.timings?.night) timeOfDay.push("NIGHT");
 
-            // Map administration method to RouteOfAdministration enum
-            let route = null;
-            if (med.method) {
-                switch (med.method.toUpperCase()) {
-                    case "ORAL":
-                    case "BY MOUTH":
-                        route = "ORAL";
-                        break;
-                    case "INTRAVENOUS":
-                    case "IV":
-                        route = "INTRAVENOUS";
-                        break;
-                    case "INTRAMUSCULAR":
-                    case "IM":
-                        route = "INTRAMUSCULAR";
-                        break;
-                    case "SUBCUTANEOUS":
-                    case "SUBCUT":
-                        route = "SUBCUTANEOUS";
-                        break;
-                    case "TOPICAL":
-                        route = "TOPICAL";
-                        break;
-                    case "INHALATION":
-                    case "INHALER":
-                        route = "INHALATION";
-                        break;
-                    case "RECTAL":
-                        route = "RECTAL";
-                        break;
-                    case "VAGINAL":
-                        route = "VAGINAL";
-                        break;
-                    case "OPHTHALMIC":
-                    case "EYE":
-                        route = "OPHTHALMIC";
-                        break;
-                    case "OTIC":
-                    case "EAR":
-                        route = "OTIC";
-                        break;
-                    default:
-                        route = "ORAL"; // Default to ORAL if not recognized
-                }
-            }
-
-            return {
-                medicineId: med.medicineId,
-                medicineName: med.medicine,
-                dosage: med.dosage,
-                timesPerDay: med.timesPerDay || "1",
-                durationDays: med.days,
-                route: route, // Use the mapped route enum value
-                timeOfDay: timeOfDay, // Use the converted timeOfDay array
-                instructions: med.remarks || "",
-                // Remove quantityPrescribed from submission data since it's optional
-                // quantityPrescribed: med.quantityPrescribed ? parseInt(med.quantityPrescribed) : null
-            };
-        })
-    };
-};
-
-// ✅ Calculate total medications in a prescription
-export const calculateTotalMedications = (prescription) => {
-    return prescription.medications ? prescription.medications.length : 0;
-};
-
-// ✅ Get status color for UI
-export const getPrescriptionStatusColor = (status) => {
-    switch (status?.toUpperCase()) {
-        case 'REQUESTED':
-            return 'warning';
-        case 'PENDING':
-            return 'info';
-        case 'IN_PROGRESS':
-            return 'primary';
-        case 'COMPLETED':
-            return 'success';
-        case 'CANCELLED':
-            return 'default';
-        case 'REJECTED':
-            return 'error';
-        default:
-            return 'default';
-    }
-};
-
-// ✅ Format prescription date for display
-export const formatPrescriptionDate = (dateString) => {
-    if (!dateString) return 'N/A';
-
-    try {
-        return new Date(dateString).toLocaleString('en-US', {
-            year: 'numeric',
-            month: 'short',
-            day: 'numeric',
-            hour: '2-digit',
-            minute: '2-digit',
-            hour12: true
-        });
-    } catch (error) {
-        return 'Invalid Date';
-    }
-};
-
-// ✅ Format medication timing for display
-export const formatMedicationTiming = (timings) => {
-    if (!timings) return 'Not specified';
-
-    const times = [];
-    if (timings.morning) times.push('Morning');
-    if (timings.afternoon) times.push('Afternoon');
-    if (timings.evening) times.push('Evening');
-    if (timings.night) times.push('Night');
-
-    return times.length > 0 ? times.join(', ') : 'Not specified';
-};
-
-// ✅ Validate prescription form data (without quantity validation)
-export const validatePrescriptionForm = (formData) => {
-    const errors = {};
-
-    // Validate patient name
-    if (!formData.patientName?.trim()) {
-        errors.patientName = 'Patient name is required';
-    }
-
-    // Validate medications
-    if (!formData.medications || formData.medications.length === 0) {
-        errors.medications = 'At least one medication is required';
-    } else {
-        const validMedications = formData.medications.filter(med =>
-            med.medicine?.trim() && med.dosage?.trim() && med.days?.trim()
-        );
-
-        if (validMedications.length === 0) {
-            errors.medications = 'At least one complete medication entry is required';
+      // Map method -> RouteOfAdministration enum
+      let route = "ORAL"; // Default to ORAL for most medications
+      if (med.method) {
+        switch (med.method.toUpperCase()) {
+          case "ORAL":
+          case "BY MOUTH":
+            route = "ORAL";
+            break;
+          case "INTRAVENOUS":
+          case "IV":
+            route = "INTRAVENOUS";
+            break;
+          case "INTRAMUSCULAR":
+          case "IM":
+            route = "INTRAMUSCULAR";
+            break;
+          case "SUBCUTANEOUS":
+          case "SUBCUT":
+            route = "SUBCUTANEOUS";
+            break;
+          case "TOPICAL":
+            route = "TOPICAL";
+            break;
+          case "INHALATION":
+          case "INHALER":
+            route = "INHALATION";
+            break;
+          case "RECTAL":
+            route = "RECTAL";
+            break;
+          case "VAGINAL":
+            route = "VAGINAL";
+            break;
+          case "OPHTHALMIC":
+          case "EYE":
+            route = "OPHTHALMIC";
+            break;
+          case "OTIC":
+          case "EAR":
+            route = "OTIC";
+            break;
+          default:
+            route = "ORAL";
         }
+      }
 
-        // Validate individual medications (without quantity validation)
-        formData.medications.forEach((med, index) => {
-            if (med.medicine?.trim() || med.dosage?.trim() || med.days?.trim()) {
-                if (!med.medicine?.trim()) {
-                    errors[`medication_${index}_medicine`] = 'Medicine name is required';
-                }
-                if (!med.dosage?.trim()) {
-                    errors[`medication_${index}_dosage`] = 'Dosage is required';
-                }
-                if (!med.days?.trim()) {
-                    errors[`medication_${index}_days`] = 'Duration is required';
-                } else if (isNaN(parseInt(med.days)) || parseInt(med.days) <= 0) {
-                    errors[`medication_${index}_days`] = 'Duration must be a positive number';
-                }
-            }
-        });
+      return {
+        medicineId: med.medicineId,
+        medicineName: med.medicine,
+        dosage: med.dosage,
+        timesPerDay: med.timesPerDay || "1",
+        durationDays: med.days,
+        route,
+        timeOfDay,
+        instructions: med.remarks || "",
+        form: med.medicineDetails?.form || "",
+        strength: med.medicineDetails?.strength || "",
+      };
+    }),
+  };
+};
+
+// Total medications in a prescription object
+export const calculateTotalMedications = (prescription) =>
+  prescription.medications ? prescription.medications.length : 0;
+
+// Status color helper (if you keep statuses)
+export const getPrescriptionStatusColor = (status) => {
+  switch (status?.toUpperCase()) {
+    case "REQUESTED":
+      return "warning";
+    case "PENDING":
+      return "info";
+    case "IN_PROGRESS":
+      return "primary";
+    case "COMPLETED":
+      return "success";
+    case "CANCELLED":
+      return "default";
+    case "REJECTED":
+      return "error";
+    default:
+      return "default";
+  }
+};
+
+// Human-friendly date
+export const formatPrescriptionDate = (dateString) => {
+  if (!dateString) return "N/A";
+  try {
+    return new Date(dateString).toLocaleString("en-US", {
+      year: "numeric",
+      month: "short",
+      day: "numeric",
+      hour: "2-digit",
+      minute: "2-digit",
+      hour12: true,
+    });
+  } catch {
+    return "Invalid Date";
+  }
+};
+
+// UI timing formatter (used on the doctor form side)
+export const formatMedicationTiming = (timings) => {
+  if (!timings) return "Not specified";
+  const times = [];
+  if (timings.morning) times.push("Morning");
+  if (timings.afternoon) times.push("Afternoon");
+  if (timings.evening) times.push("Evening");
+  if (timings.night) times.push("Night");
+  return times.length > 0 ? times.join(", ") : "Not specified";
+};
+
+// Validate doctor form (no quantity requirement)
+export const validatePrescriptionForm = (formData) => {
+  const errors = {};
+
+  if (!formData.patientName?.trim()) {
+    errors.patientName = "Patient name is required";
+  }
+
+  if (!formData.medications || formData.medications.length === 0) {
+    errors.medications = "At least one medication is required";
+  } else {
+    const valid = formData.medications.filter(
+      (m) => m.medicine?.trim() && m.dosage?.trim() && m.days?.trim()
+    );
+    if (valid.length === 0) {
+      errors.medications = "At least one complete medication entry is required";
     }
+    formData.medications.forEach((m, i) => {
+      if (m.medicine?.trim() || m.dosage?.trim() || m.days?.trim()) {
+        if (!m.medicine?.trim()) errors[`medication_${i}_medicine`] = "Medicine name is required";
+        if (!m.dosage?.trim()) errors[`medication_${i}_dosage`] = "Dosage is required";
+        if (!m.days?.trim()) errors[`medication_${i}_days`] = "Duration is required";
+        else if (isNaN(parseInt(m.days)) || parseInt(m.days) <= 0)
+          errors[`medication_${i}_days`] = "Duration must be a positive number";
+      }
+    });
+  }
 
-    return {
-        isValid: Object.keys(errors).length === 0,
-        errors
-    };
+  return { isValid: Object.keys(errors).length === 0, errors };
 };
 
-// ✅ Create prescription summary for display
+// Summary builder (works with requestDate OR prescriptionDate OR createdAt)
 export const createPrescriptionSummary = (prescription) => {
-    return {
-        id: prescription.id,
-        patientName: prescription.patientName,
-        doctorName: prescription.doctorName,
-        status: prescription.status,
-        medicationCount: calculateTotalMedications(prescription),
-        requestDate: formatPrescriptionDate(prescription.requestDate),
-        completedDate: prescription.completedDate ?
-            formatPrescriptionDate(prescription.completedDate) : null,
-        isActive: prescription.isActive
-    };
+  const reqDate =
+    prescription.requestDate ||
+    prescription.prescriptionDate ||
+    prescription.createdAt ||
+    null;
+
+  return {
+    id: prescription.id,
+    patientName: prescription.patientName,
+    doctorName: prescription.doctorName,
+    status: prescription.status,
+    medicationCount: calculateTotalMedications(prescription),
+    requestDate: reqDate ? formatPrescriptionDate(reqDate) : "N/A",
+    completedDate: prescription.completedDate
+      ? formatPrescriptionDate(prescription.completedDate)
+      : null,
+    isActive: prescription.isActive,
+  };
 };
 
-// ✅ Export default object with all functions
+/* -------------------- Default export (optional) -------------------- */
 export default {
-    // API calls
-    createPrescription,
-    getPrescriptionById,
-    getMyPrescriptions,
-    getRecentPrescriptions,
-    getPrescriptionsByPatientId,
-    getPrescriptionByAppointmentId,
-    getPrescriptionsForPharmacy,
-    getPrescriptionsByStatus,
-    updatePrescriptionStatus,
-    searchPrescriptionsByPatientName,
-    getDoctorPrescriptionStatistics,
-    getOverallPrescriptionStatistics,
-    getOverduePrescriptions,
-    deletePrescription,
-    getPrescriptionStatuses,
+  // API calls
+  createPrescription,
+  getPrescriptionById,
+  getMyPrescriptions,
+  getRecentPrescriptions,
+  getPrescriptionsByPatientId,
+  getPrescriptionByAppointmentId,
+  getPrescriptionsForPharmacy,
+  dispensePrescription,
+  getPrescriptionsByStatus,          // if implemented
+  updatePrescriptionStatus,          // if implemented
+  searchPrescriptionsByPatientName,
+  getDoctorPrescriptionStatistics,   // if implemented
+  getOverallPrescriptionStatistics,  // if implemented
+  getOverduePrescriptions,           // if implemented
+  deletePrescription,                // if implemented
+  getPrescriptionStatuses,           // if implemented
 
-    // Helper functions
-    formatPrescriptionForSubmission,
-    calculateTotalMedications,
-    getPrescriptionStatusColor,
-    formatPrescriptionDate,
-    formatMedicationTiming,
-    validatePrescriptionForm,
-    createPrescriptionSummary
+  // Helpers
+  formatPrescriptionForSubmission,
+  calculateTotalMedications,
+  getPrescriptionStatusColor,
+  formatPrescriptionDate,
+  formatMedicationTiming,
+  validatePrescriptionForm,
+  createPrescriptionSummary,
 };
+
+
+// ✅ DISPENSE MANUAL (pharmacist selects items and quantities)
+export const dispenseManual = (prescriptionId, items) =>
+  apiFetch(`/prescriptions/${prescriptionId}/dispense-manual`, "POST", { items }, true);
+
+// ✅ COMPLETE PRESCRIPTION (mark inactive)
+export const completePrescription = (prescriptionId) =>
+  apiFetch(`/prescriptions/${prescriptionId}/complete`, "POST", null, true);

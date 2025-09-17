@@ -1,5 +1,6 @@
 package com.mis.dto.prescription;
 
+import com.mis.model.User;
 import lombok.*;
 
 import java.util.Date;
@@ -16,6 +17,7 @@ public class PrescriptionResponse {
     private String doctorName;
     private String patientId;
     private String patientName;
+    private User patient;
     private String appointmentId;
     private String generalNotes;
     private Date prescriptionDate;

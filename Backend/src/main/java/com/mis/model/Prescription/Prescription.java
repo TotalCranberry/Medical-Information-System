@@ -33,7 +33,7 @@ public class Prescription {
     private String id; // UUID generated in service layer
 
     // ---------- Patient linkage ----------
-    @ManyToOne(fetch = FetchType.LAZY, optional = false)
+    @ManyToOne(fetch = FetchType.EAGER, optional = false)
     @JoinColumn(name = "patient_id")
     private User patient;
 
@@ -119,5 +119,9 @@ public class Prescription {
             items.remove(item);
             item.setPrescription(null);
         }
+    }
+
+    public List<PrescriptionItem> getPrescriptionItems() {
+        return items;
     }
 }

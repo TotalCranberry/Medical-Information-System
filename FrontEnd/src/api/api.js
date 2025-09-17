@@ -11,11 +11,22 @@ async function apiFetch(path, method = 'GET', body = null, addAuth = false) {
     headers,
     ...(body && { body: JSON.stringify(body) }),
   });
+  // Read response body once to handle empty/non-JSON responses safely
+  const text = await res.text();
+
   if (!res.ok) {
-    const error = await res.text();
-    throw new Error(error);
+    throw new Error(text || res.statusText || 'Request failed');
   }
-  return res.json();
+
+  // No content (e.g., 200 with empty body or 204)
+  if (!text) return null;
+
+  // Try JSON first, then fall back to plain text
+  try {
+    return JSON.parse(text);
+  } catch {
+    return text;
+  }
 }
 
 export default apiFetch;

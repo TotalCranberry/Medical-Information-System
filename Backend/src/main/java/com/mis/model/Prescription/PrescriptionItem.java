@@ -64,6 +64,22 @@ public class PrescriptionItem {
     @Convert(converter = EncryptedStringConverter.class)
     @Column(name = "instructions", columnDefinition = "TEXT")
     private String instructions;
+    
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "form", length = 512)
+    private String form;
+    
+    @Convert(converter = EncryptedStringConverter.class)
+    @Column(name = "strength", length = 512)
+    private String strength;
+    @Column(name = "required_quantity")
+    private Integer requiredQuantity;
+
+    @Column(name = "dispensed_quantity")
+    private Integer dispensedQuantity;
+
+    @Column(name = "dispensed_status")
+    private Integer dispensedStatus;
 
     @Column(name = "created_at", nullable = false)
     private LocalDateTime createdAt;
@@ -71,5 +87,9 @@ public class PrescriptionItem {
     @PrePersist
     protected void onCreate() {
         createdAt = LocalDateTime.now();
+    }
+
+    public Integer getDispenseQuantity() {
+        return dispensedQuantity;
     }
 }

@@ -1,6 +1,7 @@
 package com.mis.repository.Prescription;
 
 import java.util.List;
+import java.util.Date;
 
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
@@ -22,4 +23,6 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Stri
     List<Prescription> findByIsActiveOrderByPrescriptionDateDesc(Boolean isActive);
 
     List<Prescription> findByPatientAndIsActive(User patient, Boolean isActive);
+    List<Prescription> findByIsActiveAndUpdatedAt(Boolean isActive, Date updatedAt);
+    List<Prescription> findByIsActiveAndUpdatedAtBetween(Boolean isActive, Date startDate, Date endDate);
 }

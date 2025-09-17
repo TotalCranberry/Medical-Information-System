@@ -12,7 +12,7 @@ import jakarta.persistence.Table;
 
 @Entity
 @Table(name = "users")
-@JsonIgnoreProperties({"appointments", "prescriptions", "diagnoses", "medicals", "vitals"})
+@JsonIgnoreProperties({"appointments", "prescriptions", "diagnoses", "medicals", "vitals", "hibernateLazyInitializer", "handler"})
 public class User {
 
     @Id
