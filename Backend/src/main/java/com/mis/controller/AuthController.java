@@ -20,6 +20,7 @@ import com.mis.dto.LoginResponse;
 import com.mis.dto.RegisterRequest;
 import com.mis.dto.UserResponse;
 import com.mis.mapper.UserMapper;
+import com.mis.model.AccountStatus;
 import com.mis.model.User;
 import com.mis.security.JwtTokenProvider;
 import com.mis.service.GoogleTokenVerifierService;
@@ -59,6 +60,12 @@ public class AuthController {
             Optional<User> userOpt = userService.authenticate(loginRequest.getEmail(), loginRequest.getPassword());
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
+                if (user.getStatus() == AccountStatus.PENDING_APPROVAL) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Your account is pending approval by an administrator."));
+                }
+                if (user.getStatus() == AccountStatus.DISABLED) {
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Your account has been disabled."));
+                }
                 String token = jwtTokenProvider.createToken(user);
                 String role = user.getRole().name();
                 LoginResponse response = new LoginResponse(token, "Login successful", role);

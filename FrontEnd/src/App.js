@@ -21,6 +21,8 @@ import EditNoteIcon from "@mui/icons-material/EditNote";
 import PeopleIcon from "@mui/icons-material/People";
 import ScienceIcon from "@mui/icons-material/Science";
 import MedicationIcon from "@mui/icons-material/Medication";
+import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
+import HistoryIcon from '@mui/icons-material/History';
 
 // Assets
 import UOPLogo from './assets/UOP_logo.jpeg';
@@ -62,6 +64,10 @@ import ViewMedical from './components/Doctor/ViewMedical';
 import LabDashboard from './components/Laboratory/LabDashboard';
 import LabRequests from './components/Laboratory/LabTests';
 import LabResults from './components/Laboratory/LabResults';
+
+// Admin pages
+import UserManagement from './components/Admin/UserManagement';
+import AuditLogPage from './components/Admin/AuditLogs';
 
 // --- Doctor mock data & helpers ---
 const mockPatients = [
@@ -144,6 +150,10 @@ const navLinksConfig = {
     { label: "Dashboard", path: "/labtechnician/dashboard", icon: <DashboardIcon /> },
     { label: "Lab Requests", path: "/labtechnician/lab-requests", icon: <MedicalServicesIcon /> },
     { label: "Lab Results", path: "/labtechnician/lab-results", icon: <DescriptionIcon /> },
+  ],
+  admin: [
+    { label: "User Management", path: "/admin/users", icon: <SupervisorAccountIcon /> },
+    { label: "Audit Log", path: "/admin/audit-log", icon: <HistoryIcon /> }
   ]
 };
 
@@ -404,6 +414,9 @@ function App() {
           <Route path="labtechnician/lab-results" element={<LabResults results={mockLabRequests} />} />
           <Route path="labtechnician/support" element={<SupportPage />} />
 
+          {/* Admin Routes */}
+          <Route path="admin/user-management" element={<UserManagement  />} />
+          <Route path="admin/audit-logs" element={<AuditLogPage />} />
         </Route>
 
         {/* Fallback redirect */}

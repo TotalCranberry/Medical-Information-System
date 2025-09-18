@@ -17,6 +17,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
 import com.mis.dto.ProfileUpdateRequest;
 import com.mis.dto.UserResponse;
 import com.mis.mapper.UserMapper;
+import com.mis.model.AccountStatus;
 import com.mis.model.AuthMethod;
 import com.mis.model.Role;
 import com.mis.model.Staff;
@@ -49,6 +50,11 @@ public class UserService {
         
         user.setId(UUID.randomUUID().toString());
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        if (user.getRole() == Role.Student || user.getRole() == Role.Staff) {
+            user.setStatus(AccountStatus.ACTIVE);
+        } else {
+            user.setStatus(AccountStatus.PENDING_APPROVAL);
+        }
         user.setLastLogin(LocalDateTime.now());
         User savedUser = userRepository.save(user);
 
@@ -86,6 +92,7 @@ public class UserService {
         newUser.setAuthMethod(AuthMethod.GoogleAuth);
         newUser.setRole(determineRoleFromEmail(email));
         newUser.setLastLogin(LocalDateTime.now());
+        newUser.setStatus(AccountStatus.ACTIVE);
         newUser.setPasswordHash(null); 
         User savedUser = userRepository.save(newUser);
         
