@@ -5,6 +5,8 @@ import {
   useTheme, useMediaQuery, Stack, Paper, TableContainer
 } from "@mui/material";
 
+import AnnouncementDisplay from "../AnnouncementDisplay";
+
 const LabDashboard = () => {
   const [filter, setFilter] = useState("newRequests");
   const theme = useTheme();
@@ -64,6 +66,7 @@ const LabDashboard = () => {
       >
         Welcome, Lab Staff
       </Typography>
+      <AnnouncementDisplay />
 
       {/* Stats Cards - Responsive Grid */}
       <Grid container spacing={2} sx={{ mb: 4 }}>
