@@ -25,6 +25,8 @@ public class Student {
 
     private String faculty;
     private LocalDate dateOfBirth;
+    private String gender;
+    private String registrationNumber;
 
     // FIX: Removed the 'age' field. It will be calculated instead.
 
@@ -37,6 +39,21 @@ public class Student {
     public void setFaculty(String faculty) { this.faculty = faculty; }
     public LocalDate getDateOfBirth() { return dateOfBirth; }
     public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
+    public String getRegistrationNumber() { return registrationNumber; }
+    public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }
+
+    @Transient
+    public String extractRegistrationNumberFromEmail() {
+        if (this.user != null && this.user.getEmail() != null) {
+            String email = this.user.getEmail();
+            if (email.matches("e\\d{2}\\d{3}@eng.pdn.ac.lk")) {
+                return email.substring(0, 6).toUpperCase();
+            }
+        }
+        return null;
+    }
 
     /**
      * FIX: Added a transient method to calculate age dynamically.

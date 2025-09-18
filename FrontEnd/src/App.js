@@ -23,6 +23,7 @@ import ScienceIcon from "@mui/icons-material/Science";
 import MedicationIcon from "@mui/icons-material/Medication";
 import SupervisorAccountIcon from '@mui/icons-material/SupervisorAccount';
 import HistoryIcon from '@mui/icons-material/History';
+import CampaignIcon from '@mui/icons-material/Campaign';
 
 // Assets
 import UOPLogo from './assets/UOP_logo.jpeg';
@@ -42,6 +43,7 @@ import ReportsTab from "./components/Patient/ReportsTab";
 import ProfilePage from "./components/Patient/ProfilePage";
 import SupportPage from "./components/Patient/SupportPage";
 import FAQPage from './components/Patient/FAQPage';
+import MedicalFormUpload from './components/Patient/MedicalFormUpload';
 
 // Pharmacy pages
 import PharmacyDashboard from "./components/Pharmacy/PharmacyDashboard";
@@ -68,6 +70,8 @@ import LabResults from './components/Laboratory/LabResults';
 // Admin pages
 import UserManagement from './components/Admin/UserManagement';
 import AuditLogPage from './components/Admin/AuditLogs';
+import CreateAnnouncement from './components/Admin/CreateAnnouncement';
+import SupportTicketsPage from './components/Admin/SupportTicketsPage';
 
 // --- Doctor mock data & helpers ---
 const mockPatients = [
@@ -134,6 +138,7 @@ const navLinksConfig = {
     { label: "Appointments", path: "/patient/appointments", icon: <CalendarTodayIcon /> },
     { label: "Reports", path: "/patient/reports", icon: <DescriptionIcon /> },
     { label: "Support", path: "/patient/support", icon: <ContactSupportIcon /> },
+    { label: "Upload Medical Form", path: "/patient/upload-medical-form", icon: <DescriptionIcon /> }
   ],
   doctor: [
     { label: "Dashboard", path: "/doctor/dashboard", icon: <DashboardIcon /> },
@@ -153,7 +158,9 @@ const navLinksConfig = {
   ],
   admin: [
     { label: "User Management", path: "/admin/dashboard", icon: <SupervisorAccountIcon /> },
-    { label: "Audit Log", path: "/admin/audit-log", icon: <HistoryIcon /> }
+    { label: "Audit Log", path: "/admin/audit-log", icon: <HistoryIcon /> },
+    { label: "Announcements", path: "/admin/announcements", icon: <CampaignIcon /> },
+    { label: "Support Tickets", path: "/admin/support-tickets", icon: <ContactSupportIcon /> }
   ]
 };
 
@@ -389,6 +396,7 @@ function App() {
           <Route path="patient/view-medical/:medicalId" element={<ViewMedical />} />
           <Route path="patient/support" element={<SupportPage />} />
           <Route path="patient/faq" element={<FAQPage />} />
+          <Route path="patient/upload-medical-form" element={<MedicalFormUpload onProfileUpdate={fetchAllUserData} />} />
 
           {/* Pharmacist Routes */}
           <Route path="pharmacist/dashboard" element={<PharmacyDashboard user={user} />} />
@@ -417,6 +425,8 @@ function App() {
           {/* Admin Routes */}
           <Route path="admin/dashboard" element={<UserManagement user={user} />} />
           <Route path="admin/audit-log" element={<AuditLogPage />} />
+          <Route path="admin/announcements" element={<CreateAnnouncement />} />
+          <Route path="admin/support-tickets" element={<SupportTicketsPage />} />
         </Route>
 
         {/* Fallback redirect */}

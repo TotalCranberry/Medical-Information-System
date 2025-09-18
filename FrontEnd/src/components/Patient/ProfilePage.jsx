@@ -1,7 +1,9 @@
 import React, { useState, useEffect } from "react";
 import {
-  Button, TextField, Typography, Paper, Box, Switch, FormControlLabel, 
-  Divider, IconButton, InputAdornment, Snackbar, Alert
+  Button, TextField, Typography, Paper, Box, Switch, FormControlLabel,
+  Divider, IconButton, InputAdornment, Snackbar, Alert,
+  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
+  Select, MenuItem, FormControl, InputLabel
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
 import { changePassword } from "../../api/auth"; 
@@ -10,6 +12,8 @@ import { updateProfile } from "../../api/auth";
 const ProfilePage = ({ user, onProfileUpdate }) => {
   const [name, setName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState(null);
+  const [gender, setGender] = useState("");
+  const [confirmOpen, setConfirmOpen] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -23,6 +27,7 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
       if (user.dateOfBirth) {
         setDateOfBirth(new Date(user.dateOfBirth));
       }
+      setGender(user.gender || "");
     }
   }, [user]);
 
@@ -32,14 +37,14 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
 
     try {
       // Prepare data for update
-      const updateData = { name };
+      const updateData = { name, gender: gender };
       
       // Include DOB for Student and Staff roles only if it's not already set
       if ((user?.role === "Student" || user?.role === "Staff") && dateOfBirth && !user?.dateOfBirth) {
         updateData.dateOfBirth = dateOfBirth.toISOString().split('T')[0]; // Format as YYYY-MM-DD
       }
       
-      const { user: updatedUser, message } = await updateProfile(updateData); 
+      const { user: updatedUser, message } = await updateProfile(updateData);
       setMessage({ text: message || "Profile updated successfully!", type: "success" });
 
       if (onProfileUpdate) {
@@ -48,6 +53,16 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
     }
+  };
+
+  const handleGenderChange = (e) => {
+    setGender(e.target.value);
+    setConfirmOpen(true);
+  };
+
+  const handleConfirmGenderChange = () => {
+    setConfirmOpen(false);
+    handleProfileSave({ preventDefault: () => {} });
   };
 
   const handlePasswordChange = async (e) => {
@@ -108,6 +123,19 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
               helperText={user?.dateOfBirth ? "Date of birth cannot be changed once set" : ""}
             />
           )}
+
+          <FormControl fullWidth margin="normal">
+            <InputLabel>Gender</InputLabel>
+            <Select
+              value={gender}
+              onChange={handleGenderChange}
+              label="Gender"
+              disabled={!!user?.gender}
+            >
+              <MenuItem value="Male">Male</MenuItem>
+              <MenuItem value="Female">Female</MenuItem>
+            </Select>
+          </FormControl>
           
           <TextField
             label="Email"
@@ -189,6 +217,24 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
           {message.text}
         </Alert>
       </Snackbar>
+
+      <Dialog
+        open={confirmOpen}
+        onClose={() => setConfirmOpen(false)}
+      >
+        <DialogTitle>Confirm Gender Change</DialogTitle>
+        <DialogContent>
+          <DialogContentText>
+            Are you sure you want to set your gender to {gender}? This cannot be changed later.
+          </DialogContentText>
+        </DialogContent>
+        <DialogActions>
+          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
+          <Button onClick={handleConfirmGenderChange} autoFocus>
+            Confirm
+          </Button>
+        </DialogActions>
+      </Dialog>
     </Box>
   );
 };
