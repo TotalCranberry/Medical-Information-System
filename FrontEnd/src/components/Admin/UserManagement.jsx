@@ -1,69 +1,35 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, CircularProgress, Alert, Chip, Paper, Button } from '@mui/material';
-import { CheckCircle, HourglassEmpty, DoNotDisturb, PeopleAlt } from '@mui/icons-material';
+import {
+  Box,
+  Typography,
+  CircularProgress,
+  Alert,
+  Chip,
+  Paper,
+  Button,
+  Table,
+  TableBody,
+  TableCell,
+  TableContainer,
+  TableHead,
+  TableRow,
+  TablePagination,
+  FormControl,
+  InputLabel,
+  Select,
+  MenuItem,
+  IconButton,
+  Tooltip
+} from '@mui/material';
+import {
+  CheckCircle,
+  HourglassEmpty,
+  DoNotDisturb,
+  PeopleAlt,
+  Check as CheckIcon,
+  Refresh as RefreshIcon
+} from '@mui/icons-material';
 import { fetchUsers, approveUser } from '../../api/admin';
-
-// A single user card component
-const UserCard = ({ user, onApprove }) => {
-    const handleApprove = () => {
-        if (window.confirm(`Are you sure you want to approve the account for ${user.name}?`)) {
-            onApprove(user.id);
-        }
-    };
-
-    const statusInfo = {
-        PENDING_APPROVAL: { icon: <HourglassEmpty className="text-yellow-500" />, label: "Pending", chipColor: "warning" },
-        ACTIVE: { icon: <CheckCircle className="text-green-500" />, label: "Active", chipColor: "success" },
-        DISABLED: { icon: <DoNotDisturb className="text-red-500" />, label: "Disabled", chipColor: "error" },
-    };
-    
-    const currentStatus = statusInfo[user.status] || { label: "Unknown" };
-
-    return (
-        <Paper elevation={2} sx={{ p: 3, mb: 2 }}>
-            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
-                <Box sx={{ flex: 1 }}>
-                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main', mb: 1 }}>
-                        {user.name}
-                    </Typography>
-                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
-                        {user.email}
-                    </Typography>
-                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
-                        <Chip label={user.role} size="small" sx={{ fontWeight: 'medium' }} />
-                        <Chip
-                            icon={currentStatus.icon}
-                            label={currentStatus.label}
-                            color={currentStatus.chipColor}
-                            size="small"
-                            variant="outlined"
-                        />
-                    </Box>
-                </Box>
-                {user.status === 'PENDING_APPROVAL' && (
-                    <Box sx={{ width: { xs: '100%', sm: 'auto' }, display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
-                        <Button
-                            variant="contained"
-                            color="success"
-                            onClick={handleApprove}
-                            sx={{
-                                fontWeight: 'bold',
-                                textTransform: 'none',
-                                boxShadow: 2,
-                                '&:hover': {
-                                    boxShadow: 4,
-                                    backgroundColor: 'success.dark'
-                                }
-                            }}
-                        >
-                            Approve
-                        </Button>
-                    </Box>
-                )}
-            </Box>
-        </Paper>
-    );
-};
 
 // Main User Management component
 export default function UserManagement() {
@@ -72,6 +38,8 @@ export default function UserManagement() {
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
+    const [page, setPage] = useState(0);
+    const [rowsPerPage, setRowsPerPage] = useState(10);
 
     const loadUsers = useCallback(async () => {
         setLoading(true);
@@ -100,11 +68,56 @@ export default function UserManagement() {
             setError('Failed to approve user.');
         }
     };
-    
+
+    const handleChangePage = (event, newPage) => {
+        setPage(newPage);
+    };
+
+    const handleChangeRowsPerPage = (event) => {
+        setRowsPerPage(parseInt(event.target.value, 10));
+        setPage(0);
+    };
+
+    const handleRefresh = () => {
+        loadUsers();
+    };
+
+    const getStatusInfo = (status) => {
+        switch (status) {
+            case 'PENDING_APPROVAL':
+                return { 
+                    icon: <HourglassEmpty sx={{ color: '#ff9800' }} />, 
+                    label: "Pending", 
+                    chipColor: "warning" 
+                };
+            case 'ACTIVE':
+                return { 
+                    icon: <CheckCircle sx={{ color: '#4caf50' }} />, 
+                    label: "Active", 
+                    chipColor: "success" 
+                };
+            case 'DISABLED':
+                return { 
+                    icon: <DoNotDisturb sx={{ color: '#f44336' }} />, 
+                    label: "Disabled", 
+                    chipColor: "error" 
+                };
+            default:
+                return { 
+                    icon: null, 
+                    label: "Unknown", 
+                    chipColor: "default" 
+                };
+        }
+    };
+
+    // Slice the users array for pagination
+    const paginatedUsers = users.slice(page * rowsPerPage, page * rowsPerPage + rowsPerPage);
+
     return (
         <Box>
             <Box sx={{ mb: 4 }}>
-                <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: '#1a237e' }}>
+                <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                     User Management
                 </Typography>
                 <Typography color="text.secondary">
@@ -113,54 +126,123 @@ export default function UserManagement() {
             </Box>
 
             <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
-                    <Typography variant="body1" sx={{ fontWeight: 'medium' }}>Filter by status:</Typography>
-                    <Button
-                        variant={filter === 'PENDING_APPROVAL' ? 'contained' : 'outlined'}
-                        onClick={() => setFilter('PENDING_APPROVAL')}
-                        sx={{
-                            fontWeight: 'bold',
-                            textTransform: 'none',
-                            borderRadius: 50,
-                            minWidth: 120
-                        }}
-                    >
-                        Pending Approval
-                    </Button>
-                    <Button
-                        variant={!filter ? 'contained' : 'outlined'}
-                        onClick={() => setFilter(null)}
-                        sx={{
-                            fontWeight: 'bold',
-                            textTransform: 'none',
-                            borderRadius: 50,
-                            minWidth: 120
-                        }}
-                    >
-                        All Users
-                    </Button>
+                <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2 }}>
+                        <Typography variant="body1" sx={{ fontWeight: 'medium' }}>Filter by status:</Typography>
+                        <FormControl sx={{ minWidth: 150 }}>
+                            <InputLabel>Status</InputLabel>
+                            <Select
+                                value={filter || ''}
+                                label="Status"
+                                onChange={(e) => setFilter(e.target.value || null)}
+                            >
+                                <MenuItem value="">All Users</MenuItem>
+                                <MenuItem value="PENDING_APPROVAL">Pending Approval</MenuItem>
+                                <MenuItem value="ACTIVE">Active</MenuItem>
+                                <MenuItem value="DISABLED">Disabled</MenuItem>
+                            </Select>
+                        </FormControl>
+                    </Box>
+                    <Tooltip title="Refresh">
+                        <IconButton onClick={handleRefresh} color="primary">
+                            <RefreshIcon />
+                        </IconButton>
+                    </Tooltip>
                 </Box>
+
+                {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
+                {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
+
+                {loading ? (
+                    <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}>
+                        <CircularProgress />
+                    </Box>
+                ) : (
+                    <>
+                        <TableContainer>
+                            <Table>
+                                <TableHead>
+                                    <TableRow>
+                                        <TableCell sx={{ fontWeight: 'bold' }}>Name</TableCell>
+                                        <TableCell sx={{ fontWeight: 'bold' }}>Email</TableCell>
+                                        <TableCell sx={{ fontWeight: 'bold' }}>Role</TableCell>
+                                        <TableCell sx={{ fontWeight: 'bold' }}>Status</TableCell>
+                                        <TableCell sx={{ fontWeight: 'bold' }}>Actions</TableCell>
+                                    </TableRow>
+                                </TableHead>
+                                <TableBody>
+                                    {users.length > 0 ? (
+                                        paginatedUsers.map((user) => {
+                                            const statusInfo = getStatusInfo(user.status);
+                                            return (
+                                                <TableRow key={user.id}>
+                                                    <TableCell>
+                                                        <Typography variant="body1" sx={{ fontWeight: 500 }}>
+                                                            {user.name}
+                                                        </Typography>
+                                                    </TableCell>
+                                                    <TableCell>{user.email}</TableCell>
+                                                    <TableCell>
+                                                        <Chip
+                                                            label={user.role}
+                                                            size="small"
+                                                            sx={{ fontWeight: 'medium' }}
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        <Chip
+                                                            icon={statusInfo.icon}
+                                                            label={statusInfo.label}
+                                                            color={statusInfo.chipColor}
+                                                            size="small"
+                                                            variant="outlined"
+                                                        />
+                                                    </TableCell>
+                                                    <TableCell>
+                                                        {user.status === 'PENDING_APPROVAL' && (
+                                                            <Tooltip title="Approve User">
+                                                                <IconButton
+                                                                    color="success"
+                                                                    onClick={() => handleApproveUser(user.id)}
+                                                                >
+                                                                    <CheckIcon />
+                                                                </IconButton>
+                                                            </Tooltip>
+                                                        )}
+                                                    </TableCell>
+                                                </TableRow>
+                                            );
+                                        })
+                                    ) : (
+                                        <TableRow>
+                                            <TableCell colSpan={5} align="center" sx={{ py: 4 }}>
+                                                <PeopleAlt sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
+                                                <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>
+                                                    No Users Found
+                                                </Typography>
+                                                <Typography color="text.secondary">
+                                                    There are no users matching the current filter.
+                                                </Typography>
+                                            </TableCell>
+                                        </TableRow>
+                                    )}
+                                </TableBody>
+                            </Table>
+                        </TableContainer>
+                        {users.length > 0 && (
+                            <TablePagination
+                                rowsPerPageOptions={[5, 10, 25]}
+                                component="div"
+                                count={users.length}
+                                rowsPerPage={rowsPerPage}
+                                page={page}
+                                onPageChange={handleChangePage}
+                                onRowsPerPageChange={handleChangeRowsPerPage}
+                            />
+                        )}
+                    </>
+                )}
             </Paper>
-
-            {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
-            {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
-
-            {loading ? (
-                <Box sx={{ display: 'flex', justifyContent: 'center', p: 4 }}><CircularProgress /></Box>
-            ) : (
-                <div className="space-y-4">
-                    {users.length > 0 ? (
-                        users.map(user => <UserCard key={user.id} user={user} onApprove={handleApproveUser} />)
-                    ) : (
-                        <Paper elevation={2} sx={{ p: 4, textAlign: 'center' }}>
-                            <PeopleAlt sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
-                            <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>No Users Found</Typography>
-                            <Typography color="text.secondary">There are no users matching the current filter.</Typography>
-                        </Paper>
-                    )}
-                </div>
-            )}
         </Box>
     );
 }
-
