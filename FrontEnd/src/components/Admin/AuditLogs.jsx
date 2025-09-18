@@ -1,5 +1,5 @@
 import React from 'react';
-import { Box, Typography, Alert } from '@mui/material';
+import { Box, Typography, Alert, Paper } from '@mui/material';
 import { History } from '@mui/icons-material';
 
 export default function AuditLogPage() {
@@ -14,12 +14,12 @@ export default function AuditLogPage() {
                 </Typography>
             </Box>
 
-            <div className="bg-white p-6 rounded-lg shadow border border-gray-200">
-                 <Alert severity="info" icon={<History />}>
+            <Paper elevation={2} sx={{ p: 3 }}>
+                <Alert severity="info" icon={<History />} sx={{ mb: 2 }}>
                     <strong>Coming Soon:</strong> This feature is pending backend implementation. Once the audit service and controller are complete, this section will display a log of all critical system activities.
                 </Alert>
                 {/* Placeholder for the future log table */}
-            </div>
+            </Paper>
         </Box>
     );
 }

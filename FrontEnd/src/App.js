@@ -152,7 +152,7 @@ const navLinksConfig = {
     { label: "Lab Results", path: "/labtechnician/lab-results", icon: <DescriptionIcon /> },
   ],
   admin: [
-    { label: "User Management", path: "/admin/users", icon: <SupervisorAccountIcon /> },
+    { label: "User Management", path: "/admin/dashboard", icon: <SupervisorAccountIcon /> },
     { label: "Audit Log", path: "/admin/audit-log", icon: <HistoryIcon /> }
   ]
 };
@@ -415,8 +415,8 @@ function App() {
           <Route path="labtechnician/support" element={<SupportPage />} />
 
           {/* Admin Routes */}
-          <Route path="admin/user-management" element={<UserManagement  />} />
-          <Route path="admin/audit-logs" element={<AuditLogPage />} />
+          <Route path="admin/dashboard" element={<UserManagement user={user} />} />
+          <Route path="admin/audit-log" element={<AuditLogPage />} />
         </Route>
 
         {/* Fallback redirect */}

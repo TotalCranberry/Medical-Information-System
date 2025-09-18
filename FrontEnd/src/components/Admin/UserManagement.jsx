@@ -1,7 +1,7 @@
 import React, { useState, useEffect, useCallback } from 'react';
-import { Box, Typography, CircularProgress, Alert, Chip } from '@mui/material';
+import { Box, Typography, CircularProgress, Alert, Chip, Paper, Button } from '@mui/material';
 import { CheckCircle, HourglassEmpty, DoNotDisturb, PeopleAlt } from '@mui/icons-material';
-import { fetchUsers, approveUser } from '../api/admin';
+import { fetchUsers, approveUser } from '../../api/admin';
 
 // A single user card component
 const UserCard = ({ user, onApprove }) => {
@@ -20,26 +20,48 @@ const UserCard = ({ user, onApprove }) => {
     const currentStatus = statusInfo[user.status] || { label: "Unknown" };
 
     return (
-        <div className="bg-white p-4 rounded-lg shadow border border-gray-200 flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
-            <div className="flex-grow">
-                <Typography variant="h6" sx={{fontWeight: '600', color: '#2c3e50' }}>{user.name}</Typography>
-                <Typography variant="body2" color="text.secondary">{user.email}</Typography>
-                <div className="mt-2 flex items-center gap-4">
-                    <Chip label={user.role} size="small" sx={{fontWeight: 'medium'}} />
-                    <Chip icon={currentStatus.icon} label={currentStatus.label} color={currentStatus.chipColor} size="small" variant="outlined" />
-                </div>
-            </div>
-            <div className="w-full sm:w-auto mt-2 sm:mt-0 flex justify-end">
+        <Paper elevation={2} sx={{ p: 3, mb: 2 }}>
+            <Box sx={{ display: 'flex', flexDirection: { xs: 'column', sm: 'row' }, justifyContent: 'space-between', alignItems: { xs: 'flex-start', sm: 'center' }, gap: 2 }}>
+                <Box sx={{ flex: 1 }}>
+                    <Typography variant="h6" sx={{ fontWeight: 600, color: 'primary.main', mb: 1 }}>
+                        {user.name}
+                    </Typography>
+                    <Typography variant="body2" color="text.secondary" sx={{ mb: 2 }}>
+                        {user.email}
+                    </Typography>
+                    <Box sx={{ display: 'flex', alignItems: 'center', gap: 2, flexWrap: 'wrap' }}>
+                        <Chip label={user.role} size="small" sx={{ fontWeight: 'medium' }} />
+                        <Chip
+                            icon={currentStatus.icon}
+                            label={currentStatus.label}
+                            color={currentStatus.chipColor}
+                            size="small"
+                            variant="outlined"
+                        />
+                    </Box>
+                </Box>
                 {user.status === 'PENDING_APPROVAL' && (
-                    <button
-                        onClick={handleApprove}
-                        className="bg-green-600 text-white px-4 py-2 rounded-md text-sm font-semibold hover:bg-green-700 transition-colors shadow-sm focus:outline-none focus:ring-2 focus:ring-green-500 focus:ring-offset-2"
-                    >
-                        Approve
-                    </button>
+                    <Box sx={{ width: { xs: '100%', sm: 'auto' }, display: 'flex', justifyContent: { xs: 'flex-start', sm: 'flex-end' } }}>
+                        <Button
+                            variant="contained"
+                            color="success"
+                            onClick={handleApprove}
+                            sx={{
+                                fontWeight: 'bold',
+                                textTransform: 'none',
+                                boxShadow: 2,
+                                '&:hover': {
+                                    boxShadow: 4,
+                                    backgroundColor: 'success.dark'
+                                }
+                            }}
+                        >
+                            Approve
+                        </Button>
+                    </Box>
                 )}
-            </div>
-        </div>
+            </Box>
+        </Paper>
     );
 };
 
@@ -90,17 +112,35 @@ export default function UserManagement() {
                 </Typography>
             </Box>
 
-            <div className="bg-white p-4 rounded-lg shadow border border-gray-200 mb-6">
-                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center' }}>
-                    <Typography variant="body1" sx={{fontWeight: 'medium'}}>Filter by status:</Typography>
-                    <button onClick={() => setFilter('PENDING_APPROVAL')} className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${filter === 'PENDING_APPROVAL' ? 'bg-indigo-600 text-white shadow' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}>
+            <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+                <Box sx={{ display: 'flex', gap: 2, alignItems: 'center', flexWrap: 'wrap' }}>
+                    <Typography variant="body1" sx={{ fontWeight: 'medium' }}>Filter by status:</Typography>
+                    <Button
+                        variant={filter === 'PENDING_APPROVAL' ? 'contained' : 'outlined'}
+                        onClick={() => setFilter('PENDING_APPROVAL')}
+                        sx={{
+                            fontWeight: 'bold',
+                            textTransform: 'none',
+                            borderRadius: 50,
+                            minWidth: 120
+                        }}
+                    >
                         Pending Approval
-                    </button>
-                    <button onClick={() => setFilter(null)} className={`px-4 py-2 rounded-full text-sm font-semibold transition-all ${!filter ? 'bg-indigo-600 text-white shadow' : 'bg-gray-100 text-gray-800 hover:bg-gray-200'}`}>
+                    </Button>
+                    <Button
+                        variant={!filter ? 'contained' : 'outlined'}
+                        onClick={() => setFilter(null)}
+                        sx={{
+                            fontWeight: 'bold',
+                            textTransform: 'none',
+                            borderRadius: 50,
+                            minWidth: 120
+                        }}
+                    >
                         All Users
-                    </button>
+                    </Button>
                 </Box>
-            </div>
+            </Paper>
 
             {error && <Alert severity="error" onClose={() => setError('')} sx={{ mb: 2 }}>{error}</Alert>}
             {success && <Alert severity="success" onClose={() => setSuccess('')} sx={{ mb: 2 }}>{success}</Alert>}
@@ -112,11 +152,11 @@ export default function UserManagement() {
                     {users.length > 0 ? (
                         users.map(user => <UserCard key={user.id} user={user} onApprove={handleApproveUser} />)
                     ) : (
-                        <div className="text-center p-6 bg-white rounded-lg shadow border border-gray-200">
+                        <Paper elevation={2} sx={{ p: 4, textAlign: 'center' }}>
                             <PeopleAlt sx={{ fontSize: 48, color: 'grey.400', mb: 2 }} />
-                            <Typography variant="h6" color="text.secondary">No Users Found</Typography>
+                            <Typography variant="h6" color="text.secondary" sx={{ mb: 1 }}>No Users Found</Typography>
                             <Typography color="text.secondary">There are no users matching the current filter.</Typography>
-                        </div>
+                        </Paper>
                     )}
                 </div>
             )}
