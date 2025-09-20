@@ -43,7 +43,7 @@ import ReportsTab from "./components/Patient/ReportsTab";
 import ProfilePage from "./components/Patient/ProfilePage";
 import SupportPage from "./components/Patient/SupportPage";
 import FAQPage from './components/Patient/FAQPage';
-import MedicalFormUpload from './components/Patient/MedicalFormUpload';
+import MedicalForm from './components/Patient/MedicalForm';
 
 // Pharmacy pages
 import PharmacyDashboard from "./components/Pharmacy/PharmacyDashboard";
@@ -396,7 +396,7 @@ function App() {
           <Route path="patient/view-medical/:medicalId" element={<ViewMedical />} />
           <Route path="patient/support" element={<SupportPage />} />
           <Route path="patient/faq" element={<FAQPage />} />
-          <Route path="patient/upload-medical-form" element={<MedicalFormUpload onProfileUpdate={fetchAllUserData} />} />
+          <Route path="patient/upload-medical-form" element={<MedicalForm onProfileUpdate={fetchAllUserData} />} />
 
           {/* Pharmacist Routes */}
           <Route path="pharmacist/dashboard" element={<PharmacyDashboard user={user} />} />

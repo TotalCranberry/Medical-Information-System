@@ -1,6 +1,6 @@
 const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
-async function apiFetch(path, method = 'GET', body = null, addAuth = false) {
+async function apiFetch(path, method = 'GET', body = null, addAuth = true) {
   const headers = {};
   if (addAuth) {
     const token = localStorage.getItem('jwtToken');

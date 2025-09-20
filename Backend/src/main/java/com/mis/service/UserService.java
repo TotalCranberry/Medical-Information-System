@@ -137,7 +137,7 @@ public class UserService {
         }
 
         if (request.getGender() != null && !request.getGender().isEmpty()) {
-            updateRoleSpecificProfile(user, null, request.getGender());
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), request.getGender());
         }
 
         User savedUser = userRepository.save(user);
