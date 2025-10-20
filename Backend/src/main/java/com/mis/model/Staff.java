@@ -24,6 +24,7 @@ public class Staff {
 
     private String faculty;
     private LocalDate dateOfBirth;
+    private String gender;
 
     // FIX: Removed the 'age' field.
 
@@ -36,6 +37,8 @@ public class Staff {
     public void setFaculty(String faculty) { this.faculty = faculty; }
     public LocalDate getDateOfBirth() { return dateOfBirth; }
     public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
+    public String getGender() { return gender; }
+    public void setGender(String gender) { this.gender = gender; }
 
     /**
      * FIX: Added a transient method to calculate age dynamically.

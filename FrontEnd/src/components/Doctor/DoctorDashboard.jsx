@@ -24,6 +24,7 @@ import {
   fetchDashboardStats
 } from "../../api/appointments";
 import { useNavigate } from 'react-router-dom';
+import AnnouncementDisplay from "../AnnouncementDisplay";
 
 const DoctorDashboard = ({ doctor }) => {
   const navigate = useNavigate();
@@ -186,6 +187,7 @@ const DoctorDashboard = ({ doctor }) => {
 
   return (
     <Box>
+      <AnnouncementDisplay />
       <Typography
         variant="h4"
         gutterBottom

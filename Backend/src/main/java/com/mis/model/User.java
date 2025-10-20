@@ -36,6 +36,10 @@ public class User {
     @Column(name = "auth_method", nullable = false)
     private AuthMethod authMethod;
 
+    @Enumerated(EnumType.STRING)
+    @Column(nullable = false)
+    private AccountStatus status;
+
     @Column(name = "last_login")
     private LocalDateTime lastLogin;
 
@@ -85,6 +89,14 @@ public class User {
 
     public void setAuthMethod(AuthMethod authMethod) {
         this.authMethod = authMethod;
+    }
+
+    public AccountStatus getStatus() {
+        return status;
+    }
+    
+    public void setStatus(AccountStatus status) {
+        this.status = status;
     }
 
     public LocalDateTime getLastLogin() {

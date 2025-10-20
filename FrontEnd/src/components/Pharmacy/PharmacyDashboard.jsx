@@ -1,4 +1,5 @@
 import React, { useMemo } from "react";
+import AnnouncementDisplay from "../AnnouncementDisplay";
 import {
   Box,
   Typography,
@@ -72,6 +73,7 @@ const PharmacyDashboard = ({ user }) => {
         mx: "auto"
       }}
     >
+      <AnnouncementDisplay />
       <Typography
         variant="h4"
         sx={{

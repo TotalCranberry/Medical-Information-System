@@ -10,6 +10,7 @@ public class ProfileUpdateRequest {
     private String name;
     
     private LocalDate dateOfBirth;
+    private String gender;
     
     public ProfileUpdateRequest() {}
     
@@ -29,4 +30,11 @@ public class ProfileUpdateRequest {
         this.dateOfBirth = dateOfBirth;
     }
 
+    public String getGender() {
+        return gender;
+    }
+
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
 }
