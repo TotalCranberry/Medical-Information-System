@@ -21,6 +21,13 @@ import {
   IconButton,
   Tooltip,
   LinearProgress,
+  Collapse,
+  Card,
+  CardContent,
+  Fade,
+  Slide,
+  Zoom,
+  CircularProgress,
 } from "@mui/material";
 import {
   Close as CloseIcon,
@@ -34,6 +41,8 @@ import {
   ClearAll as ClearAllIcon,
   CheckCircle as CheckCircleIcon,
   InfoOutlined as InfoIcon,
+  Visibility as VisibilityIcon,
+  VisibilityOff as VisibilityOffIcon,
 } from "@mui/icons-material";
 import { searchMedicines } from "../../api/medicine";
 import { dispenseManual } from "../../api/prescription";
@@ -47,6 +56,19 @@ const THEME = {
   bad:     "#C62828",
   warn:    "#EF6C00",
   good:    "#2E7D32",
+  gradients: {
+    accent: "linear-gradient(135deg, #45D27A 0%, #2E7D32 100%)",
+    primary: "linear-gradient(135deg, #0C3C3C 0%, #1A5A5A 100%)",
+    card: "linear-gradient(135deg, #FFFFFF 0%, #F8F9FA 100%)",
+  },
+  shadows: {
+    button: "0 4px 14px rgba(69, 210, 122, 0.25)",
+  },
+  borderRadius: {
+    small: "8px",
+    medium: "12px",
+    large: "16px",
+  },
 };
 
 const inputSx = {
@@ -67,6 +89,17 @@ const inputSx = {
 const pillSx = { mr: 1, mb: 1, fontWeight: 600, bgcolor: `${THEME.accent}15`, color: THEME.primary, borderRadius: "999px" };
 const cardSx = { p: 1.5, borderRadius: 2, border: "1px solid rgba(12,60,60,0.10)", background: "#fff" };
 const lightCardSx = { p: 1.5, borderRadius: 2, border: "1px solid rgba(12,60,60,0.08)", background: THEME.light };
+
+const modernButtonSx = {
+  borderRadius: THEME.borderRadius.medium,
+  fontWeight: 600,
+  textTransform: "none",
+  transition: "all 0.3s ease",
+  "&:hover": {
+    transform: "translateY(-2px)",
+    boxShadow: THEME.shadows.button,
+  },
+};
 
 const Pill = ({ children, ...props }) => (
   <Zoom in timeout={300}>
@@ -166,6 +199,7 @@ export default function ViewPrescriptionDialog({ open, onClose, rx, readOnly = f
   const [invResults, setInvResults] = useState([]);
   const [loadingSearch, setLoadingSearch] = useState(false);
   const [submitting, setSubmitting] = useState(false);
+  const [showInventory, setShowInventory] = useState(false);
 
   // confirmation + notifications + result summary
   const [confirmOpen, setConfirmOpen] = useState(false);
@@ -208,6 +242,7 @@ export default function ViewPrescriptionDialog({ open, onClose, rx, readOnly = f
       setSelections({});
       setInvQuery("");
       setInvResults([]);
+      setShowInventory(false);
       setConfirmOpen(false);
       setResultOpen(false);
       setResultPayload(null);
@@ -639,192 +674,187 @@ export default function ViewPrescriptionDialog({ open, onClose, rx, readOnly = f
               const stockOk = stock == null ? null : Number(stock) > 0;
 
               return (
-                <Box key={it.key} sx={{ ...cardSx }}>
-                  <Stack direction={{ xs: "column", sm: "row" }} alignItems={{ sm: "center" }} justifyContent="space-between" spacing={1.25}>
-                    <Box sx={{ minWidth: 260 }}>
-                      <Typography variant="subtitle1" sx={{ fontWeight: 800, color: THEME.primary }}>
-                        {it.medicineName}{" "}
-                        <Typography component="span" variant="body2" sx={{ color: THEME.gray, fontWeight: 500 }}>
-                          {it.form || it.strength ? `(${[it.form, it.strength].filter(Boolean).join(" ")})` : ""}
-                        </Typography>
-                      </Typography>
-                      <Typography variant="body2" sx={{ color: THEME.gray }}>
-                        Route: {it.route} &nbsp;|&nbsp; Duration: {it.duration ? `${it.duration} days` : "-"}
-                        {it.dosage ? <> &nbsp;|&nbsp; Dosage: {it.dosage}</> : null}
-                      </Typography>
-                      <Stack direction="row" flexWrap="wrap" sx={{ mt: 1 }}>
-                        {(it.timeOfDay || []).map((t) => <Pill key={t}>{t}</Pill>)}
-                        {it.quantity != null && <Pill>Requested: {it.quantity}</Pill>}
-                      </Stack>
-                      {it.instructions && (
-                        <Typography variant="body2" sx={{ mt: 1 }}>
-                          <i>Remarks:</i> {it.instructions}
-                        </Typography>
-                      )}
-                    </Box>
+                <Slide key={it.key} in timeout={300} direction="up">
+                  <Card sx={{ ...cardSx }}>
+                    <CardContent sx={{ p: 2.5 }}>
+                      <Stack direction="row" alignItems="center" justifyContent="space-between" spacing={1.25}>
+                        <Box sx={{ minWidth: 260 }}>
+                          <Typography variant="subtitle1" sx={{ fontWeight: 800, color: THEME.primary }}>
+                            {it.medicineName}{" "}
+                            <Typography component="span" variant="body2" sx={{ color: THEME.gray, fontWeight: 500 }}>
+                              {it.form || it.strength ? `(${[it.form, it.strength].filter(Boolean).join(" ")})` : ""}
+                            </Typography>
+                          </Typography>
+                          <Typography variant="body2" sx={{ color: THEME.gray }}>
+                            Route: {it.route} &nbsp;|&nbsp; Duration: {it.duration ? `${it.duration} days` : "-"}
+                            {it.dosage ? <> &nbsp;|&nbsp; Dosage: {it.dosage}</> : null}
+                          </Typography>
+                          <Stack direction="row" flexWrap="wrap" sx={{ mt: 1 }}>
+                            {(it.timeOfDay || []).map((t) => <Pill key={t}>{t}</Pill>)}
+                            {it.quantity != null && <Pill>Requested: {it.quantity}</Pill>}
+                          </Stack>
+                          {it.instructions && (
+                            <Typography variant="body2" sx={{ mt: 1 }}>
+                              <i>Remarks:</i> {it.instructions}
+                            </Typography>
+                          )}
+                        </Box>
 
-                          {/* Actions Section - Show different content for read-only mode */}
-                          <Box sx={{
-                            minWidth: { xs: "100%", lg: 400 },
-                            maxWidth: { lg: 400 },
-                          }}>
-                            {readOnly ? (
+                        {/* Actions Section - Show different content for read-only mode */}
+                        <Box sx={{
+                          minWidth: { xs: "100%", lg: 400 },
+                          maxWidth: { lg: 400 },
+                        }}>
+                          {readOnly ? (
+                            <Box sx={{
+                              p: 2,
+                              borderRadius: THEME.borderRadius.medium,
+                              bgcolor: "#f8f9fa",
+                              border: `2px solid rgba(12, 60, 60, 0.08)`,
+                              display: "flex",
+                              alignItems: "center",
+                              justifyContent: "center",
+                              minHeight: 100,
+                            }}>
+                              <Typography variant="body1" sx={{ color: THEME.primary, fontWeight: 600 }}>
+                                Prescription Details
+                              </Typography>
+                            </Box>
+                          ) : (
+                            <Stack spacing={2}>
+                              {/* Selection and quantity */}
                               <Box sx={{
                                 p: 2,
                                 borderRadius: THEME.borderRadius.medium,
-                                bgcolor: "#f8f9fa",
-                                border: `2px solid rgba(12, 60, 60, 0.08)`,
-                                display: "flex",
-                                alignItems: "center",
-                                justifyContent: "center",
-                                minHeight: 100,
+                                bgcolor: sel.checked ? `${THEME.accent}08` : "#f8f9fa",
+                                border: `2px solid ${sel.checked ? THEME.accent : "rgba(12, 60, 60, 0.08)"}`,
+                                transition: "all 0.3s ease",
                               }}>
-                                <Typography variant="body1" sx={{ color: THEME.primary, fontWeight: 600 }}>
-                                  Prescription Details
-                                </Typography>
-                              </Box>
-                            ) : (
-                              <Stack spacing={2}>
-                                {/* Selection and quantity */}
-                                <Box sx={{
-                                  p: 2,
-                                  borderRadius: THEME.borderRadius.medium,
-                                  bgcolor: sel.checked ? `${THEME.accent}08` : "#f8f9fa",
-                                  border: `2px solid ${sel.checked ? THEME.accent : "rgba(12, 60, 60, 0.08)"}`,
-                                  transition: "all 0.3s ease",
-                                }}>
-                                  <FormControlLabel
-                                    sx={{
-                                      mb: 2,
-                                      "& .MuiFormControlLabel-label": {
-                                        fontWeight: 700,
-                                        color: sel.checked ? THEME.primary : THEME.gray,
-                                      },
-                                    }}
-                                    control={
-                                      <Checkbox
-                                        checked={!!sel.checked}
-                                        onChange={() => toggleSelect(it.key)}
-                                        sx={{
+                                <FormControlLabel
+                                  sx={{
+                                    mb: 2,
+                                    "& .MuiFormControlLabel-label": {
+                                      fontWeight: 700,
+                                      color: sel.checked ? THEME.primary : THEME.gray,
+                                    },
+                                  }}
+                                  control={
+                                    <Checkbox
+                                      checked={!!sel.checked}
+                                      onChange={() => toggleSelect(it.key)}
+                                      sx={{
+                                        color: THEME.accent,
+                                        "&.Mui-checked": {
                                           color: THEME.accent,
-                                          "&.Mui-checked": {
+                                        },
+                                      }}
+                                    />
+                                  }
+                                  label="Dispense this medication"
+                                />
+
+                                {/* Enhanced quantity stepper */}
+                                <Stack spacing={2}>
+                                  <Box>
+                                    <Typography variant="caption" sx={{ color: THEME.gray, fontWeight: 600, mb: 1, display: "block" }}>
+                                      Quantity to dispense:
+                                    </Typography>
+                                    <QuantityStepper
+                                      value={sel.qty || ""}
+                                      onChange={(e) => setQty(it.key, e.target.value)}
+                                      onIncrement={() => stepQty(it.key, 1)}
+                                      onDecrement={() => stepQty(it.key, -1)}
+                                      disabled={!sel.checked}
+                                      max={stock || 999}
+                                    />
+                                  </Box>
+
+                                  {/* Action buttons */}
+                                  <Stack direction="row" spacing={1}>
+                                    <Tooltip title="Fill with requested quantity" arrow>
+                                      <span>
+                                        <Button
+                                          size="small"
+                                          variant="outlined"
+                                          onClick={() => setSuggestedQty(it.key, it.quantity ?? 0)}
+                                          disabled={!sel.checked || !it.quantity}
+                                          sx={{
+                                            borderColor: THEME.accent,
                                             color: THEME.accent,
-                                          },
-                                        }}
-                                      />
-                                    }
-                                    label="Dispense this medication"
-                                  />
-
-                                  {/* Enhanced quantity stepper */}
-                                  <Stack spacing={2}>
-                                    <Box>
-                                      <Typography variant="caption" sx={{ color: THEME.gray, fontWeight: 600, mb: 1, display: "block" }}>
-                                        Quantity to dispense:
-                                      </Typography>
-                                      <QuantityStepper
-                                        value={sel.qty || ""}
-                                        onChange={(e) => setQty(it.key, e.target.value)}
-                                        onIncrement={() => stepQty(it.key, 1)}
-                                        onDecrement={() => stepQty(it.key, -1)}
-                                        disabled={!sel.checked}
-                                        max={stock || 999}
-                                      />
-                                    </Box>
-
-                                    {/* Action buttons */}
-                                    <Stack direction="row" spacing={1}>
-                                      <Tooltip title="Fill with requested quantity" arrow>
-                                        <span>
-                                          <Button
-                                            size="small"
-                                            variant="outlined"
-                                            onClick={() => setSuggestedQty(it.key, it.quantity ?? 0)}
-                                            disabled={!sel.checked || !it.quantity}
-                                            sx={{
+                                            "&:hover": {
+                                              bgcolor: `${THEME.accent}15`,
                                               borderColor: THEME.accent,
-                                              color: THEME.accent,
-                                              "&:hover": {
-                                                bgcolor: `${THEME.accent}15`,
-                                                borderColor: THEME.accent,
-                                              },
-                                              ...modernButtonSx,
-                                              flex: 1,
-                                            }}
-                                          >
-                                            Suggested
-                                          </Button>
-                                        </span>
-                                      </Tooltip>
+                                            },
+                                            ...modernButtonSx,
+                                            flex: 1,
+                                          }}
+                                        >
+                                          Suggested
+                                        </Button>
+                                      </span>
+                                    </Tooltip>
 
-                                      <Tooltip title="Check current stock availability" arrow>
-                                        <span>
-                                          <LoadingButton
-                                            size="small"
-                                            variant="outlined"
-                                            loading={sel.checking}
-                                            onClick={() => checkAvailabilityForItem(it.key, it.medicineName)}
-                                            sx={{
+                                    <Tooltip title="Check current stock availability" arrow>
+                                      <span>
+                                        <LoadingButton
+                                          size="small"
+                                          variant="outlined"
+                                          loading={sel.checking}
+                                          onClick={() => checkAvailabilityForItem(it.key, it.medicineName)}
+                                          sx={{
+                                            borderColor: THEME.primary,
+                                            color: THEME.primary,
+                                            "&:hover": {
+                                              bgcolor: "rgba(12, 60, 60, 0.08)",
                                               borderColor: THEME.primary,
-                                              color: THEME.primary,
-                                              "&:hover": {
-                                                bgcolor: "rgba(12, 60, 60, 0.08)",
-                                                borderColor: THEME.primary,
-                                              },
-                                              ...modernButtonSx,
-                                              flex: 1,
-                                            }}
-                                          >
-                                            Stock
-                                          </LoadingButton>
-                                        </span>
-                                      </Tooltip>
-                                    </Stack>
+                                            },
+                                            ...modernButtonSx,
+                                            flex: 1,
+                                          }}
+                                        >
+                                          Stock
+                                        </LoadingButton>
+                                      </span>
+                                    </Tooltip>
                                   </Stack>
-                                </Box>
+                                </Stack>
+                              </Box>
 
-                                {/* Stock availability display */}
-                                {sel.availability && (
-                                  <Fade in>
-                                    <Box sx={{
-                                      p: 2,
-                                      borderRadius: THEME.borderRadius.medium,
-                                      bgcolor: stockOk === null ? "#fff" : stockOk ? `${THEME.good}10` : `${THEME.bad}10`,
-                                      border: `1px solid ${stockOk === null ? "rgba(0,0,0,0.1)" : stockOk ? THEME.good : THEME.bad}30`,
-                                      display: "flex",
-                                      alignItems: "center",
-                                      gap: 1,
-                                    }}>
-                                      {stockOk !== null && (
-                                        <Box sx={{
-                                          width: 8,
-                                          height: 8,
-                                          borderRadius: "50%",
-                                          bgcolor: stockOk ? THEME.good : THEME.bad,
-                                          animation: "pulse 2s infinite",
-                                          "@keyframes pulse": {
-                                            "0%": { opacity: 1 },
-                                            "50%": { opacity: 0.5 },
-                                            "100%": { opacity: 1 },
-                                          },
-                                        }} />
-                                      )}
-                                      <Typography
-                                        variant="body2"
-                                        sx={{
-                                          color: stockOk === null ? THEME.gray : stockOk ? THEME.good : THEME.bad,
-                                          fontWeight: 700,
-                                        }}
-                                      >
-                                        {sel.availability}
-                                      </Typography>
-                                    </Box>
-                                  </Fade>
-                                )}
-                              </Stack>
-                            )}
-                          </Box>
-                        </Stack>
+                              {/* Stock availability display */}
+                              {sel.availability && (
+                                <Fade in>
+                                  <Box sx={{
+                                    p: 2,
+                                    borderRadius: THEME.borderRadius.medium,
+                                    bgcolor: stockOk === null ? "#fff" : stockOk ? `${THEME.good}10` : `${THEME.bad}10`,
+                                    border: `1px solid ${stockOk === null ? "rgba(0,0,0,0.1)" : stockOk ? THEME.good : THEME.bad}30`,
+                                    display: "flex",
+                                    alignItems: "center",
+                                    gap: 1,
+                                  }}>
+                                    {stockOk !== null && (
+                                      <Box sx={{
+                                        width: 8,
+                                        height: 8,
+                                        borderRadius: "50%",
+                                        bgcolor: stockOk ? THEME.good : THEME.bad,
+                                      }} />
+                                    )}
+                                    <Typography
+                                      variant="body2"
+                                      sx={{
+                                        color: stockOk === null ? THEME.gray : stockOk ? THEME.good : THEME.bad,
+                                        fontWeight: 700,
+                                      }}
+                                    >
+                                      {sel.availability}
+                                    </Typography>
+                                  </Box>
+                                </Fade>
+                              )}
+                            </Stack>
+                          )}
+                        </Box>
                       </Stack>
                     </CardContent>
                   </Card>
@@ -856,6 +886,7 @@ export default function ViewPrescriptionDialog({ open, onClose, rx, readOnly = f
             <Stack
               direction="row"
               justifyContent="flex-end"
+              alignItems="center"
               spacing={2}
               sx={{ width: "100%" }}
             >
@@ -878,7 +909,7 @@ export default function ViewPrescriptionDialog({ open, onClose, rx, readOnly = f
             </Stack>
           ) : (
             <Stack
-              direction={{ xs: "column", sm: "row" }}
+              direction="row"
               alignItems="center"
               spacing={2}
               sx={{ width: "100%" }}
