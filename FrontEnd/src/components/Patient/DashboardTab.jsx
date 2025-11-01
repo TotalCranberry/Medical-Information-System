@@ -99,10 +99,21 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
 
   return (
     <Box>
+      <AnnouncementDisplay />
+
       {showDobReminder && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          Please complete your profile by setting your date of birth in the Profile
-          section.
+          Please complete your profile by setting your date of birth in the Profile section.
+        </Alert>
+      )}
+      {showSexReminder && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Please complete your profile by setting your sex in the Profile section.
+        </Alert>
+      )}
+      {showMedicalFormReminder && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Please upload your medical form in the Upload Medical Form section.
         </Alert>
       )}
 

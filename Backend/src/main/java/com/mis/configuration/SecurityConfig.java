@@ -5,10 +5,8 @@ import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import static org.springframework.security.config.Customizer.withDefaults;
-
 import org.springframework.http.HttpMethod;
+import static org.springframework.security.config.Customizer.withDefaults;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -54,6 +52,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/support/**").authenticated()
 
                 // Admin-specific endpoints
+                .requestMatchers("/api/admin/**").hasAuthority("ROLE_Admin")
                 .requestMatchers("/api/support/tickets").hasAuthority("ROLE_Admin")
 
                 // Patient-facing endpoints

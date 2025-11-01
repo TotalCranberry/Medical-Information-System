@@ -19,6 +19,9 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
     List<Appointment> findAppointmentsForDay(@Param("startOfDay") Date startOfDay, @Param("endOfDay") Date endOfDay);
 
     boolean existsByAppointmentDateTime(Date appointmentDateTime);
+    
+    @Query("SELECT COUNT(a) > 0 FROM Appointment a WHERE a.appointmentDateTime = :appointmentDateTime AND a.status != :status")
+    boolean existsByAppointmentDateTimeAndStatusNot(@Param("appointmentDateTime") Date appointmentDateTime, @Param("status") AppointmentStatus status);
 
     List<Appointment> findByStatusOrderByAppointmentDateTimeAsc(AppointmentStatus status);
     
