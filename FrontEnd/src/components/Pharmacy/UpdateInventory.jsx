@@ -2,7 +2,8 @@ import React, { useState, useEffect } from "react";
 import {
   Box, Typography, Paper, TextField, Button, Grid,
   Table, TableHead, TableRow, TableCell, TableBody, MenuItem, Snackbar, Alert,
-  Avatar, Chip, IconButton, InputAdornment, Fade, Grow
+  Avatar, Chip, IconButton, InputAdornment, Fade, Grow, Skeleton, Card, CardContent,
+  Collapse, Divider
 } from "@mui/material";
 import {
   Inventory as InventoryIcon,
@@ -15,7 +16,13 @@ import {
   Category as CategoryIcon,
   PriceChange as PriceIcon,
   Warning as WarningIcon,
-  CheckCircle as CheckCircleIcon
+  CheckCircle as CheckCircleIcon,
+  TrendingUp as TrendingUpIcon,
+  Business as BusinessIcon,
+  CalendarToday as CalendarIcon,
+  ExpandMore as ExpandMoreIcon,
+  ExpandLess as ExpandLessIcon,
+  Person as PersonIcon
 } from "@mui/icons-material";
 import {
   getAllMedicines,
@@ -25,7 +32,7 @@ import {
 } from "../../api/medicine";
 import apiFetch from "../../api/api";
 
-/** ---------- THEME & STYLES (matched to your other pages) ---------- */
+/** ---------- THEME & STYLES ---------- */
 const THEME = {
   primary: "#0C3C3C",
   accent:  "#45D27A",
@@ -90,6 +97,21 @@ const actionButtonSx = (variant = "primary") => ({
   py: 1.2,
   letterSpacing: 0.2,
   transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
+  position: "relative",
+  overflow: "hidden",
+  "&::before": {
+    content: '""',
+    position: "absolute",
+    top: 0,
+    left: "-100%",
+    width: "100%",
+    height: "100%",
+    background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
+    transition: "left 0.5s ease-in-out",
+  },
+  "&:hover::before": {
+    left: "100%",
+  },
   ...(variant === "primary" && {
     borderColor: THEME.accent,
     color: THEME.accent,
@@ -124,13 +146,15 @@ const actionButtonSx = (variant = "primary") => ({
 
 const tableRowSx = (rowStyle) => ({
   backgroundColor: rowStyle.bg,
-  transition: "all 0.25s ease",
+  transition: "all 0.25s cubic-bezier(0.4, 0, 0.2, 1)",
   "&:hover": {
     backgroundColor: rowStyle.bg === "transparent" ? "rgba(69, 210, 122, 0.04)" : rowStyle.bg,
     transform: "scale(1.01)",
     "& .MuiTableCell-root": { borderColor: "rgba(69, 210, 122, 0.2)" }
   },
-  "&:nth-of-type(even)": { backgroundColor: rowStyle.bg === "transparent" ? "rgba(12, 60, 60, 0.02)" : rowStyle.bg }
+  "&:nth-of-type(even)": { 
+    backgroundColor: rowStyle.bg === "transparent" ? "rgba(12, 60, 60, 0.02)" : rowStyle.bg 
+  }
 });
 
 /** ---------- COMPONENT ---------- */
@@ -141,6 +165,7 @@ const UpdateInventoryPage = () => {
   const [searchTerm, setSearchTerm] = useState("");
   const [snackbar, setSnackbar] = useState({ open: false, success: true, message: "" });
   const [loading, setLoading] = useState(false);
+  const [formExpanded, setFormExpanded] = useState(true);
 
   const [formData, setFormData] = useState({
     generic: "",
@@ -162,10 +187,10 @@ const UpdateInventoryPage = () => {
       setLoading(true);
       const data = await getAllMedicines();
       setInventory(data || []);
+      setTimeout(() => setLoading(false), 500);
     } catch (err) {
       console.error("Inventory load failed", err);
       setSnackbar({ open: true, success: false, message: "Failed to load inventory" });
-    } finally {
       setLoading(false);
     }
   };
@@ -189,12 +214,15 @@ const UpdateInventoryPage = () => {
           if (res) {
             setMode("update");
             setFormData(res);
+            setFormExpanded(true);
           } else {
             setMode("add");
+            setFormExpanded(true);
           }
         })
         .catch(() => {
           setMode("add");
+          setFormExpanded(true);
           setSnackbar({ open: true, success: false, message: "Medicine not found." });
         });
       return;
@@ -205,14 +233,17 @@ const UpdateInventoryPage = () => {
         if (res && res.length > 0) {
           setMode("update");
           setFormData(res[0]);
+          setFormExpanded(true);
         } else {
           setMode("add");
           setFormData(prev => ({ ...prev, [searchFilter]: searchTerm }));
+          setFormExpanded(true);
         }
       })
       .catch(() => {
         setMode("add");
         setFormData(prev => ({ ...prev, [searchFilter]: searchTerm }));
+        setFormExpanded(true);
         setSnackbar({ open: true, success: false, message: "Search failed." });
       });
   };
@@ -324,7 +355,7 @@ const UpdateInventoryPage = () => {
   const formFields = ["generic", "name", "form", "strength", "batch", "manufacturer", "category"];
   const dateFields = ["mfg", "expiry"];
 
-  /** Row status coloring (near-expiry/expired/low-stock) */
+  /** Row status coloring */
   const getRowStyle = (medicine) => {
     const current = new Date();
     const expiry = medicine?.expiry ? new Date(medicine.expiry) : null;
@@ -335,6 +366,75 @@ const UpdateInventoryPage = () => {
     if (medicine.stock < 50)  return { bg: "#fff3cd", color: "#856404", tag: "Low Stock", tagColor: "#856404" };
     return { bg: "transparent", color: "inherit", tag: "OK", tagColor: THEME.success };
   };
+
+  // Calculate statistics
+  const stats = {
+    total: inventory.length,
+    expired: inventory.filter(med => {
+      const expiry = new Date(med.expiry);
+      return expiry < new Date();
+    }).length,
+    nearExpiry: inventory.filter(med => {
+      const expiry = new Date(med.expiry);
+      const days = Math.ceil((expiry.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
+      return days >= 0 && days <= 30;
+    }).length,
+    lowStock: inventory.filter(med => med.stock < 50).length,
+  };
+
+  const searchOptions = [
+    { value: "name", label: "Brand Name", icon: PharmacyIcon },
+    { value: "generic", label: "Generic Name", icon: PharmacyIcon },
+    { value: "batch", label: "Batch Number", icon: CategoryIcon },
+    { value: "manufacturer", label: "Manufacturer", icon: BusinessIcon },
+    { value: "category", label: "Category", icon: CategoryIcon },
+    { value: "name+manufacturer", label: "Brand Name + Manufacturer", icon: SearchIcon },
+  ];
+
+  if (loading) {
+    return (
+      <Box sx={{ px: 3, py: 5, backgroundColor: THEME.bg, minHeight: "100vh" }}>
+        <Skeleton variant="text" width={400} height={60} sx={{ mb: 5 }} />
+        
+        {/* Statistics Cards Skeleton */}
+        <Grid container spacing={3} mb={4}>
+          {[1, 2, 3, 4].map((i) => (
+            <Grid item xs={12} sm={6} md={3} key={i}>
+              <Skeleton variant="rectangular" height={120} sx={{ borderRadius: "20px" }} />
+            </Grid>
+          ))}
+        </Grid>
+        
+        {/* Search Section Skeleton */}
+        <Paper elevation={8} sx={{ p: 4, borderRadius: "24px", mb: 4 }}>
+          <Skeleton variant="text" width={200} height={40} sx={{ mb: 3 }} />
+          <Grid container spacing={3}>
+            <Grid item xs={12} md={3}>
+              <Skeleton variant="rectangular" height={56} sx={{ borderRadius: "16px" }} />
+            </Grid>
+            <Grid item xs={12} md={6}>
+              <Skeleton variant="rectangular" height={56} sx={{ borderRadius: "16px" }} />
+            </Grid>
+            <Grid item xs={12} md={3}>
+              <Skeleton variant="rectangular" height={56} sx={{ borderRadius: "16px" }} />
+            </Grid>
+          </Grid>
+        </Paper>
+
+        {/* Form Skeleton */}
+        <Paper elevation={8} sx={{ p: 4, borderRadius: "24px", mb: 4 }}>
+          <Skeleton variant="text" width={200} height={40} sx={{ mb: 3 }} />
+          <Grid container spacing={3}>
+            {[1, 2, 3, 4, 5, 6].map((i) => (
+              <Grid item xs={12} sm={6} md={4} key={i}>
+                <Skeleton variant="rectangular" height={56} sx={{ borderRadius: "16px" }} />
+              </Grid>
+            ))}
+          </Grid>
+        </Paper>
+      </Box>
+    );
+  }
 
   return (
     <Box sx={{ px: 3, py: 5, maxWidth: "1400px", mx: "auto", backgroundColor: THEME.bg, minHeight: "100vh" }}>
@@ -369,9 +469,52 @@ const UpdateInventoryPage = () => {
         </Box>
       </Fade>
 
+      {/* Statistics Dashboard */}
+      <Grid container spacing={3} mb={4}>
+        {[
+          { label: "Total Medicines", value: stats.total, icon: PharmacyIcon, color: THEME.primary },
+          { label: "Expired", value: stats.expired, icon: WarningIcon, color: THEME.error },
+          { label: "Near Expiry", value: stats.nearExpiry, icon: CalendarIcon, color: THEME.warning },
+          { label: "Low Stock", value: stats.lowStock, icon: TrendingUpIcon, color: "#856404" },
+        ].map((stat, index) => (
+          <Grow in timeout={800 + index * 150} key={stat.label}>
+            <Grid item xs={12} sm={6} md={3}>
+              <Card sx={{ ...cardSx, p: 3 }}>
+                <CardContent sx={{ textAlign: "center", p: 0 }}>
+                  <Avatar sx={{ 
+                    bgcolor: `${stat.color}15`, 
+                    color: stat.color, 
+                    width: 48, 
+                    height: 48,
+                    mx: "auto",
+                    mb: 2
+                  }}>
+                    <stat.icon fontSize="medium" />
+                  </Avatar>
+                  <Typography variant="h4" sx={{ 
+                    fontWeight: 800, 
+                    color: stat.color,
+                    mb: 1
+                  }}>
+                    {stat.value}
+                  </Typography>
+                  <Typography variant="body2" sx={{ 
+                    color: THEME.gray,
+                    fontWeight: 600,
+                    fontSize: "0.9rem"
+                  }}>
+                    {stat.label}
+                  </Typography>
+                </CardContent>
+              </Card>
+            </Grid>
+          </Grow>
+        ))}
+      </Grid>
+
       {/* Search Existing Medicine */}
-      <Grow in timeout={800}>
-        <Paper elevation={10} sx={{ ...cardSx, mb: 4 }}>
+      <Grow in timeout={900}>
+        <Paper elevation={12} sx={{ ...cardSx, mb: 4 }}>
           <Typography variant="h6" sx={{ mb: 3, fontWeight: 700, color: THEME.primary, display: "flex", alignItems: "center" }}>
             <SearchIcon sx={{ mr: 1 }} /> Search Existing Medicine
           </Typography>
@@ -387,12 +530,14 @@ const UpdateInventoryPage = () => {
                 size="medium"
                 sx={inputSx}
               >
-                <MenuItem value="name">Brand Name</MenuItem>
-                <MenuItem value="generic">Generic Name</MenuItem>
-                <MenuItem value="batch">Batch Number</MenuItem>
-                <MenuItem value="manufacturer">Manufacturer</MenuItem>
-                <MenuItem value="category">Category</MenuItem>
-                <MenuItem value="name+manufacturer">Brand Name + Manufacturer</MenuItem>
+                {searchOptions.map((option) => (
+                  <MenuItem key={option.value} value={option.value}>
+                    <Box display="flex" alignItems="center">
+                      <option.icon sx={{ mr: 1, fontSize: "1.2rem" }} />
+                      {option.label}
+                    </Box>
+                  </MenuItem>
+                ))}
               </TextField>
             </Grid>
 
@@ -427,7 +572,7 @@ const UpdateInventoryPage = () => {
                       InputProps={{
                         startAdornment: (
                           <InputAdornment position="start">
-                            <CategoryIcon sx={{ color: THEME.gray }} />
+                            <BusinessIcon sx={{ color: THEME.gray }} />
                           </InputAdornment>
                         )
                       }}
@@ -484,11 +629,15 @@ const UpdateInventoryPage = () => {
                               p: 2,
                               cursor: "pointer",
                               fontSize: "0.95rem",
+                              display: "flex",
+                              alignItems: "center",
+                              transition: "background-color 0.2s ease",
                               "&:hover": { backgroundColor: "rgba(69,210,122,0.06)" },
                               borderBottom: i < suggestions.length - 1 ? "1px solid #eee" : "none"
                             }}
                             onClick={() => setSearchTerm(s)}
                           >
+                            <PersonIcon sx={{ mr: 1, fontSize: "1.1rem", color: THEME.gray }} />
                             {s}
                           </Box>
                         ))}
@@ -507,7 +656,7 @@ const UpdateInventoryPage = () => {
                 startIcon={<SearchIcon />}
                 sx={actionButtonSx("primary")}
               >
-                Search
+                Search Medicine
               </Button>
             </Grid>
           </Grid>
@@ -515,110 +664,160 @@ const UpdateInventoryPage = () => {
       </Grow>
 
       {/* Add / Update Form */}
-      <Grow in timeout={900}>
-        <Paper elevation={10} sx={{ ...cardSx, mb: 4 }}>
-          <Typography variant="h6" sx={{ mb: 3, fontWeight: 700, color: THEME.primary }}>
-            {mode === "update" ? "Update Stock & Dates" : "Add New Medicine"}
-          </Typography>
-
-          <Grid container spacing={3}>
-            {/* Regular fields */}
-            {formFields.map((field) => (
-              <Grid item xs={12} sm={6} md={4} key={field}>
-                <TextField
-                  fullWidth
-                  label={formatLabel(field)}
-                  value={formData[field]}
-                  onChange={(e) => handleChange(field, e.target.value)}
-                  disabled={mode === "update" && !["stock", "mfg", "expiry", "unitPrice"].includes(field)}
-                  size="medium"
-                  sx={inputSx}
-                />
-              </Grid>
-            ))}
-
-            {/* Date fields */}
-            {dateFields.map((field) => (
-              <Grid item xs={12} sm={6} md={4} key={field}>
-                <TextField
-                  fullWidth
-                  label={formatLabel(field)}
-                  type="date"
-                  value={formData[field]}
-                  onChange={(e) => handleChange(field, e.target.value)}
-                  InputLabelProps={{ shrink: true }}
-                  size="medium"
-                  sx={inputSx}
-                />
-              </Grid>
-            ))}
-
-            {/* Stock */}
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                fullWidth
-                label={formatLabel("stock")}
-                type="number"
-                value={formData.stock}
-                onChange={(e) => handleChange("stock", e.target.value)}
-                inputProps={{ min: 0 }}
-                size="medium"
-                sx={inputSx}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <InventoryIcon sx={{ color: THEME.gray }} />
-                    </InputAdornment>
-                  )
+      <Grow in timeout={1000}>
+        <Paper elevation={12} sx={{ ...cardSx, mb: 4 }}>
+          <Box 
+            display="flex" 
+            alignItems="center" 
+            justifyContent="space-between" 
+            sx={{ cursor: "pointer" }}
+            onClick={() => setFormExpanded(!formExpanded)}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 700, color: THEME.primary, display: "flex", alignItems: "center" }}>
+              {mode === "update" ? <EditIcon sx={{ mr: 1 }} /> : <AddIcon sx={{ mr: 1 }} />}
+              {mode === "update" ? "Update Stock & Details" : "Add New Medicine"}
+              <Chip 
+                label={mode === "update" ? "Update Mode" : "Add Mode"}
+                size="small"
+                sx={{ 
+                  ml: 2,
+                  bgcolor: mode === "update" ? `${THEME.warning}15` : `${THEME.success}15`,
+                  color: mode === "update" ? THEME.warning : THEME.success,
+                  fontWeight: 600
                 }}
               />
+            </Typography>
+            <IconButton>
+              {formExpanded ? <ExpandLessIcon /> : <ExpandMoreIcon />}
+            </IconButton>
+          </Box>
+          
+          <Collapse in={formExpanded}>
+            <Divider sx={{ my: 3 }} />
+            <Grid container spacing={3}>
+              {/* Regular fields */}
+              {formFields.map((field) => (
+                <Grid item xs={12} sm={6} md={4} key={field}>
+                  <TextField
+                    fullWidth
+                    label={formatLabel(field)}
+                    value={formData[field]}
+                    onChange={(e) => handleChange(field, e.target.value)}
+                    disabled={mode === "update" && !["stock", "mfg", "expiry", "unitPrice"].includes(field)}
+                    size="medium"
+                    sx={{
+                      ...inputSx,
+                      "& .MuiOutlinedInput-root.Mui-disabled": {
+                        backgroundColor: "rgba(12, 60, 60, 0.04)",
+                      }
+                    }}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          {field === "generic" && <PharmacyIcon sx={{ color: THEME.gray }} />}
+                          {field === "name" && <PharmacyIcon sx={{ color: THEME.gray }} />}
+                          {field === "form" && <CategoryIcon sx={{ color: THEME.gray }} />}
+                          {field === "strength" && <TrendingUpIcon sx={{ color: THEME.gray }} />}
+                          {field === "batch" && <CategoryIcon sx={{ color: THEME.gray }} />}
+                          {field === "manufacturer" && <BusinessIcon sx={{ color: THEME.gray }} />}
+                          {field === "category" && <CategoryIcon sx={{ color: THEME.gray }} />}
+                        </InputAdornment>
+                      )
+                    }}
+                  />
+                </Grid>
+              ))}
+
+              {/* Date fields */}
+              {dateFields.map((field) => (
+                <Grid item xs={12} sm={6} md={4} key={field}>
+                  <TextField
+                    fullWidth
+                    label={formatLabel(field)}
+                    type="date"
+                    value={formData[field]}
+                    onChange={(e) => handleChange(field, e.target.value)}
+                    InputLabelProps={{ shrink: true }}
+                    size="medium"
+                    sx={inputSx}
+                    InputProps={{
+                      startAdornment: (
+                        <InputAdornment position="start">
+                          <CalendarIcon sx={{ color: THEME.gray }} />
+                        </InputAdornment>
+                      )
+                    }}
+                  />
+                </Grid>
+              ))}
+
+              {/* Stock */}
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label={formatLabel("stock")}
+                  type="number"
+                  value={formData.stock}
+                  onChange={(e) => handleChange("stock", e.target.value)}
+                  inputProps={{ min: 0 }}
+                  size="medium"
+                  sx={inputSx}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <InventoryIcon sx={{ color: THEME.gray }} />
+                      </InputAdornment>
+                    )
+                  }}
+                />
+              </Grid>
+
+              {/* Unit Price */}
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label="Unit Price (Rs.)"
+                  type="number"
+                  inputProps={{ step: "0.01", min: 0 }}
+                  value={formData.unitPrice}
+                  onChange={(e) => handleChange("unitPrice", e.target.value)}
+                  size="medium"
+                  sx={inputSx}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <PriceIcon sx={{ color: THEME.gray }} />
+                      </InputAdornment>
+                    )
+                  }}
+                />
+              </Grid>
             </Grid>
 
-            {/* Unit Price */}
-            <Grid item xs={12} sm={6} md={4}>
-              <TextField
-                fullWidth
-                label="Unit Price (Rs.)"
-                type="number"
-                inputProps={{ step: "0.01", min: 0 }}
-                value={formData.unitPrice}
-                onChange={(e) => handleChange("unitPrice", e.target.value)}
-                size="medium"
-                sx={inputSx}
-                InputProps={{
-                  startAdornment: (
-                    <InputAdornment position="start">
-                      <PriceIcon sx={{ color: THEME.gray }} />
-                    </InputAdornment>
-                  )
-                }}
-              />
-            </Grid>
-          </Grid>
-
-          <Box sx={{ mt: 4, display: "flex", justifyContent: "center", gap: 2, flexWrap: "wrap" }}>
-            <Button
-              variant="outlined"
-              onClick={handleSubmit}
-              size="large"
-              startIcon={mode === "update" ? <EditIcon /> : <AddIcon />}
-              sx={actionButtonSx("primary")}
-            >
-              {mode === "update" ? "Update Stock" : "Add Medicine"}
-            </Button>
-
-            {mode === "update" && (
+            <Box sx={{ mt: 4, display: "flex", justifyContent: "center", gap: 2, flexWrap: "wrap" }}>
               <Button
                 variant="outlined"
-                onClick={handleCancel}
+                onClick={handleSubmit}
                 size="large"
-                startIcon={<ClearIcon />}
-                sx={actionButtonSx("secondary")}
+                startIcon={mode === "update" ? <EditIcon /> : <AddIcon />}
+                sx={actionButtonSx("primary")}
               >
-                Cancel
+                {mode === "update" ? "Update Medicine" : "Add Medicine"}
               </Button>
-            )}
-          </Box>
+
+              {mode === "update" && (
+                <Button
+                  variant="outlined"
+                  onClick={handleCancel}
+                  size="large"
+                  startIcon={<ClearIcon />}
+                  sx={actionButtonSx("secondary")}
+                >
+                  Cancel Update
+                </Button>
+              )}
+            </Box>
+          </Collapse>
         </Paper>
       </Grow>
 
@@ -634,13 +833,23 @@ const UpdateInventoryPage = () => {
           }}
         >
           <Box sx={{ p: 3, borderBottom: `1px solid rgba(12, 60, 60, 0.1)` }}>
-            <Typography variant="h6" sx={{ color: THEME.primary, fontWeight: 700, display: "flex", alignItems: "center" }}>
+            <Typography variant="h6" sx={{ 
+              color: THEME.primary, 
+              fontWeight: 700, 
+              display: "flex", 
+              alignItems: "center" 
+            }}>
               <PharmacyIcon sx={{ mr: 1 }} />
               Current Inventory
               <Chip
                 size="small"
                 label={`${inventory.length} items`}
-                sx={{ ml: 2, bgcolor: `${THEME.accent}15`, color: THEME.accent, fontWeight: 700 }}
+                sx={{ 
+                  ml: 2, 
+                  bgcolor: `${THEME.accent}15`, 
+                  color: THEME.accent, 
+                  fontWeight: 700 
+                }}
               />
             </Typography>
           </Box>
@@ -672,99 +881,182 @@ const UpdateInventoryPage = () => {
               </TableHead>
 
               <TableBody>
-                {loading && (
+                {inventory.length === 0 ? (
                   <TableRow>
-                    <TableCell colSpan={13} sx={{ textAlign: "center", py: 4, color: THEME.gray }}>
-                      Loading inventory…
+                    <TableCell colSpan={13} sx={{ py: 6 }}>
+                      <Box display="flex" flexDirection="column" alignItems="center">
+                        <Avatar sx={{ 
+                          bgcolor: `${THEME.gray}15`, 
+                          color: THEME.gray,
+                          width: 64,
+                          height: 64,
+                          mb: 2
+                        }}>
+                          <InventoryIcon fontSize="large" />
+                        </Avatar>
+                        <Typography variant="h6" color={THEME.gray} fontWeight={600}>
+                          No medicines found in inventory
+                        </Typography>
+                        <Typography variant="body2" color={THEME.gray} mt={1}>
+                          Add your first medicine using the form above
+                        </Typography>
+                      </Box>
                     </TableCell>
                   </TableRow>
-                )}
+                ) : (
+                  inventory.map((medicine, idx) => {
+                    const row = getRowStyle(medicine);
+                    const price =
+                      medicine.unitPrice !== null && medicine.unitPrice !== undefined && !isNaN(parseFloat(medicine.unitPrice))
+                        ? `Rs. ${parseFloat(medicine.unitPrice).toFixed(2)}`
+                        : "-";
 
-                {!loading && inventory.map((medicine, idx) => {
-                  const row = getRowStyle(medicine);
-                  const price =
-                    medicine.unitPrice !== null && medicine.unitPrice !== undefined && !isNaN(parseFloat(medicine.unitPrice))
-                      ? `Rs. ${parseFloat(medicine.unitPrice).toFixed(2)}`
-                      : "-";
-
-                  return (
-                    <Fade in timeout={300 + idx * 60} key={medicine.id}>
-                      <TableRow sx={tableRowSx(row)}>
-                        <TableCell sx={{ fontSize: "0.95rem", color: row.color, textAlign: "center", fontWeight: 600 }}>
-                          {medicine.generic || "-"}
-                        </TableCell>
-                        <TableCell sx={{ fontSize: "0.95rem", color: row.color, textAlign: "center", fontWeight: 600 }}>
-                          {medicine.name}
-                        </TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>
-                          <Chip
-                            label={medicine.form || "-"}
-                            size="small"
-                            sx={{ bgcolor: `${THEME.primary}15`, color: THEME.primary, fontWeight: 600 }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ fontSize: "0.95rem", color: row.color, textAlign: "center", fontWeight: 600 }}>
-                          {medicine.strength}
-                        </TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>
-                          <Chip
-                            label={`${medicine.stock} units`}
-                            size="small"
-                            sx={{
-                              bgcolor: medicine.stock < 50 ? `${THEME.warning}15` : `${THEME.success}15`,
-                              color: medicine.stock < 50 ? THEME.warning : THEME.success,
-                              fontWeight: 700
-                            }}
-                            icon={medicine.stock < 50 ? <WarningIcon /> : <CheckCircleIcon />}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ fontSize: "0.95rem", color: row.color, textAlign: "center", fontWeight: 600 }}>
-                          {price}
-                        </TableCell>
-                        <TableCell sx={{ fontSize: "0.95rem", color: row.color, textAlign: "center" }}>
-                          {medicine.batch}
-                        </TableCell>
-                        <TableCell sx={{ fontSize: "0.95rem", color: row.color, textAlign: "center", whiteSpace: 'nowrap' }}>
-                          {medicine.mfg}
-                        </TableCell>
-                        <TableCell sx={{ fontSize: "0.95rem", color: row.color, textAlign: "center", whiteSpace: 'nowrap', fontWeight: 700 }}>
-                          {medicine.expiry}
-                        </TableCell>
-                        <TableCell sx={{ fontSize: "0.95rem", color: row.color, textAlign: "center" }}>
-                          {medicine.manufacturer}
-                        </TableCell>
-                        <TableCell sx={{ fontSize: "0.95rem", color: row.color, textAlign: "center" }}>
-                          {medicine.lastUpdate ? new Date(medicine.lastUpdate).toLocaleDateString("en-GB") : "-"}
-                        </TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>
-                          <Chip
-                            label={medicine.category || "-"}
-                            size="small"
-                            sx={{ bgcolor: `${THEME.accent}15`, color: THEME.accent, fontWeight: 600 }}
-                          />
-                        </TableCell>
-                        <TableCell sx={{ textAlign: "center" }}>
-                          <Button
-                            size="small"
-                            variant="outlined"
-                            startIcon={<DeleteIcon />}
-                            onClick={() => handleDelete(medicine.id)}
-                            sx={actionButtonSx("danger")}
-                          >
-                            Delete
-                          </Button>
-                        </TableCell>
-                      </TableRow>
-                    </Fade>
-                  );
-                })}
-
-                {!loading && inventory.length === 0 && (
-                  <TableRow>
-                    <TableCell colSpan={13} sx={{ textAlign: "center", py: 4, fontSize: "1rem", color: THEME.gray }}>
-                      No medicines found in inventory
-                    </TableCell>
-                  </TableRow>
+                    return (
+                      <Fade in timeout={300 + idx * 60} key={medicine.id}>
+                        <TableRow sx={tableRowSx(row)}>
+                          <TableCell sx={{ 
+                            fontSize: "0.95rem", 
+                            color: row.color, 
+                            textAlign: "center", 
+                            fontWeight: 600 
+                          }}>
+                            {medicine.generic || "-"}
+                          </TableCell>
+                          <TableCell sx={{ 
+                            fontSize: "0.95rem", 
+                            color: row.color, 
+                            textAlign: "center", 
+                            fontWeight: 600 
+                          }}>
+                            <Box display="flex" alignItems="center" justifyContent="center">
+                              <Avatar sx={{ 
+                                mr: 1, 
+                                bgcolor: THEME.accent, 
+                                width: 24, 
+                                height: 24 
+                              }}>
+                                <PharmacyIcon sx={{ fontSize: "0.8rem" }} />
+                              </Avatar>
+                              {medicine.name}
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ textAlign: "center" }}>
+                            <Chip
+                              label={medicine.form || "-"}
+                              size="small"
+                              sx={{ 
+                                bgcolor: `${THEME.primary}15`, 
+                                color: THEME.primary, 
+                                fontWeight: 600 
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ 
+                            fontSize: "0.95rem", 
+                            color: row.color, 
+                            textAlign: "center", 
+                            fontWeight: 600 
+                          }}>
+                            {medicine.strength}
+                          </TableCell>
+                          <TableCell sx={{ textAlign: "center" }}>
+                            <Chip
+                              label={`${medicine.stock} units`}
+                              size="small"
+                              sx={{
+                                bgcolor: medicine.stock < 50 ? `${THEME.warning}15` : `${THEME.success}15`,
+                                color: medicine.stock < 50 ? THEME.warning : THEME.success,
+                                fontWeight: 700
+                              }}
+                              icon={medicine.stock < 50 ? <WarningIcon /> : <CheckCircleIcon />}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ 
+                            fontSize: "0.95rem", 
+                            color: row.color, 
+                            textAlign: "center", 
+                            fontWeight: 600 
+                          }}>
+                            {price}
+                          </TableCell>
+                          <TableCell sx={{ 
+                            fontSize: "0.95rem", 
+                            color: row.color, 
+                            textAlign: "center" 
+                          }}>
+                            {medicine.batch}
+                          </TableCell>
+                          <TableCell sx={{ 
+                            fontSize: "0.95rem", 
+                            color: row.color, 
+                            textAlign: "center", 
+                            whiteSpace: 'nowrap' 
+                          }}>
+                            {medicine.mfg}
+                          </TableCell>
+                          <TableCell sx={{ 
+                            fontSize: "0.95rem", 
+                            color: row.color, 
+                            textAlign: "center", 
+                            whiteSpace: 'nowrap', 
+                            fontWeight: 700 
+                          }}>
+                            <Box display="flex" alignItems="center" justifyContent="center">
+                              {row.tag !== "OK" && (
+                                <Chip
+                                  label={row.tag}
+                                  size="small"
+                                  sx={{
+                                    bgcolor: `${row.tagColor}15`,
+                                    color: row.tagColor,
+                                    fontWeight: 700,
+                                    mr: 1
+                                  }}
+                                />
+                              )}
+                              {medicine.expiry}
+                            </Box>
+                          </TableCell>
+                          <TableCell sx={{ 
+                            fontSize: "0.95rem", 
+                            color: row.color, 
+                            textAlign: "center" 
+                          }}>
+                            {medicine.manufacturer}
+                          </TableCell>
+                          <TableCell sx={{ 
+                            fontSize: "0.95rem", 
+                            color: row.color, 
+                            textAlign: "center" 
+                          }}>
+                            {medicine.lastUpdate ? new Date(medicine.lastUpdate).toLocaleDateString("en-GB") : "-"}
+                          </TableCell>
+                          <TableCell sx={{ textAlign: "center" }}>
+                            <Chip
+                              label={medicine.category || "-"}
+                              size="small"
+                              sx={{ 
+                                bgcolor: `${THEME.accent}15`, 
+                                color: THEME.accent, 
+                                fontWeight: 600 
+                              }}
+                            />
+                          </TableCell>
+                          <TableCell sx={{ textAlign: "center" }}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<DeleteIcon />}
+                              onClick={() => handleDelete(medicine.id)}
+                              sx={actionButtonSx("danger")}
+                            >
+                              Delete
+                            </Button>
+                          </TableCell>
+                        </TableRow>
+                      </Fade>
+                    );
+                  })
                 )}
               </TableBody>
             </Table>
@@ -779,7 +1071,16 @@ const UpdateInventoryPage = () => {
         onClose={() => setSnackbar({ ...snackbar, open: false })}
         anchorOrigin={{ vertical: 'bottom', horizontal: 'center' }}
       >
-        <Alert severity={snackbar.success ? "success" : "error"} sx={{ fontSize: "0.95rem" }}>
+        <Alert 
+          severity={snackbar.success ? "success" : "error"} 
+          sx={{ 
+            fontSize: "0.95rem",
+            borderRadius: "12px",
+            "& .MuiAlert-icon": {
+              fontSize: "1.2rem"
+            }
+          }}
+        >
           {snackbar.message}
         </Alert>
       </Snackbar>
