@@ -490,6 +490,38 @@ public class PrescriptionService {
         prescriptionRepository.save(p);
     }
 
+    /**
+     * Get completed prescriptions for a specific patient (active=false, newest first).
+     * Use this for the patient dashboard.
+     */
+    @Transactional(readOnly = true)
+    public List<Prescription> getCompletedPrescriptionsForPatient(String patientId) {
+        System.out.println("DEBUG: Looking for completed prescriptions for patientId: " + patientId);
+
+        // First try to find by User entity relationship (most reliable)
+        User patient = userRepository.findById(patientId).orElse(null);
+        if (patient != null) {
+            List<Prescription> prescriptions = prescriptionRepository.findByPatientAndIsActiveOrderByPrescriptionDateDesc(patient, false);
+            System.out.println("DEBUG: Found " + prescriptions.size() + " completed prescriptions by User entity");
+            if (!prescriptions.isEmpty()) {
+                for (Prescription p : prescriptions) {
+                    System.out.println("DEBUG: Prescription ID: " + p.getId() + ", Patient ID: " + p.getPatientId() + ", IsActive: " + p.getIsActive());
+                }
+                return prescriptions;
+            }
+        }
+
+        // Fallback: try to find by encrypted patient ID string
+        List<Prescription> prescriptions = prescriptionRepository.findByPatientIdAndIsActiveOrderByPrescriptionDateDesc(patientId, false);
+        System.out.println("DEBUG: Found " + prescriptions.size() + " completed prescriptions by encrypted patientId");
+
+        System.out.println("DEBUG: Total found " + prescriptions.size() + " completed prescriptions");
+        for (Prescription p : prescriptions) {
+            System.out.println("DEBUG: Prescription ID: " + p.getId() + ", Patient ID: " + p.getPatientId() + ", IsActive: " + p.getIsActive());
+        }
+        return prescriptions;
+    }
+
     // ----------- lightweight DTOs (kept here for convenience) ------------
 
     @Data @Builder @AllArgsConstructor

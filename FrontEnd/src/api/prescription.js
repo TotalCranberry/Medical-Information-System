@@ -315,3 +315,7 @@ export const dispenseManual = (prescriptionId, items) =>
 // ✅ COMPLETE PRESCRIPTION (mark inactive)
 export const completePrescription = (prescriptionId) =>
   apiFetch(`/prescriptions/${prescriptionId}/complete`, "POST", null, true);
+
+// ✅ COMPLETED PRESCRIPTIONS FOR PATIENT — matches backend: GET /api/prescriptions/patient/completed
+export const getCompletedPrescriptionsForPatient = () =>
+  apiFetch("/prescriptions/patient/completed", "GET", null, true);
