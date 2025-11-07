@@ -1,4 +1,4 @@
-package com.mis.dto.prescription;
+package com.mis.dto.Prescription;
 
 import lombok.AllArgsConstructor;
 import lombok.Data;

@@ -406,9 +406,6 @@ function App() {
           <Route path="pharmacist/prescription-print" element={<PrescriptionPrint user={user} />} />
           <Route path="invoice/:prescriptionId" element={<Invoice />} />
 
-          {/* Shared Routes */}
-          <Route path="prescription-print" element={<PrescriptionPrint user={user} />} />
-
           {/* Doctor Routes - UPDATED with Medical Routes */}
           <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />
           <Route path="doctor/patients" element={<PatientsTab />} />
