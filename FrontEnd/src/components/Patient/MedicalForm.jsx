@@ -81,27 +81,24 @@ const MedicalForm = ({ onProfileUpdate }) => {
                     <TextField name="medicalHistory.allergies" label="Allergies" fullWidth onChange={handleChange} />
 
                     <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>Emergency Contact</Typography>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}>
-                            <TextField name="emergencyContact.name" label="Name" fullWidth onChange={handleChange} />
-                        </Grid>
-                        <Grid item xs={12} sm={6}>
-                            <TextField name="emergencyContact.phone" label="Phone" fullWidth onChange={handleChange} />
-                        </Grid>
-                        <Grid item xs={12}>
-                            <TextField name="emergencyContact.address" label="Address" fullWidth onChange={handleChange} />
-                        </Grid>
-                    </Grid>
+                    <TextField name="emergencyContact.name" label="Name" fullWidth onChange={handleChange} sx={{ mb: 2 }}/>
+                    <TextField name="emergencyContact.phone" label="Phone" fullWidth onChange={handleChange} sx={{ mb: 2 }}/>
+                    <TextField name="emergencyContact.address" label="Address" fullWidth onChange={handleChange} sx={{ mb: 2 }}/>
+
 
                     <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>Eye Exam</Typography>
-                    <Grid container spacing={2}>
-                        <Grid item xs={12} sm={6}><TextField name="eyeExam.visionWithoutGlasses.right" label="Vision (Without Glasses) - Right" fullWidth onChange={handleChange} /></Grid>
-                        <Grid item xs={12} sm={6}><TextField name="eyeExam.visionWithoutGlasses.left" label="Vision (Without Glasses) - Left" fullWidth onChange={handleChange} /></Grid>
-                        <Grid item xs={12} sm={6}><TextField name="eyeExam.visionWithGlasses.right" label="Vision (With Glasses) - Right" fullWidth onChange={handleChange} /></Grid>
-                        <Grid item xs={12} sm={6}><TextField name="eyeExam.visionWithGlasses.left" label="Vision (With Glasses) - Left" fullWidth onChange={handleChange} /></Grid>
-                        <Grid item xs={12}><TextField name="eyeExam.colorVision" label="Color Vision" fullWidth onChange={handleChange} /></Grid>
+                    <Typography variant="h8" gutterBottom sx={{ mt: 3 }}>Vision (No Glasses)</Typography>
+                    <Grid container spacing={2} sx={{ mb: 2 }} >
+                        <Grid item ><TextField name="eyeExam.visionWithoutGlasses.right" label="R" fullWidth onChange={handleChange} /></Grid>
+                        <Grid item xs={12} sm={6}><TextField name="eyeExam.visionWithoutGlasses.left" label="L" fullWidth onChange={handleChange} /></Grid>
                     </Grid>
-
+                    <Typography variant="h8" gutterBottom sx={{ mt: 3 }}>Vision (With Glasses)</Typography>
+                    <Grid container spacing={2} sx={{ mb: 2 }}>
+                        <Grid item xs={12} sm={6}><TextField name="eyeExam.visionWithGlasses.right" label="R" fullWidth onChange={handleChange} /></Grid>
+                        <Grid item xs={12} sm={6}><TextField name="eyeExam.visionWithGlasses.left" label="L" fullWidth onChange={handleChange} /></Grid>
+                    </Grid>
+                    <TextField name="eyeExam.colorVision" label="Color Vision" fullWidth onChange={handleChange} sx={{ mb: 2 }}/>
+                    
                     <Typography variant="h6" gutterBottom sx={{ mt: 3 }}>Dental Exam</Typography>
                     <TextField name="dentalExam.oralHealthCondition" label="Oral Health Condition" fullWidth onChange={handleChange} />
 

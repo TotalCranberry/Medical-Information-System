@@ -9,6 +9,7 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
+
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
@@ -33,7 +34,6 @@ import com.mis.repository.AppointmentRepository;
 import com.mis.repository.DiagnosisRepository;
 import com.mis.repository.LabResultRepository;
 import com.mis.repository.MedicalRepository;
-import com.mis.repository.MedicalRecordRepository;
 import com.mis.repository.Prescription.PrescriptionRepository;
 import com.mis.repository.UserRepository;
 import com.mis.service.MedicalFormService;
@@ -49,17 +49,15 @@ public class PatientController {
     private final MedicalRepository medicalRepository;
     private final PrescriptionRepository prescriptionRepository;
     private final LabResultRepository labResultRepository;
-    private final MedicalRecordRepository medicalRecordRepository;
     private final MedicalFormService medicalFormService;
 
-    public PatientController(AppointmentRepository appointmentRepository, DiagnosisRepository diagnosisRepository, LabResultRepository labResultRepository, MedicalRepository medicalRepository, PrescriptionRepository prescriptionRepository, UserRepository userRepository, MedicalRecordRepository medicalRecordRepository, MedicalFormService medicalFormService) {
+    public PatientController(AppointmentRepository appointmentRepository, DiagnosisRepository diagnosisRepository, LabResultRepository labResultRepository, MedicalRepository medicalRepository, PrescriptionRepository prescriptionRepository, UserRepository userRepository, MedicalFormService medicalFormService) {
         this.appointmentRepository = appointmentRepository;
         this.diagnosisRepository = diagnosisRepository;
         this.labResultRepository = labResultRepository;
         this.medicalRepository = medicalRepository;
         this.prescriptionRepository = prescriptionRepository;
         this.userRepository = userRepository;
-        this.medicalRecordRepository = medicalRecordRepository;
         this.medicalFormService = medicalFormService;
     }
 
