@@ -24,7 +24,8 @@ import {
   fetchPatientVitals,
   savePatientVitals,
   saveDiagnosis,
-  fetchPatientMedicals
+  fetchPatientMedicals,
+  completeAppointment
 } from "../../api/appointments";
 
 // 1. Import the new API and Component
@@ -70,6 +71,7 @@ const PatientProfile = () => {
   const [editingVitals, setEditingVitals] = useState(false);
   const [saving, setSaving] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(true);
+  const [diagnosisSaved, setDiagnosisSaved] = useState(false);
 
   // --- ADDED STATE FOR MEDICAL RECORD ---
   const [medicalRecord, setMedicalRecord] = useState(null);
@@ -321,11 +323,32 @@ const PatientProfile = () => {
 
       setDiagnosis("");
       setDiagnosisNotes("");
+      setDiagnosisSaved(true);
       await loadAdditionalData();
       setError(null);
     } catch (err) {
       setError(err.message);
       console.error("Error saving diagnosis:", err);
+    } finally {
+      setSaving(false);
+    }
+  };
+
+  const handleCompleteAppointment = async () => {
+    if (!currentAppointmentId) {
+      setError("No appointment to complete");
+      return;
+    }
+
+    try {
+      setSaving(true);
+      await completeAppointment(currentAppointmentId);
+      setError(null);
+      // Navigate back to dashboard after successful completion
+      navigate('/doctor/dashboard');
+    } catch (err) {
+      setError(err.message);
+      console.error("Error completing appointment:", err);
     } finally {
       setSaving(false);
     }
@@ -762,6 +785,22 @@ const PatientProfile = () => {
                   Save Diagnosis
                 </Button>
               </Grid>
+              {diagnosisSaved && currentAppointmentId && (
+                <Grid item xs={12}>
+                  <Button
+                      onClick={handleCompleteAppointment}
+                      variant="contained"
+                      disabled={saving}
+                      sx={{
+                        backgroundColor: "#1976D2",
+                        "&:hover": { backgroundColor: "#1565C0" },
+                        mt: 1
+                      }}
+                  >
+                    Complete Appointment
+                  </Button>
+                </Grid>
+              )}
             </Grid>
           </Paper>
 
