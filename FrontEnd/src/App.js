@@ -398,7 +398,7 @@ function App() {
           <Route path="patient/view-medical/:medicalId" element={<ViewMedical />} />
           <Route path="patient/support" element={<SupportPage />} />
           <Route path="patient/faq" element={<FAQPage />} />
-          <Route path="patient/upload-medical-form" element={<MedicalForm onProfileUpdate={fetchAllUserData} />} />
+          <Route path="patient/upload-medical-form" element={<MedicalForm user={user} onProfileUpdate={fetchAllUserData} />} />
 
           {/* Pharmacist Routes */}
           <Route path="pharmacist/dashboard" element={<PharmacyDashboard user={user} />} />
