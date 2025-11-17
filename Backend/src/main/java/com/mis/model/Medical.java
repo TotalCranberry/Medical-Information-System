@@ -67,6 +67,18 @@ public class Medical {
     @Column(name = "sent_to_course_unit_at")
     private Date sentToCourseUnitAt;
 
+    @Column(name = "doctor_signature", columnDefinition = "LONGBLOB")
+    private byte[] doctorSignature;
+
+    @Column(name = "doctor_signature_content_type")
+    private String doctorSignatureContentType;
+
+    @Column(name = "doctor_seal", columnDefinition = "LONGBLOB")
+    private byte[] doctorSeal;
+
+    @Column(name = "doctor_seal_content_type")
+    private String doctorSealContentType;
+
     // Constructors
     public Medical() {
         this.createdAt = new Date();
@@ -118,4 +130,16 @@ public class Medical {
 
     public Date getSentToCourseUnitAt() { return sentToCourseUnitAt; }
     public void setSentToCourseUnitAt(Date sentToCourseUnitAt) { this.sentToCourseUnitAt = sentToCourseUnitAt; }
+
+    public byte[] getDoctorSignature() { return doctorSignature; }
+    public void setDoctorSignature(byte[] doctorSignature) { this.doctorSignature = doctorSignature; }
+
+    public String getDoctorSignatureContentType() { return doctorSignatureContentType; }
+    public void setDoctorSignatureContentType(String doctorSignatureContentType) { this.doctorSignatureContentType = doctorSignatureContentType; }
+
+    public byte[] getDoctorSeal() { return doctorSeal; }
+    public void setDoctorSeal(byte[] doctorSeal) { this.doctorSeal = doctorSeal; }
+
+    public String getDoctorSealContentType() { return doctorSealContentType; }
+    public void setDoctorSealContentType(String doctorSealContentType) { this.doctorSealContentType = doctorSealContentType; }
 }
