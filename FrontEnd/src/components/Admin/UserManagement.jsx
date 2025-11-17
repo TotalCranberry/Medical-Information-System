@@ -38,12 +38,14 @@ import {
   Block as BlockIcon,
   VpnKey as VpnKeyIcon
 } from '@mui/icons-material';
-import { fetchUsers, approveUser, editUserProfile, disableUser, resetPassword } from '../../api/admin';
+import { fetchUsers, approveUser, editUserProfile, disableUser, resetPassword, reactivateUser } from '../../api/admin';
 
 // Main User Management component
 export default function UserManagement() {
     const [users, setUsers] = useState([]);
-    const [filter, setFilter] = useState('PENDING_APPROVAL');
+    const [statusFilter, setStatusFilter] = useState('PENDING_APPROVAL');
+    const [roleFilter, setRoleFilter] = useState('');
+    const [searchTerm, setSearchTerm] = useState('');
     const [loading, setLoading] = useState(true);
     const [error, setError] = useState('');
     const [success, setSuccess] = useState('');
@@ -51,19 +53,20 @@ export default function UserManagement() {
     const [rowsPerPage, setRowsPerPage] = useState(10);
     const [editingUser, setEditingUser] = useState(null);
     const [editFormData, setEditFormData] = useState({ name: '', dateOfBirth: '' });
+    const [confirmAction, setConfirmAction] = useState({ open: false, title: '', content: '', onConfirm: null });
 
     const loadUsers = useCallback(async () => {
         setLoading(true);
         setError('');
         try {
-            const data = await fetchUsers(filter);
+            const data = await fetchUsers(statusFilter, roleFilter, searchTerm);
             setUsers(data);
         } catch (err) {
             setError('Failed to fetch users. Please try again.');
         } finally {
             setLoading(false);
         }
-    }, [filter]);
+    }, [statusFilter, roleFilter, searchTerm]);
 
     useEffect(() => {
         loadUsers();
@@ -80,29 +83,60 @@ export default function UserManagement() {
         }
     };
 
-    const handleDisableUser = async (userId) => {
-        if (window.confirm('Are you sure you want to disable this user account?')) {
-            try {
-                await disableUser(userId);
-                setSuccess('User disabled successfully!');
-                setTimeout(() => setSuccess(''), 3000);
-                loadUsers();
-            } catch (err) {
-                setError('Failed to disable user.');
+    const handleDisableUser = (userId) => {
+        setConfirmAction({
+            open: true,
+            title: 'Confirm Disable User',
+            content: 'Are you sure you want to disable this user account?',
+            onConfirm: async () => {
+                try {
+                    await disableUser(userId);
+                    setSuccess('User disabled successfully!');
+                    setTimeout(() => setSuccess(''), 3000);
+                    loadUsers();
+                } catch (err) {
+                    setError('Failed to disable user.');
+                }
+                setConfirmAction({ open: false, title: '', content: '', onConfirm: null });
             }
-        }
+        });
     };
 
-    const handleResetPassword = async (user) => {
-        if (window.confirm(`Are you sure you want to reset the password for ${user.name}? This action cannot be undone.`)) {
-            try {
-                const response = await resetPassword(user.id);
-                setSuccess(response.message || 'Password reset successfully. Check logs for temp password.');
-                setTimeout(() => setSuccess(''), 5000);
-            } catch (err) {
-                setError('Failed to reset password.');
+    const handleReactivateUser = (userId) => {
+        setConfirmAction({
+            open: true,
+            title: 'Confirm Reactivate User',
+            content: 'Are you sure you want to reactivate this user account?',
+            onConfirm: async () => {
+                try {
+                    await reactivateUser(userId);
+                    setSuccess('User reactivated successfully!');
+                    setTimeout(() => setSuccess(''), 3000);
+                    loadUsers();
+                } catch (err) {
+                    setError('Failed to reactivate user.');
+                }
+                setConfirmAction({ open: false, title: '', content: '', onConfirm: null });
             }
-        }
+        });
+    };
+
+    const handleResetPassword = (user) => {
+        setConfirmAction({
+            open: true,
+            title: 'Confirm Password Reset',
+            content: `Are you sure you want to reset the password for ${user.name}? This action cannot be undone.`,
+            onConfirm: async () => {
+                try {
+                    const response = await resetPassword(user.id);
+                    setSuccess(response.message || 'Password reset successfully. Check logs for temp password.');
+                    setTimeout(() => setSuccess(''), 5000);
+                } catch (err) {
+                    setError('Failed to reset password.');
+                }
+                setConfirmAction({ open: false, title: '', content: '', onConfirm: null });
+            }
+        });
     };
 
     const handleChangePage = (event, newPage) => {
@@ -168,20 +202,34 @@ export default function UserManagement() {
                 <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                     User Management
                 </Typography>
-                <Typography color="text.secondary">
-                    Review pending account registrations and manage all users in the system.
-                </Typography>
             </Box>
 
             <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
                 <Box sx={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', flexWrap: 'wrap', gap: 2, mb: 2 }}>
+                    <TextField
+                        label="Search by Email"
+                        variant="outlined"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        sx={{ minWidth: 300 }}
+                    />
                     <FormControl sx={{ minWidth: 200 }}>
                         <InputLabel>Status Filter</InputLabel>
-                        <Select value={filter || ''} label="Status Filter" onChange={(e) => setFilter(e.target.value || null)}>
+                        <Select value={statusFilter || ''} label="Status Filter" onChange={(e) => setStatusFilter(e.target.value || null)}>
                             <MenuItem value="PENDING_APPROVAL">Pending Approval</MenuItem>
                             <MenuItem value="ACTIVE">Active</MenuItem>
                             <MenuItem value="DISABLED">Disabled</MenuItem>
-                            <MenuItem value="">All Users</MenuItem>
+                            <MenuItem value="">All Statuses</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <FormControl sx={{ minWidth: 200 }}>
+                        <InputLabel>Role Filter</InputLabel>
+                        <Select value={roleFilter || ''} label="Role Filter" onChange={(e) => setRoleFilter(e.target.value || null)}>
+                            <MenuItem value="">All Roles</MenuItem>
+                            <MenuItem value="STUDENT">Student</MenuItem>
+                            <MenuItem value="DOCTOR">Doctor</MenuItem>
+                            <MenuItem value="STAFF">Staff</MenuItem>
+                            <MenuItem value="ADMIN">Admin</MenuItem>
                         </Select>
                     </FormControl>
                     <Tooltip title="Refresh Users">
@@ -213,13 +261,27 @@ export default function UserManagement() {
                                         <TableRow key={user.id} hover>
                                             <TableCell>{user.name}</TableCell>
                                             <TableCell>{user.email}</TableCell>
-                                            <TableCell><Chip component="div" label={user.role} size="small" /></TableCell>
-                                            <TableCell><Chip component="div" icon={statusInfo.icon} label={statusInfo.label} color={statusInfo.chipColor} size="small" variant="outlined" /></TableCell>
+                                            <TableCell>
+                                                {/* FIX: Wrapped Chip in a Box to disable clicks */}
+                                                <Box sx={{ pointerEvents: 'none' }}>
+                                                    <Chip label={user.role} size="small" />
+                                                </Box>
+                                            </TableCell>
+                                            <TableCell>
+                                                {/* FIX: Wrapped Chip in a Box to disable clicks */}
+                                                <Box sx={{ pointerEvents: 'none' }}>
+                                                    <Chip icon={statusInfo.icon} label={statusInfo.label} color={statusInfo.chipColor} size="small" variant="outlined" />
+                                                </Box>
+                                            </TableCell>
                                             <TableCell align="center">
                                                 <Stack direction="row" spacing={0} justifyContent="center">
                                                     <Tooltip title="Edit Profile"><IconButton color="primary" onClick={() => handleEditUser(user)}><EditIcon /></IconButton></Tooltip>
                                                     {user.status === 'PENDING_APPROVAL' && (<Tooltip title="Approve User"><IconButton color="success" onClick={() => handleApproveUser(user.id)}><CheckIcon /></IconButton></Tooltip>)}
-                                                    {user.status !== 'DISABLED' && (<Tooltip title="Disable User"><IconButton color="error" onClick={() => handleDisableUser(user.id)}><BlockIcon /></IconButton></Tooltip>)}
+                                                    {user.status !== 'DISABLED' ? (
+                                                        <Tooltip title="Disable User"><IconButton color="error" onClick={() => handleDisableUser(user.id)}><BlockIcon /></IconButton></Tooltip>
+                                                    ) : (
+                                                        <Tooltip title="Reactivate User"><IconButton color="success" onClick={() => handleReactivateUser(user.id)}><RefreshIcon /></IconButton></Tooltip>
+                                                    )}
                                                     <Tooltip title="Reset Password"><span><IconButton color="secondary" onClick={() => handleResetPassword(user)} disabled={user.authMethod === 'GoogleAuth'}><VpnKeyIcon /></IconButton></span></Tooltip>
                                                 </Stack>
                                             </TableCell>
@@ -259,6 +321,22 @@ export default function UserManagement() {
                 <DialogActions>
                     <Button onClick={handleCancelEdit}>Cancel</Button>
                     <Button onClick={handleSaveEdit} variant="contained">Save Changes</Button>
+                </DialogActions>
+            </Dialog>
+
+            <Dialog
+                open={confirmAction.open}
+                onClose={() => setConfirmAction({ open: false, title: '', content: '', onConfirm: null })}
+            >
+                <DialogTitle>{confirmAction.title}</DialogTitle>
+                <DialogContent>
+                    <Typography>{confirmAction.content}</Typography>
+                </DialogContent>
+                <DialogActions>
+                    <Button onClick={() => setConfirmAction({ open: false, title: '', content: '', onConfirm: null })}>Cancel</Button>
+                    <Button onClick={confirmAction.onConfirm} color="primary" autoFocus>
+                        Confirm
+                    </Button>
                 </DialogActions>
             </Dialog>
         </Box>

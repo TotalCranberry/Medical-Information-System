@@ -19,10 +19,12 @@ import com.mis.dto.UserResponse;
 import com.mis.mapper.UserMapper;
 import com.mis.model.AccountStatus;
 import com.mis.model.AuthMethod;
+import com.mis.model.MedicalRecord;
 import com.mis.model.Role;
 import com.mis.model.Staff;
 import com.mis.model.Student;
 import com.mis.model.User;
+import com.mis.repository.MedicalRecordRepository;
 import com.mis.repository.StaffRepository;
 import com.mis.repository.StudentRepository;
 import com.mis.repository.UserRepository;
@@ -32,16 +34,18 @@ public class UserService {
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final StaffRepository staffRepository;
+    private final MedicalRecordRepository medicalRecordRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       StudentRepository studentRepository, StaffRepository staffRepository,
+                       StudentRepository studentRepository, MedicalRecordRepository medicalRecordRepository, StaffRepository staffRepository,
                        AuditService auditService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.studentRepository = studentRepository;
         this.staffRepository = staffRepository;
+        this.medicalRecordRepository = medicalRecordRepository;
         this.auditService = auditService;
     }
 
@@ -137,7 +141,7 @@ public class UserService {
         }
 
         if (request.getGender() != null && !request.getGender().isEmpty()) {
-            updateRoleSpecificProfile(user, null, request.getGender());
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), request.getGender());
         }
 
         User savedUser = userRepository.save(user);
@@ -183,9 +187,13 @@ public class UserService {
         } else if (user.getRole() == Role.Staff) {
             staff = staffRepository.findById(user.getId()).orElse(null);
         }
+        // 3. FIND THE MEDICAL RECORD
+        // We use .orElse(null) in case the record doesn't exist yet
+        MedicalRecord medicalRecord = medicalRecordRepository.findByUserId(userId).orElse(null); 
         
-        return UserMapper.toUserResponse(user, student, staff);
-    }
+        // 4. PASS THE MEDICAL RECORD TO THE MAPPER
+        return UserMapper.toUserResponse(user, student, staff, medicalRecord);
+     }
 
     public Optional<User> authenticate(String email, String rawPassword) {
         Optional<User> userOpt = userRepository.findByEmail(email);

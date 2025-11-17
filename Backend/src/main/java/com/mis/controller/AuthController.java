@@ -47,7 +47,7 @@ public class AuthController {
         try {
             User userEntity = UserMapper.toUser(request);
             User savedUser = userService.register(userEntity, request.getPassword());
-            UserResponse response = UserMapper.toUserResponse(savedUser, null, null);
+            UserResponse response = UserMapper.toUserResponse(savedUser, null, null, null);
             return ResponseEntity.status(HttpStatus.CREATED).body(response);
         } catch (IllegalArgumentException ex) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message", ex.getMessage()));
@@ -61,10 +61,10 @@ public class AuthController {
             if (userOpt.isPresent()) {
                 User user = userOpt.get();
                 if (user.getStatus() == AccountStatus.PENDING_APPROVAL) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Your account is pending approval by an administrator."));
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body( "Your account is pending approval by an administrator.");
                 }
                 if (user.getStatus() == AccountStatus.DISABLED) {
-                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message", "Your account has been disabled."));
+                    return ResponseEntity.status(HttpStatus.FORBIDDEN).body("Your account has been disabled.");
                 }
                 String token = jwtTokenProvider.createToken(user);
                 String role = user.getRole().name();
