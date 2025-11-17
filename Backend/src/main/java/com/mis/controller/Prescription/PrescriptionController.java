@@ -58,7 +58,7 @@ public class PrescriptionController {
 
     // 2) View a single prescription (fields auto-decrypted by JPA converter)
     @GetMapping("/{id}")
-    @PreAuthorize("hasAuthority('ROLE_Pharmacist')")
+    @PreAuthorize("hasAnyAuthority('ROLE_Doctor', 'ROLE_Pharmacist', 'ROLE_Student', 'ROLE_Staff')")
     public ResponseEntity<PrescriptionResponse> getOne(@PathVariable String id) {
         Prescription prescription = prescriptionService.getByIdOrThrow(id);
         return ResponseEntity.ok(PrescriptionMapper.toResponse(prescription));
@@ -89,7 +89,18 @@ public class PrescriptionController {
             return ResponseEntity.ok().build();
         }
 
-    // 4) Migration: re-encrypt existing data with current key (Admin only)
+    // 4) Completed prescriptions for Patient (active=false, newest first)
+    @GetMapping("/patient/completed")
+    @PreAuthorize("hasAuthority('ROLE_Student') or hasAuthority('ROLE_Staff')")
+    public ResponseEntity<List<Prescription>> completedPrescriptionsForPatient(Authentication auth) {
+        String patientId = auth.getName();
+        System.out.println("DEBUG: Controller - Patient ID from auth: " + patientId);
+        List<Prescription> prescriptions = prescriptionService.getCompletedPrescriptionsForPatient(patientId);
+        System.out.println("DEBUG: Controller - Returning " + prescriptions.size() + " prescriptions");
+        return ResponseEntity.ok(prescriptions);
+    }
+
+    // 5) Migration: re-encrypt existing data with current key (Admin only)
     @PostMapping("/migrate")
     @PreAuthorize("hasRole('Admin')")
     public ResponseEntity<String> migratePrescriptionData() {
