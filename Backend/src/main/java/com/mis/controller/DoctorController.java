@@ -4,12 +4,15 @@ import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
 import java.util.ArrayList;
+import java.util.Base64;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
 import java.util.stream.Collectors;
+
+import org.springframework.web.multipart.MultipartFile;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,7 +24,9 @@ import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.PutMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
+import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
+import org.springframework.web.multipart.MultipartFile;
 
 import java.util.Optional;
 import com.mis.dto.DiagnosisRequest;
@@ -312,17 +317,31 @@ public class DoctorController {
     // Medical Endpoints
     @PostMapping("/patients/{patientId}/medical")
     public ResponseEntity<?> issueMedical(Authentication authentication,
-                                        @PathVariable String patientId,
-                                        @RequestBody @Valid MedicalRequest request) {
+                                         @PathVariable String patientId,
+                                         @RequestParam("recommendations") String recommendations,
+                                         @RequestParam(value = "additionalNotes", required = false) String additionalNotes,
+                                         @RequestParam(value = "appointmentId", required = false) String appointmentId,
+                                         @RequestParam(value = "doctorSignature", required = false) MultipartFile doctorSignature,
+                                         @RequestParam(value = "doctorSeal", required = false) MultipartFile doctorSeal) {
         try {
             String doctorId = authentication.getName();
             User patient = userRepository.findById(patientId)
                     .orElseThrow(() -> new RuntimeException("Patient not found"));
-            
+
+            // Validate file sizes (1MB limit)
+            if (doctorSignature != null && doctorSignature.getSize() > 1024 * 1024) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor signature image must be less than 1MB"));
+            }
+            if (doctorSeal != null && doctorSeal.getSize() > 1024 * 1024) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor seal image must be less than 1MB"));
+            }
+
             // Get patient details based on role
             Integer patientAge = null;
             String patientFaculty = null;
-            
+
             if (patient.getRole() == Role.Student) {
                 Student studentDetails = studentRepository.findById(patientId).orElse(null);
                 if (studentDetails != null) {
@@ -336,7 +355,7 @@ public class DoctorController {
                     patientAge = calculateAge(staffDetails.getDateOfBirth());
                 }
             }
-            
+
             Medical medical = new Medical();
             medical.setId(UUID.randomUUID().toString());
             medical.setPatient(patient);
@@ -346,17 +365,27 @@ public class DoctorController {
             medical.setPatientEmail(patient.getEmail());
             medical.setPatientFaculty(patientFaculty);
             medical.setPatientRole(patient.getRole().toString());
-            medical.setRecommendations(request.getRecommendations());
-            medical.setAdditionalNotes(request.getAdditionalNotes());
+            medical.setRecommendations(recommendations);
+            medical.setAdditionalNotes(additionalNotes);
             medical.setMedicalDate(new Date());
             medical.setCreatedAt(new Date());
-            
+
+            // Handle file uploads
+            if (doctorSignature != null && !doctorSignature.isEmpty()) {
+                medical.setDoctorSignature(doctorSignature.getBytes());
+                medical.setDoctorSignatureContentType(doctorSignature.getContentType());
+            }
+            if (doctorSeal != null && !doctorSeal.isEmpty()) {
+                medical.setDoctorSeal(doctorSeal.getBytes());
+                medical.setDoctorSealContentType(doctorSeal.getContentType());
+            }
+
             // Link to appointment if provided
-            if (request.getAppointmentId() != null && !request.getAppointmentId().trim().isEmpty()) {
-                Appointment appointment = appointmentRepository.findById(request.getAppointmentId()).orElse(null);
+            if (appointmentId != null && !appointmentId.trim().isEmpty()) {
+                Appointment appointment = appointmentRepository.findById(appointmentId).orElse(null);
                 medical.setAppointment(appointment);
             }
-            
+
             Medical savedMedical = medicalRepository.save(medical);
             return ResponseEntity.ok(savedMedical);
         } catch (Exception e) {
@@ -366,19 +395,76 @@ public class DoctorController {
     }
 
     @GetMapping("/patients/{patientId}/medicals")
-    public ResponseEntity<List<Medical>> getPatientMedicals(@PathVariable String patientId) {
+    public ResponseEntity<List<Map<String, Object>>> getPatientMedicals(@PathVariable String patientId) {
         User patient = userRepository.findById(patientId)
                 .orElseThrow(() -> new RuntimeException("Patient not found"));
-        
+
         List<Medical> medicals = medicalRepository.findByPatientOrderByMedicalDateDesc(patient);
-        return ResponseEntity.ok(medicals);
+        List<Map<String, Object>> medicalDTOs = new ArrayList<>();
+
+        for (Medical medical : medicals) {
+            Map<String, Object> dto = new HashMap<>();
+            dto.put("id", medical.getId());
+            dto.put("patientName", medical.getPatientName());
+            dto.put("patientRole", medical.getPatientRole());
+            dto.put("patientAge", medical.getPatientAge());
+            dto.put("patientFaculty", medical.getPatientFaculty());
+            dto.put("patientEmail", medical.getPatientEmail());
+            dto.put("recommendations", medical.getRecommendations());
+            dto.put("additionalNotes", medical.getAdditionalNotes());
+            dto.put("medicalDate", medical.getMedicalDate());
+            dto.put("createdAt", medical.getCreatedAt());
+            dto.put("isSentToCourseUnit", medical.getIsSentToCourseUnit());
+            dto.put("sentToCourseUnitAt", medical.getSentToCourseUnitAt());
+
+            // Convert images to base64
+            if (medical.getDoctorSignature() != null && medical.getDoctorSignature().length > 0) {
+                String base64Signature = Base64.getEncoder().encodeToString(medical.getDoctorSignature());
+                String mimeType = medical.getDoctorSignatureContentType() != null ? medical.getDoctorSignatureContentType() : "image/png";
+                dto.put("doctorSignature", "data:" + mimeType + ";base64," + base64Signature);
+            }
+            if (medical.getDoctorSeal() != null && medical.getDoctorSeal().length > 0) {
+                String base64Seal = Base64.getEncoder().encodeToString(medical.getDoctorSeal());
+                String mimeType = medical.getDoctorSealContentType() != null ? medical.getDoctorSealContentType() : "image/png";
+                dto.put("doctorSeal", "data:" + mimeType + ";base64," + base64Seal);
+            }
+
+            medicalDTOs.add(dto);
+        }
+
+        return ResponseEntity.ok(medicalDTOs);
     }
 
     @GetMapping("/medicals/{medicalId}")
-    public ResponseEntity<Medical> getMedical(@PathVariable String medicalId) {
+    public ResponseEntity<Map<String, Object>> getMedical(@PathVariable String medicalId) {
         Medical medical = medicalRepository.findById(medicalId)
                 .orElseThrow(() -> new RuntimeException("Medical not found"));
-        return ResponseEntity.ok(medical);
+
+        Map<String, Object> dto = new HashMap<>();
+        dto.put("id", medical.getId());
+        dto.put("patientName", medical.getPatientName());
+        dto.put("patientRole", medical.getPatientRole());
+        dto.put("patientAge", medical.getPatientAge());
+        dto.put("patientFaculty", medical.getPatientFaculty());
+        dto.put("patientEmail", medical.getPatientEmail());
+        dto.put("recommendations", medical.getRecommendations());
+        dto.put("additionalNotes", medical.getAdditionalNotes());
+        dto.put("medicalDate", medical.getMedicalDate());
+        dto.put("createdAt", medical.getCreatedAt());
+        dto.put("isSentToCourseUnit", medical.getIsSentToCourseUnit());
+        dto.put("sentToCourseUnitAt", medical.getSentToCourseUnitAt());
+
+        // Convert images to base64
+        if (medical.getDoctorSignature() != null && medical.getDoctorSignature().length > 0) {
+            String base64Signature = Base64.getEncoder().encodeToString(medical.getDoctorSignature());
+            dto.put("doctorSignature", "data:image/png;base64," + base64Signature);
+        }
+        if (medical.getDoctorSeal() != null && medical.getDoctorSeal().length > 0) {
+            String base64Seal = Base64.getEncoder().encodeToString(medical.getDoctorSeal());
+            dto.put("doctorSeal", "data:image/png;base64," + base64Seal);
+        }
+
+        return ResponseEntity.ok(dto);
     }
 
     @PutMapping("/medicals/{medicalId}/send-to-course-unit")
