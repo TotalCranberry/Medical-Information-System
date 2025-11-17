@@ -43,7 +43,7 @@ import ReportsTab from "./components/Patient/ReportsTab";
 import ProfilePage from "./components/Patient/ProfilePage";
 import SupportPage from "./components/Patient/SupportPage";
 import FAQPage from './components/Patient/FAQPage';
-import MedicalFormUpload from './components/Patient/MedicalFormUpload';
+import MedicalForm from './components/Patient/MedicalForm';
 
 // Pharmacy pages
 import PharmacyDashboard from "./components/Pharmacy/PharmacyDashboard";
@@ -72,6 +72,7 @@ import UserManagement from './components/Admin/UserManagement';
 import AuditLogPage from './components/Admin/AuditLogs';
 import CreateAnnouncement from './components/Admin/CreateAnnouncement';
 import SupportTicketsPage from './components/Admin/SupportTicketsPage';
+import NotificationBell from './components/NotificationBell';
 
 // --- Doctor mock data & helpers ---
 const mockPatients = [
@@ -138,7 +139,7 @@ const navLinksConfig = {
     { label: "Appointments", path: "/patient/appointments", icon: <CalendarTodayIcon /> },
     { label: "Reports", path: "/patient/reports", icon: <DescriptionIcon /> },
     { label: "Support", path: "/patient/support", icon: <ContactSupportIcon /> },
-    { label: "Upload Medical Form", path: "/patient/upload-medical-form", icon: <DescriptionIcon /> }
+    { label: "Upload Medical Form", path: "/patient/upload-medical-form", icon: <DescriptionIcon />, roles: ['Student'] }
   ],
   doctor: [
     { label: "Dashboard", path: "/doctor/dashboard", icon: <DashboardIcon /> },
@@ -188,7 +189,7 @@ const MainLayout = ({ user, onLogout }) => {
     <Box sx={{ width: 250, height: "100%", bgcolor: "#0c3c3c", color: "#fff" }} role="presentation">
       <Box sx={{ display: "flex", alignItems: "center", p: 2, justifyContent: "center", mt: 2 }} />
       <List sx={{ mt: 1 }}>
-        {navLinks.map((link) => (
+        {navLinks.filter(link => !link.roles || link.roles.includes(user.role)).map((link) => (
           <ListItem key={link.path} disablePadding>
             <ListItemButton
               component={Link}
@@ -234,12 +235,13 @@ const MainLayout = ({ user, onLogout }) => {
           </Box>
           <Box sx={{ flexGrow: 1 }} />
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
-            {navLinks.map((link) => (
+            {navLinks.filter(link => !link.roles || link.roles.includes(user.role)).map((link) => (
               <Button key={link.label} component={Link} to={link.path} sx={{ color: 'white' }}>
                 {link.label}
               </Button>
             ))}
           </Box>
+          <NotificationBell />
           <IconButton sx={{ ml: 2 }} onClick={handleAvatarClick}>
             <Avatar sx={{ bgcolor: "#45d27a" }}>{user?.name?.charAt(0)}</Avatar>
           </IconButton>
@@ -396,7 +398,7 @@ function App() {
           <Route path="patient/view-medical/:medicalId" element={<ViewMedical />} />
           <Route path="patient/support" element={<SupportPage />} />
           <Route path="patient/faq" element={<FAQPage />} />
-          <Route path="patient/upload-medical-form" element={<MedicalFormUpload onProfileUpdate={fetchAllUserData} />} />
+          <Route path="patient/upload-medical-form" element={<MedicalForm onProfileUpdate={fetchAllUserData} />} />
 
           {/* Pharmacist Routes */}
           <Route path="pharmacist/dashboard" element={<PharmacyDashboard user={user} />} />

@@ -28,7 +28,6 @@ public class Student {
     private String gender;
     private String registrationNumber;
 
-    // FIX: Removed the 'age' field. It will be calculated instead.
 
     // Getters and Setters
     public String getId() { return id; }
@@ -48,10 +47,13 @@ public class Student {
     public String extractRegistrationNumberFromEmail() {
         if (this.user != null && this.user.getEmail() != null) {
             String email = this.user.getEmail();
-            if (email.matches("e\\d{2}\\d{3}@eng.pdn.ac.lk")) {
-                return email.substring(0, 6).toUpperCase();
+            int atIndex = email.indexOf('@');
+            
+            if (atIndex != -1) {
+                return email.substring(0, atIndex);
             }
         }
+        
         return null;
     }
 

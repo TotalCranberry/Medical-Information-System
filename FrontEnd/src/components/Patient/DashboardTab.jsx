@@ -21,8 +21,13 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
   const isDobRequired = user?.role === "Student" || user?.role === "Staff";
   const isDobSet = user?.dateOfBirth !== null && user?.dateOfBirth !== undefined;
   const showDobReminder = isDobRequired && !isDobSet;
-  const showSexReminder = isDobRequired && !user?.sex;
-  const showMedicalFormReminder = user?.role === "Student" && (!user?.medicalRecord || user?.medicalRecord.length === 0);
+  
+  // This correctly checks for the 'gender' field to show the reminder.
+  const isGenderSet = user?.gender !== null && user?.gender !== undefined;
+  const showGenderReminder = isDobRequired && !isGenderSet;
+  
+  const isMedicalFormSet = user?.medicalRecord !== null && user?.medicalRecord !== undefined;
+  const showMedicalFormReminder = user?.role === "Student" && !isMedicalFormSet;
 
   // Load completed prescriptions
   useEffect(() => {
@@ -58,31 +63,27 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
   const statCards = [
     {
       label: "Appointments",
-      count: appointments.filter((app) => app.status == "Scheduled").length,
+      count: appointments.filter((app) => app.status === "Scheduled").length,
       icon: CalendarTodayIcon,
-      color: theme.palette.success.main, // green tone
-      chipColor: "primary",
+      color: theme.palette.success.main,
     },
     {
       label: "Medicals / Diagnoses",
       count: medicals.length + diagnoses.length,
       icon: AssignmentIcon,
-      color: theme.palette.warning.main, // orange tone
-      chipColor: "warning",
+      color: theme.palette.warning.main,
     },
     {
       label: "Reports",
       count: reports.length,
       icon: DescriptionIcon,
-      color: theme.palette.info.main, // blue tone
-      chipColor: "info",
+      color: theme.palette.info.main,
     },
     {
       label: "Prescriptions",
       count: prescriptions.length,
       icon: ReceiptLongIcon,
-      color: theme.palette.secondary.main, // purple tone
-      chipColor: "secondary",
+      color: theme.palette.secondary.main,
     },
   ];
 
@@ -106,14 +107,9 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
           Please complete your profile by setting your date of birth in the Profile section.
         </Alert>
       )}
-      {showSexReminder && (
+      {showGenderReminder && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          Please complete your profile by setting your sex in the Profile section.
-        </Alert>
-      )}
-      {showMedicalFormReminder && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          Please upload your medical form in the Upload Medical Form section.
+          Please complete your profile by setting your gender in the Profile section.
         </Alert>
       )}
 
@@ -176,9 +172,9 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {appointments && appointments.filter(app => app.status == "Scheduled").length > 0 ? (
+                  {appointments && appointments.filter(app => app.status === "Scheduled").length > 0 ? (
                     appointments
-                      .filter(app => app.status == "Scheduled")
+                      .filter(app => app.status === "Scheduled")
                       .sort((a, b) => new Date(a.appointmentDateTime) - new Date(b.appointmentDateTime))
                       .slice(0, 4)
                       .map(app => (
