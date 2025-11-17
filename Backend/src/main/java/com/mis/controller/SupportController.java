@@ -52,10 +52,12 @@ public class SupportController {
         return ResponseEntity.ok().body(Map.of("message","Support request received successfully."));
     }
 
-    // New endpoint for Admins
-    @GetMapping("/tickets")
-    public ResponseEntity<List<SupportTicket>> getOpenTickets() {
-        List<SupportTicket> openTickets = supportTicketRepository.findByStatusOrderByCreatedAtDesc(TicketStatus.OPEN);
-        return ResponseEntity.ok(openTickets);
+    @GetMapping("/my-tickets")
+    public ResponseEntity<List<SupportTicket>> getMyTickets(Authentication authentication) {
+        String userId = authentication.getName();
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+        List<SupportTicket> myTickets = supportTicketRepository.findBySubmittedByUserOrderByCreatedAtDesc(user);
+        return ResponseEntity.ok(myTickets);
     }
 }

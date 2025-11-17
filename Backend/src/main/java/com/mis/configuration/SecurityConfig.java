@@ -5,10 +5,8 @@ import java.util.Arrays;
 import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
-
-import static org.springframework.security.config.Customizer.withDefaults;
-
 import org.springframework.http.HttpMethod;
+import static org.springframework.security.config.Customizer.withDefaults;
 import org.springframework.security.config.annotation.method.configuration.EnableMethodSecurity;
 import org.springframework.security.config.annotation.web.builders.HttpSecurity;
 import org.springframework.security.config.annotation.web.configuration.EnableWebSecurity;
@@ -54,6 +52,7 @@ public class SecurityConfig {
                 .requestMatchers("/api/support/**").authenticated()
 
                 // Admin-specific endpoints
+                .requestMatchers("/api/admin/**").hasAuthority("ROLE_Admin")
                 .requestMatchers("/api/support/tickets").hasAuthority("ROLE_Admin")
 
                 // Patient-facing endpoints
@@ -77,11 +76,10 @@ public class SecurityConfig {
                 .requestMatchers("/api/prescriptions/doctor/**").hasAuthority("ROLE_Doctor")
 
                 // Patient-specific views:
-                // If these endpoints expose patient IDs arbitrarily, keep Doctor-only.
-                // If you add a "me" endpoint for patients, allow Student/Staff there specifically:
-                // .requestMatchers(HttpMethod.GET, "/api/prescriptions/patient/me/**")
-                //     .hasAnyAuthority("ROLE_Student","ROLE_Staff")
-
+                // Allow patients to access their own completed prescriptions
+                .requestMatchers(HttpMethod.GET, "/api/prescriptions/patient/completed")
+                    .hasAnyAuthority("ROLE_Student", "ROLE_Staff")
+                // Other patient endpoints remain doctor-only
                 .requestMatchers("/api/prescriptions/patient/**").hasAuthority("ROLE_Doctor")
                 .requestMatchers("/api/prescriptions/appointment/**").hasAuthority("ROLE_Doctor")
 
@@ -92,6 +90,9 @@ public class SecurityConfig {
                 .requestMatchers("/api/prescriptions/overdue").hasAuthority("ROLE_Pharmacist")
                 .requestMatchers("/api/prescriptions/statistics").hasAuthority("ROLE_Pharmacist")
 
+                // Individual prescription access (GET /api/prescriptions/{id}) - allow all authenticated users
+                .requestMatchers(HttpMethod.GET, "/api/prescriptions/{id}")
+                    .authenticated()
                 // Catch-all prescriptions read endpoints (Doctor or Pharmacist)
                 .requestMatchers("/api/prescriptions/**")
                     .hasAnyAuthority("ROLE_Doctor", "ROLE_Pharmacist")

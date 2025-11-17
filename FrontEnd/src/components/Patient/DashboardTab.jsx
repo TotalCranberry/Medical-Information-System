@@ -1,20 +1,59 @@
-import React from "react";
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import AnnouncementDisplay from "../AnnouncementDisplay";
 import {
   Box, Typography, Paper, Table, TableBody, TableCell,
-  TableContainer, TableHead, TableRow, Grid, Alert, Chip, useTheme,
+  TableContainer, TableHead, TableRow, Grid, Alert, Chip, useTheme, Button,
 } from "@mui/material";
 import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
 import AssignmentIcon from "@mui/icons-material/Assignment";
 import DescriptionIcon from "@mui/icons-material/Description";
 import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import { getCompletedPrescriptionsForPatient } from "../../api/prescription";
 
 const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescriptions }) => {
   const theme = useTheme();
+  const navigate = useNavigate();
+  const [completedPrescriptions, setCompletedPrescriptions] = useState([]);
 
   // Check if DOB is required but not set
   const isDobRequired = user?.role === "Student" || user?.role === "Staff";
   const isDobSet = user?.dateOfBirth !== null && user?.dateOfBirth !== undefined;
   const showDobReminder = isDobRequired && !isDobSet;
+  const showSexReminder = isDobRequired && !user?.sex;
+  const showMedicalFormReminder = user?.role === "Student" && (!user?.medicalRecord || user?.medicalRecord.length === 0);
+
+  // Load completed prescriptions
+  useEffect(() => {
+    const loadCompletedPrescriptions = async () => {
+      try {
+        console.log("DEBUG: Frontend - Loading completed prescriptions");
+        const data = await getCompletedPrescriptionsForPatient();
+        console.log("DEBUG: Frontend - Received prescriptions data:", data);
+        // Sort by date (recent to past)
+        const sorted = data.sort((a, b) => new Date(b.prescriptionDate || b.createdAt) - new Date(a.prescriptionDate || a.createdAt));
+        console.log("DEBUG: Frontend - Sorted prescriptions:", sorted);
+        setCompletedPrescriptions(sorted);
+      } catch (error) {
+        console.error("Failed to load completed prescriptions:", error);
+        setCompletedPrescriptions([]);
+      }
+    };
+
+    loadCompletedPrescriptions();
+  }, []);
+
+  const handleViewPrescription = (prescription) => {
+    // Navigate to prescription print page instead of opening dialog
+    navigate('/prescription-print', {
+      state: {
+        prescription: prescription,
+        fromCompletedTab: true,
+        readOnly: true
+      }
+    });
+  };
 
   const statCards = [
     {
@@ -60,10 +99,21 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
 
   return (
     <Box>
+      <AnnouncementDisplay />
+
       {showDobReminder && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          Please complete your profile by setting your date of birth in the Profile
-          section.
+          Please complete your profile by setting your date of birth in the Profile section.
+        </Alert>
+      )}
+      {showSexReminder && (
+        <Alert severity="warning" sx={{ mb: 3 }}>
+          Please complete your profile by setting your sex in the Profile section.
+        </Alert>
+      )}
+      {showMedicalFormReminder && (
+        <Alert severity="info" sx={{ mb: 3 }}>
+          Please upload your medical form in the Upload Medical Form section.
         </Alert>
       )}
 
@@ -79,6 +129,7 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
       >
         Welcome, {user?.name || "User"}
       </Typography>
+
 
       <Grid container spacing={4} justifyContent="center" alignItems="stretch" sx={{ mb: { xs: 3, md: 5 } }}>
         {statCards.map(({ label, count, icon: IconComponent, color }) => (
@@ -201,41 +252,46 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
         <Grid item xs={12} lg={4}>
           <Paper elevation={2} sx={{ p: 3, minHeight: 300 }}>
             <Typography variant="h6" fontWeight={600} mb={2} textAlign="center">
-              Prescriptions
+              Recent Prescriptions
             </Typography>
             <TableContainer sx={{ maxHeight: 300 }}>
               <Table stickyHeader>
                 <TableHead>
                   <TableRow>
                     <TableCell>Date</TableCell>
-                    <TableCell>Medicine</TableCell>
-                    <TableCell>Status</TableCell>
+                    <TableCell>Doctor</TableCell>
+                    <TableCell>Action</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {prescriptions.length === 0 ? (
+                  {completedPrescriptions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={3} align="center">
                         No prescriptions found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    prescriptions.map(rx => (
-                      <TableRow key={rx.id || rx.date} hover>
-                        <TableCell>{rx.date}</TableCell>
-                        <TableCell>{rx.medicine}</TableCell>
+                    completedPrescriptions.slice(0, 5).map(rx => (
+                      <TableRow key={rx.id} hover>
                         <TableCell>
-                          <Chip
-                            label={rx.status}
+                          {new Date(rx.prescriptionDate || rx.createdAt).toLocaleDateString()}
+                        </TableCell>
+                        <TableCell>{rx.doctorName}</TableCell>
+                        <TableCell>
+                          <Button
                             size="small"
-                            color={
-                              rx.status?.toLowerCase() === "dispensed"
-                                ? "success"
-                                : rx.status?.toLowerCase() === "pending"
-                                ? "warning"
-                                : "default"
-                            }
-                          />
+                            variant="outlined"
+                            startIcon={<VisibilityIcon />}
+                            onClick={() => handleViewPrescription(rx)}
+                            sx={{
+                              minWidth: "auto",
+                              px: 1,
+                              py: 0.5,
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            View
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))

@@ -36,6 +36,9 @@ public class SupportTicket {
     @Column(nullable = false, updatable = false)
     private Date createdAt;
 
+    @Column(length = 1000)
+    private String reply;
+
     // Getters and Setters...
     public String getId() { return id; }
     public void setId(String id) { this.id = id; }
@@ -47,4 +50,6 @@ public class SupportTicket {
     public void setStatus(TicketStatus status) { this.status = status; }
     public Date getCreatedAt() { return createdAt; }
     public void setCreatedAt(Date createdAt) { this.createdAt = createdAt; }
+    public String getReply() { return reply; }
+    public void setReply(String reply) { this.reply = reply; }
 }

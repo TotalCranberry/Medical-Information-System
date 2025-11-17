@@ -26,8 +26,16 @@ const line = { borderTop: '2px solid #0C3C3C' };
 
 // ---------- Normalizers ----------
 const normalizeItems = (rx) => {
+  console.log("DEBUG: normalizeItems - rx:", rx);
+  console.log("DEBUG: normalizeItems - rx.items:", rx?.items);
+  console.log("DEBUG: normalizeItems - rx.medications:", rx?.medications);
+
   const raw = (rx?.items || rx?.medications || []);
+  console.log("DEBUG: normalizeItems - raw items array:", raw);
+
   return (raw || []).map((it, i) => {
+    console.log(`DEBUG: normalizeItems - processing item ${i}:`, it);
+
     const medName   = it.medicineName || it.medicine?.name || it.medicine || '';
     const route     = it.routeOfAdministration || it.route || '-';
     const duration  = it.durationDays || it.days || it.duration || '';
@@ -49,7 +57,7 @@ const normalizeItems = (rx) => {
 
     const dispensedStatus = to01(statusRaw) ?? 0;
 
-    return {
+    const normalizedItem = {
       id: it.id ?? it.itemId ?? `idx_${i}`,
       medicineName: medName,
       route,
@@ -65,6 +73,9 @@ const normalizeItems = (rx) => {
       dispensedStatus,
       instructions: it.instructions ?? '',
     };
+
+    console.log(`DEBUG: normalizeItems - normalized item ${i}:`, normalizedItem);
+    return normalizedItem;
   });
 };
 
@@ -126,7 +137,14 @@ const PrescriptionPrint = ({ user }) => {
 
   // Memoize rx to keep stable reference across renders
   const rx = useMemo(() => (rxFresh ?? passedRx ?? EMPTY_RX), [rxFresh, passedRx]);
+  console.log("DEBUG: PrescriptionPrint - rx object:", rx);
+  console.log("DEBUG: PrescriptionPrint - rx.id:", rx.id);
+  console.log("DEBUG: PrescriptionPrint - rx.items:", rx.items);
+  console.log("DEBUG: PrescriptionPrint - rx.medications:", rx.medications);
+
   const items = useMemo(() => normalizeItems(rx), [rx]);
+  console.log("DEBUG: PrescriptionPrint - normalized items:", items);
+
   const resultsMap = useMemo(() => buildResultsMap(dispenseResults), [dispenseResults]);
 
   const createdAt = rx.createdAt || rx.prescriptionDate || new Date().toISOString();
@@ -447,33 +465,42 @@ const PrescriptionPrint = ({ user }) => {
                 </tr>
               </thead>
               <tbody>
-                {items.map((item, index) => {
-                  const overlay = getResultForItem(item, resultsMap);
-                  // const requestedQty = (item.requiredQuantity ?? item.units ?? overlay?.requestedQty ?? null);
-                  const dispensedQty  = (item.dispensedQuantity ?? overlay?.dispensedQty ?? 0);
-                  const dispensed = item.dispensedStatus === 1;
+                {items.length === 0 ? (
+                  <tr>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '20px', color: THEME.gray }}>
+                      No prescription items found
+                    </td>
+                  </tr>
+                ) : (
+                  items.map((item, index) => {
+                    console.log(`DEBUG: Rendering item ${index}:`, item);
+                    const overlay = getResultForItem(item, resultsMap);
+                    // const requestedQty = (item.requiredQuantity ?? item.units ?? overlay?.requestedQty ?? null);
+                    const dispensedQty  = (item.dispensedQuantity ?? overlay?.dispensedQty ?? 0);
+                    const dispensed = item.dispensedStatus === 1;
 
-                  return (
-                    <tr key={item.id || index}>
-                      <td>
-                        <div style={{ fontWeight: 700, color: THEME.primary }}>{item.medicineName || "-"}</div>
-                        <div style={{ fontSize: 12, color: THEME.gray }}>
-                          {item.form || '-'} {item.strength ? `• ${item.strength}` : ''}
-                        </div>
-                      </td>
-                      <td>{item.dosage || "-"}</td>
-                      <td>{Array.isArray(item.timeOfDay) && item.timeOfDay.length ? item.timeOfDay.join(", ") : "-"}</td>
-                      <td>{item.duration ? `${item.duration} days` : "-"}</td>
-                      <td>{item.route || "-"}</td>
-                      <td>{item.instructions || "-"}</td>
-                      {/* <td>{requestedQty ?? "-"}</td> */}
-                      <td>{dispensedQty ?? "-"}</td>
-                      <td style={{ textAlign: "center", fontWeight: 800, color: dispensed ? '#047857' : '#b91c1c' }}>
-                        {markSymbol(dispensed)}
-                      </td>
-                    </tr>
-                  );
-                })}
+                    return (
+                      <tr key={item.id || index}>
+                        <td>
+                          <div style={{ fontWeight: 700, color: THEME.primary }}>{item.medicineName || "-"}</div>
+                          <div style={{ fontSize: 12, color: THEME.gray }}>
+                            {item.form || '-'} {item.strength ? `• ${item.strength}` : ''}
+                          </div>
+                        </td>
+                        <td>{item.dosage || "-"}</td>
+                        <td>{Array.isArray(item.timeOfDay) && item.timeOfDay.length ? item.timeOfDay.join(", ") : "-"}</td>
+                        <td>{item.duration ? `${item.duration} days` : "-"}</td>
+                        <td>{item.route || "-"}</td>
+                        <td>{item.instructions || "-"}</td>
+                        {/* <td>{requestedQty ?? "-"}</td> */}
+                        <td>{dispensedQty ?? "-"}</td>
+                        <td style={{ textAlign: "center", fontWeight: 800, color: dispensed ? '#047857' : '#b91c1c' }}>
+                          {markSymbol(dispensed)}
+                        </td>
+                      </tr>
+                    );
+                  })
+                )}
               </tbody>
             </table>
 
@@ -504,26 +531,50 @@ const PrescriptionPrint = ({ user }) => {
 
             {/* Bottom buttons */}
             <div className="no-print section-gap-lg btn-row">
-              <button onClick={onDownload} className="btn btn-outline" disabled={loading} aria-label="Print prescription">
-                {loading ? 'Loading…' : 'Download / Print'}
-              </button>
-
-              {fromCompletedTab ? (
-                <button onClick={onReturn} className="btn btn-solid" disabled={loading} aria-label="Return to prescriptions">
-                  Return to View Prescription
-                </button>
-              ) : (
+              {/* Role-based button rendering */}
+              {user?.role === 'Pharmacist' ? (
                 <>
-                  {rx.isActive ? (
-                    <button onClick={onComplete} className="btn btn-solid" disabled={loading} aria-label="Complete prescription">
-                      Complete Prescription
-                    </button>
-                  ) : (
+                  <button onClick={onDownload} className="btn btn-outline" disabled={loading} aria-label="Print prescription">
+                    {loading ? 'Loading…' : 'Download / Print'}
+                  </button>
+
+                  {fromCompletedTab ? (
                     <button onClick={onReturn} className="btn btn-solid" disabled={loading} aria-label="Return to prescriptions">
                       Return to View Prescription
                     </button>
+                  ) : (
+                    <>
+                      {rx.isActive ? (
+                        <button onClick={onComplete} className="btn btn-solid" disabled={loading} aria-label="Complete prescription">
+                          Complete Prescription
+                        </button>
+                      ) : (
+                        <button onClick={onReturn} className="btn btn-solid" disabled={loading} aria-label="Return to prescriptions">
+                          Return to View Prescription
+                        </button>
+                      )}
+                    </>
                   )}
                 </>
+              ) : (user?.role === 'Student' || user?.role === 'Staff') ? (
+                <>
+                  <button
+                    onClick={() => navigate(`/${user.role.toLowerCase()}/dashboard`)}
+                    className="btn btn-outline"
+                    aria-label="Return to dashboard"
+                  >
+                    Return to Dashboard
+                  </button>
+
+                  <button onClick={onDownload} className="btn btn-outline" disabled={loading} aria-label="Print prescription">
+                    {loading ? 'Loading…' : 'Download / Print'}
+                  </button>
+                </>
+              ) : (
+                // Fallback for other roles or undefined role
+                <button onClick={onDownload} className="btn btn-outline" disabled={loading} aria-label="Print prescription">
+                  {loading ? 'Loading…' : 'Download / Print'}
+                </button>
               )}
             </div>
 

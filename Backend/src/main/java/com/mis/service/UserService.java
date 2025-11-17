@@ -17,6 +17,7 @@ import com.google.api.client.googleapis.auth.oauth2.GoogleIdToken.Payload;
 import com.mis.dto.ProfileUpdateRequest;
 import com.mis.dto.UserResponse;
 import com.mis.mapper.UserMapper;
+import com.mis.model.AccountStatus;
 import com.mis.model.AuthMethod;
 import com.mis.model.Role;
 import com.mis.model.Staff;
@@ -32,13 +33,16 @@ public class UserService {
     private final StudentRepository studentRepository;
     private final StaffRepository staffRepository;
     private final PasswordEncoder passwordEncoder;
+    private final AuditService auditService;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       StudentRepository studentRepository, StaffRepository staffRepository) {
+                       StudentRepository studentRepository, StaffRepository staffRepository,
+                       AuditService auditService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.studentRepository = studentRepository;
         this.staffRepository = staffRepository;
+        this.auditService = auditService;
     }
 
     @Transactional 
@@ -49,6 +53,11 @@ public class UserService {
         
         user.setId(UUID.randomUUID().toString());
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
+        if (user.getRole() == Role.Student || user.getRole() == Role.Staff) {
+            user.setStatus(AccountStatus.ACTIVE);
+        } else {
+            user.setStatus(AccountStatus.PENDING_APPROVAL);
+        }
         user.setLastLogin(LocalDateTime.now());
         User savedUser = userRepository.save(user);
 
@@ -57,6 +66,7 @@ public class UserService {
             Student student = new Student();
             student.setUser(savedUser); 
             student.setFaculty(faculty);
+            student.setRegistrationNumber(student.extractRegistrationNumberFromEmail());
             studentRepository.save(student);
         } else if (savedUser.getRole() == Role.Staff) {
             Staff staff = new Staff();
@@ -64,6 +74,9 @@ public class UserService {
             staff.setFaculty(faculty);
             staffRepository.save(staff);
         }
+        
+        // Log the USER_REGISTRATION event
+        auditService.logAction(savedUser, "USER_REGISTRATION", "User registered successfully with role: " + savedUser.getRole());
         
         return savedUser;
     }
@@ -76,7 +89,10 @@ public class UserService {
         if (userOpt.isPresent()) {
             User existingUser = userOpt.get();
             existingUser.setLastLogin(LocalDateTime.now());
-            return userRepository.save(existingUser);
+            User savedUser = userRepository.save(existingUser);
+            // Log the GOOGLE_USER_LOGIN event
+            auditService.logAction(savedUser, "GOOGLE_USER_LOGIN", "User logged in with Google successfully");
+            return savedUser;
         }
 
         User newUser = new User();
@@ -86,6 +102,7 @@ public class UserService {
         newUser.setAuthMethod(AuthMethod.GoogleAuth);
         newUser.setRole(determineRoleFromEmail(email));
         newUser.setLastLogin(LocalDateTime.now());
+        newUser.setStatus(AccountStatus.ACTIVE);
         newUser.setPasswordHash(null); 
         User savedUser = userRepository.save(newUser);
         
@@ -94,6 +111,7 @@ public class UserService {
             Student student = new Student();
             student.setUser(savedUser);
             student.setFaculty(faculty);
+            student.setRegistrationNumber(student.extractRegistrationNumberFromEmail());
             studentRepository.save(student);
         } else if (savedUser.getRole() == Role.Staff) {
             Staff staff = new Staff();
@@ -115,22 +133,40 @@ public class UserService {
         }
         
         if (request.getDateOfBirth() != null) {
-            updateRoleSpecificProfile(user, request.getDateOfBirth());
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), null);
         }
 
-        return userRepository.save(user);
+        if (request.getGender() != null && !request.getGender().isEmpty()) {
+            updateRoleSpecificProfile(user, null, request.getGender());
+        }
+
+        User savedUser = userRepository.save(user);
+        // Log the PROFILE_UPDATE event
+        auditService.logAction(savedUser, "PROFILE_UPDATE", "User profile updated successfully");
+        
+        return savedUser;
     }
 
-    private void updateRoleSpecificProfile(User user, LocalDate dateOfBirth) {
+    private void updateRoleSpecificProfile(User user, LocalDate dateOfBirth, String gender) {
         if (user.getRole() == Role.Student) {
             Student student = studentRepository.findById(user.getId())
                 .orElseThrow(() -> new RuntimeException("Student profile not found"));
-            student.setDateOfBirth(dateOfBirth);
+            if (dateOfBirth != null) {
+                student.setDateOfBirth(dateOfBirth);
+            }
+            if (gender != null) {
+                student.setGender(gender);
+            }
             studentRepository.save(student);
         } else if (user.getRole() == Role.Staff) {
             Staff staff = staffRepository.findById(user.getId())
                 .orElseThrow(() -> new RuntimeException("Staff profile not found"));
-            staff.setDateOfBirth(dateOfBirth);
+            if (dateOfBirth != null) {
+                staff.setDateOfBirth(dateOfBirth);
+            }
+            if (gender != null) {
+                staff.setGender(gender);
+            }
             staffRepository.save(staff);
         }
     }
@@ -158,6 +194,8 @@ public class UserService {
             if (passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
                 user.setLastLogin(LocalDateTime.now());
                 userRepository.save(user);
+                // Log the USER_LOGIN event
+                auditService.logAction(user, "USER_LOGIN", "User logged in successfully");
                 return Optional.of(user);
             }
         }
@@ -186,7 +224,9 @@ public class UserService {
 
         // Encode and set the new password
         user.setPasswordHash(passwordEncoder.encode(newPassword));
-        userRepository.save(user);
+        User savedUser = userRepository.save(user);
+        // Log the PASSWORD_CHANGE event
+        auditService.logAction(savedUser, "PASSWORD_CHANGE", "User password changed successfully");
     }
 
     private String extractFacultyFromEmail(String email) {
@@ -256,9 +296,5 @@ public class UserService {
         // If you log in with email:
         return userRepository.findByEmail(username)
                 .orElseThrow(() -> new IllegalStateException("Logged-in user not found by email: " + username));
-
-        // If you log in with username (UNCOMMENT this and REMOVE the email block above):
-        // return userRepository.findByUsername(username)
-        //         .orElseThrow(() -> new IllegalStateException("Logged-in user not found by username: " + username));
     }
 }

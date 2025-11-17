@@ -25,4 +25,9 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Stri
     List<Prescription> findByPatientAndIsActive(User patient, Boolean isActive);
     List<Prescription> findByIsActiveAndUpdatedAt(Boolean isActive, Date updatedAt);
     List<Prescription> findByIsActiveAndUpdatedAtBetween(Boolean isActive, Date startDate, Date endDate);
+
+    List<Prescription> findByPatientIdAndIsActiveOrderByPrescriptionDateDesc(String patientId, Boolean isActive);
+
+    // Alternative query using the User entity relationship
+    List<Prescription> findByPatientAndIsActiveOrderByPrescriptionDateDesc(User patient, Boolean isActive);
 }

@@ -1,15 +1,26 @@
 const API_BASE = process.env.REACT_APP_API_BASE_URL;
 
 async function apiFetch(path, method = 'GET', body = null, addAuth = false) {
-  const headers = { 'Content-Type': 'application/json' };
+  const headers = {};
   if (addAuth) {
     const token = localStorage.getItem('jwtToken');
     if (token) headers['Authorization'] = `Bearer ${token}`;
   }
+
+  let reqBody;
+  if (body) {
+    if (body instanceof FormData) {
+      reqBody = body;
+    } else {
+      headers['Content-Type'] = 'application/json';
+      reqBody = JSON.stringify(body);
+    }
+  }
+
   const res = await fetch(`${API_BASE}${path}`, {
     method,
     headers,
-    ...(body && { body: JSON.stringify(body) }),
+    ...(reqBody && { body: reqBody }),
   });
   // Read response body once to handle empty/non-JSON responses safely
   const text = await res.text();
