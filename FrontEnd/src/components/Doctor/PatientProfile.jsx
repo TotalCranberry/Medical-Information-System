@@ -28,6 +28,10 @@ import {
   completeAppointment
 } from "../../api/appointments";
 
+// Import API and Component for Medical Record
+import { getMedicalRecord } from '../../api/patient';
+import ViewPatientMedicalRecord from './ViewPatientMedicalRecord';
+
 const PatientProfile = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
@@ -64,36 +68,21 @@ const PatientProfile = () => {
   const [apiAvailable, setApiAvailable] = useState(true);
   const [diagnosisSaved, setDiagnosisSaved] = useState(false);
 
-  // Helper function to safely get patient information with multiple fallbacks
+  // --- Medical Record State ---
+  const [medicalRecord, setMedicalRecord] = useState(null);
+  const [recordStatus, setRecordStatus] = useState('loading'); // 'loading', 'found', 'not_found', 'error'
+
+  // Helper function to safely get patient information
   const getPatientInfo = (field) => {
     if (!patientData) return 'N/A';
-    
-    // Try direct access first
-    if (patientData[field] !== undefined && patientData[field] !== null) {
-      return patientData[field];
-    }
-    
-    // Try patientDetails nested object
-    if (patientData.patientDetails && patientData.patientDetails[field] !== undefined && patientData.patientDetails[field] !== null) {
-      return patientData.patientDetails[field];
-    }
-    
-    // Try user nested object (in case patient data is nested under user)
-    if (patientData.user && patientData.user[field] !== undefined && patientData.user[field] !== null) {
-      return patientData.user[field];
-    }
-
-    // Special handling for faculty - might be stored as different property names
-    if (field === 'faculty') {
-      return patientData.Faculty || patientData.department || patientData.patientDetails?.Faculty || patientData.patientDetails?.department || 'N/A';
-    }
-
-    // Special handling for age - might need calculation from dateOfBirth
+    if (patientData[field] !== undefined && patientData[field] !== null) return patientData[field];
+    if (patientData.patientDetails && patientData.patientDetails[field] !== undefined && patientData.patientDetails[field] !== null) return patientData.patientDetails[field];
+    if (patientData.user && patientData.user[field] !== undefined && patientData.user[field] !== null) return patientData.user[field];
+    if (field === 'faculty') return patientData.Faculty || patientData.department || patientData.patientDetails?.Faculty || patientData.patientDetails?.department || 'N/A';
     if (field === 'age') {
       const age = getPatientAge();
       return age !== null ? age : 'N/A';
     }
-
     return 'N/A';
   };
 
@@ -107,7 +96,6 @@ const PatientProfile = () => {
 
   useEffect(() => {
     if (medicalIssued) {
-      // Clear the success flag from location state after showing the message
       window.history.replaceState({}, document.title);
     }
   }, [medicalIssued]);
@@ -125,6 +113,7 @@ const PatientProfile = () => {
       setRecentDiagnoses(profileData.recentDiagnoses || []);
       
       await loadMedicals();
+      await fetchMedicalRecordData(); // Fetch the medical form
       
       if (profileData.latestVitals) {
         setCurrentVitals({
@@ -139,7 +128,6 @@ const PatientProfile = () => {
           notes: profileData.latestVitals.notes || ""
         });
       }
-
       setError(null);
       setApiAvailable(true);
     } catch (err) {
@@ -173,6 +161,7 @@ const PatientProfile = () => {
       setRecentDiagnoses(profileData.recentDiagnoses || []);
       
       await loadMedicals();
+      await fetchMedicalRecordData(); // Fetch the medical form
       
       if (vitalsData.length > 0) {
         const latestVitals = vitalsData[0];
@@ -196,6 +185,28 @@ const PatientProfile = () => {
       }
     } finally {
       setLoading(false);
+    }
+  };
+
+  // Separated function to fetch medical record with robust error handling
+  const fetchMedicalRecordData = async () => {
+    try {
+      setRecordStatus('loading');
+      const recordData = await getMedicalRecord(patientId);
+      setMedicalRecord(recordData);
+      setRecordStatus('found');
+    } catch (recordError) {
+      // If 404, it just means the patient hasn't uploaded one yet.
+      if (recordError.message && (recordError.message.includes('404') || recordError.message.includes('Not Found'))) {
+        setMedicalRecord(null);
+        setRecordStatus('not_found');
+      } else {
+        // Any other error (500, network, etc.) is a real problem.
+        console.error("Failed to fetch medical record:", recordError);
+        setRecordStatus('error');
+        // Append this error to the main error state so the user sees it
+        setError(prev => prev ? `${prev} | Medical Record Error: ${recordError.message}` : `Medical Record Error: ${recordError.message}`);
+      }
     }
   };
 
@@ -229,7 +240,6 @@ const PatientProfile = () => {
 
     try {
       setSaving(true);
-
       const vitalsToSave = {};
       Object.keys(currentVitals).forEach(key => {
         const value = currentVitals[key];
@@ -262,25 +272,20 @@ const PatientProfile = () => {
       setError("Diagnosis cannot be empty");
       return;
     }
-
     if (!apiAvailable) {
       setError("Diagnosis API endpoint is not yet implemented.");
       return;
     }
-
     try {
       setSaving(true);
       const diagnosisData = {
         diagnosis: diagnosis.trim(),
         notes: diagnosisNotes.trim()
       };
-
       if (currentAppointmentId) {
         diagnosisData.appointmentId = currentAppointmentId;
       }
-
       await saveDiagnosis(patientId, diagnosisData);
-
       setDiagnosis("");
       setDiagnosisNotes("");
       setDiagnosisSaved(true);
@@ -299,12 +304,10 @@ const PatientProfile = () => {
       setError("No appointment to complete");
       return;
     }
-
     try {
       setSaving(true);
       await completeAppointment(currentAppointmentId);
       setError(null);
-      // Navigate back to dashboard after successful completion
       navigate('/doctor/dashboard');
     } catch (err) {
       setError(err.message);
@@ -355,12 +358,10 @@ const PatientProfile = () => {
 
   const getPatientAge = () => {
     if (!patientData) return null;
-    
     const directAge = patientData.age || patientData.patientDetails?.age || patientData.user?.age;
     if (directAge !== undefined && directAge !== null) {
       return directAge;
     }
-    
     const dob = patientData.dateOfBirth || patientData.patientDetails?.dateOfBirth || patientData.user?.dateOfBirth;
     if (dob) {
       const today = new Date();
@@ -372,7 +373,6 @@ const PatientProfile = () => {
       }
       return age;
     }
-    
     return null;
   };
 
@@ -418,7 +418,6 @@ const PatientProfile = () => {
 
   return (
     <Box p={3}>
-      {/* Header */}
       <Box display="flex" alignItems="center" mb={1}>
         <Button
           startIcon={<ArrowBackIcon />}
@@ -429,11 +428,11 @@ const PatientProfile = () => {
         </Button>
       </Box>
       
-      {/* Title under the back button */}
       <Typography variant="h4" sx={{ color: "#0c3c3c", fontWeight: 700, mb: 3 }}>
         Patient Profile
       </Typography>
 
+      {/* General Error Alert */}
       {error && (
         <Alert severity={apiAvailable ? "error" : "warning"} sx={{ mb: 3 }}>
           {error}
@@ -475,9 +474,10 @@ const PatientProfile = () => {
             </Typography>
           </Paper>
         </Grid>
+
         {/* Main Content */}
         <Grid item xs={12} md={8}>
-          {/* Action Buttons */}
+          {/* Quick Actions */}
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600, mb: 2 }}>
               Quick Actions
@@ -531,6 +531,23 @@ const PatientProfile = () => {
               </Grid>
             </Grid>
           </Paper>
+
+          {/* Medical Record Section (New) */}
+          {recordStatus === 'error' && (
+            <Alert severity="error" sx={{ mb: 3 }}>
+              Could not load the patient's medical record form. (Status: Server Error)
+            </Alert>
+          )}
+          
+          {recordStatus === 'found' && medicalRecord && (
+            <ViewPatientMedicalRecord record={medicalRecord} />
+          )}
+
+          {recordStatus === 'not_found' && (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              This patient has not submitted a medical form.
+            </Alert>
+          )}
 
           {/* Vitals Section */}
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>

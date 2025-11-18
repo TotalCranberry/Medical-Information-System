@@ -189,7 +189,7 @@ public class UserService {
         }
         // 3. FIND THE MEDICAL RECORD
         // We use .orElse(null) in case the record doesn't exist yet
-        MedicalRecord medicalRecord = medicalRecordRepository.findByUserId(userId).orElse(null); 
+        MedicalRecord medicalRecord = medicalRecordRepository.findByUser_Id(userId).orElse(null); 
         
         // 4. PASS THE MEDICAL RECORD TO THE MAPPER
         return UserMapper.toUserResponse(user, student, staff, medicalRecord);

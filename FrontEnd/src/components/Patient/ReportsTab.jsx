@@ -144,6 +144,7 @@ const ReportsTab = ({
                           {new Date(medical.medicalDate).toLocaleDateString()}
                         </TableCell>
                         <TableCell>{medical.recommendations}</TableCell>
+                        
                       </TableRow>
                     ))
                   )}
