@@ -1,7 +1,7 @@
 package com.mis.mapper.Prescription;
 
-import com.mis.dto.prescription.PrescriptionItemRequest;
-import com.mis.dto.prescription.PrescriptionResponse;
+import com.mis.dto.Prescription.PrescriptionItemRequest;
+import com.mis.dto.Prescription.PrescriptionResponse;
 import com.mis.model.Prescription.Prescription;
 import com.mis.model.Prescription.PrescriptionItem;
 

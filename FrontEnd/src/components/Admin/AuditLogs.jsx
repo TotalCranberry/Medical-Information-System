@@ -11,10 +11,15 @@ import {
   TableRow,
   CircularProgress,
   Alert,
-  Snackbar
+  Snackbar,
+  TextField,
+  Button
 } from '@mui/material';
 import { History } from '@mui/icons-material';
 import { fetchAuditLogs } from '../../api/admin';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
 
 export default function AuditLogPage() {
     const [auditLogs, setAuditLogs] = useState([]);
@@ -24,6 +29,9 @@ export default function AuditLogPage() {
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+    const [searchTerm, setSearchTerm] = useState('');
+    const [startDate, setStartDate] = useState(new Date());
+    const [endDate, setEndDate] = useState(new Date());
 
     const showSnackbar = (message, severity = 'success') => {
         setSnackbarMessage(message);
@@ -35,23 +43,27 @@ export default function AuditLogPage() {
         setSnackbarOpen(false);
     };
 
-    useEffect(() => {
-        const loadAuditLogs = async () => {
-            try {
-                setLoading(true);
-                setError('');
-                const data = await fetchAuditLogs();
-                setAuditLogs(data);
-            } catch (err) {
-                setError('Failed to fetch audit logs. Please try again.');
-                showSnackbar('Failed to fetch audit logs. Please try again.', 'error');
-            } finally {
-                setLoading(false);
-            }
-        };
+    const loadAuditLogs = async () => {
+        try {
+            setLoading(true);
+            setError('');
+            const data = await fetchAuditLogs(searchTerm, startDate, endDate);
+            setAuditLogs(data);
+        } catch (err) {
+            setError('Failed to fetch audit logs. Please try again.');
+            showSnackbar('Failed to fetch audit logs. Please try again.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         loadAuditLogs();
     }, []);
+
+    const handleSearch = () => {
+        loadAuditLogs();
+    };
 
     const formatTimestamp = (timestamp) => {
         return new Date(timestamp).toLocaleString();
@@ -63,12 +75,33 @@ export default function AuditLogPage() {
                 <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                     System Audit Log
                 </Typography>
-                <Typography color="text.secondary">
-                    Track critical user actions and system events for compliance and security monitoring.
-                </Typography>
             </Box>
 
             <Paper elevation={2} sx={{ p: 3 }}>
+                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                    <TextField
+                        label="Search by User Email"
+                        variant="outlined"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        sx={{ flexGrow: 1 }}
+                    />
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <DateTimePicker
+                            label="Start Date"
+                            value={startDate}
+                            onChange={(newValue) => setStartDate(newValue)}
+                            renderInput={(params) => <TextField {...params} />}
+                        />
+                        <DateTimePicker
+                            label="End Date"
+                            value={endDate}
+                            onChange={(newValue) => setEndDate(newValue)}
+                            renderInput={(params) => <TextField {...params} />}
+                        />
+                    </LocalizationProvider>
+                    <Button variant="contained" onClick={handleSearch}>Search</Button>
+                </Box>
                 {error && (
                     <Alert severity="error" sx={{ mb: 2 }}>
                         {error}

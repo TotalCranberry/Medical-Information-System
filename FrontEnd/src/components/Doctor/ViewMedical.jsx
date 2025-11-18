@@ -1,4 +1,18 @@
 import React, { useState, useEffect } from "react";
+import {
+  Box, Typography, Paper, Grid, Button, Card, CardContent,
+  Divider, Alert, CircularProgress, Chip
+} from "@mui/material";
+import {
+  ArrowBack as ArrowBackIcon,
+  Send as SendIcon,
+  MedicalServices as MedicalIcon,
+  Person as PersonIcon,
+  Email as EmailIcon,
+  School as FacultyIcon,
+  CalendarToday as DateIcon,
+  Image as ImageIcon
+} from "@mui/icons-material";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { fetchMedical as fetchDoctorMedical, sendMedicalToCourseUnit } from "../../api/appointments";
 import { fetchPatientMedical } from "../../api/reports";
@@ -13,12 +27,15 @@ const ViewMedical = () => {
   const [sending, setSending] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(null);
+  const [signatureImage, setSignatureImage] = useState(null);
+  const [sealImage, setSealImage] = useState(null);
 
   const role = localStorage.getItem("userRole");
 
   useEffect(() => {
     loadMedical();
   }, [medicalId]);
+
 
   const loadMedical = async () => {
     try {
@@ -32,6 +49,16 @@ const ViewMedical = () => {
       }
 
       setMedical(medicalData);
+
+      // Process images if they exist (now returned as base64 data URLs)
+      if (medicalData.doctorSignature) {
+        setSignatureImage(medicalData.doctorSignature);
+      }
+
+      if (medicalData.doctorSeal) {
+        setSealImage(medicalData.doctorSeal);
+      }
+
       setError(null);
     } catch (err) {
       setError(err.message || "Failed to load medical certificate");
@@ -82,170 +109,291 @@ const ViewMedical = () => {
 
   if (loading) {
     return (
-      <div className="flex justify-center items-center min-h-96">
-        <div className="animate-spin rounded-full h-16 w-16 border-b-2 border-green-500"></div>
-      </div>
+      <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
+        <CircularProgress size={60} sx={{ color: "#45d27a" }} />
+      </Box>
     );
   }
 
   if (!medical) {
     return (
-      <div className="p-6">
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+      <Box p={3}>
+        <Alert severity="error" sx={{ mb: 3 }}>
           Medical certificate not found. Please go back and try again.
-        </div>
-        <button
+        </Alert>
+        <Button
+          startIcon={<ArrowBackIcon />}
           onClick={handleBack}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded"
+          sx={{ mt: 2 }}
         >
-          ← Back
-        </button>
-      </div>
+          Back
+        </Button>
+      </Box>
     );
   }
 
   return (
-    <div className="p-6">
-      {/* Back Button */}
-      <div className="flex items-center mb-4">
-        <button
+    <Box p={3}>
+      {/* Header */}
+      <Box display="flex" alignItems="center" mb={1}>
+        <Button
+          startIcon={<ArrowBackIcon />}
           onClick={handleBack}
-          className="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded mr-4"
+          sx={{ mr: 2 }}
         >
-          ← Back
-        </button>
-      </div>
+          Back
+        </Button>
+      </Box>
 
       {/* Title */}
-      <h1 className="text-3xl font-bold text-gray-800 mb-6">Medical Certificate</h1>
+      <Typography variant="h4" sx={{ color: "#0c3c3c", fontWeight: 700, mb: 3 }}>
+        Medical Certificate
+      </Typography>
 
       {/* Error & Success */}
       {error && (
-        <div className="bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded mb-4">
+        <Alert severity="error" sx={{ mb: 3 }}>
           {error}
-          <button onClick={() => setError(null)} className="float-right text-red-500">×</button>
-        </div>
+        </Alert>
       )}
 
       {success && (
-        <div className="bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded mb-4">
+        <Alert severity="success" sx={{ mb: 3 }}>
           {success}
-          <button onClick={() => setSuccess(null)} className="float-right text-green-500">×</button>
-        </div>
+        </Alert>
       )}
 
-      {/* Layout */}
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+      <Grid container spacing={3}>
         {/* Medical Certificate Details */}
-        <div className="lg:col-span-2">
-          <div className="bg-white border border-gray-300 rounded-lg p-8 shadow-lg">
-            <div className="text-center mb-8">
-              <h2 className="text-2xl font-bold text-gray-800 mb-2">UNIVERSITY OF PERADENIYA</h2>
-              <h3 className="text-xl font-semibold text-green-500 mb-2">MEDICAL CERTIFICATE</h3>
-              <p className="text-gray-600">Medical Information System</p>
-            </div>
+        <Grid item xs={12} md={8}>
+          <Paper elevation={2} sx={{ p: 4 }}>
+            <Box textAlign="center" mb={4}>
+              <Typography variant="h5" sx={{ color: "#0c3c3c", fontWeight: 700, mb: 1 }}>
+                UNIVERSITY OF PERADENIYA
+              </Typography>
+              <Typography variant="h6" sx={{ color: "#45d27a", fontWeight: 600, mb: 1 }}>
+                MEDICAL CERTIFICATE
+              </Typography>
+              <Typography variant="body2" color="text.secondary">
+                Medical Information System
+              </Typography>
+            </Box>
 
-            <hr className="mb-6" />
+            <Divider sx={{ mb: 4 }} />
 
             {/* Patient Information */}
-            <div className="mb-6">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">Patient Information</h4>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                <div><strong>Name:</strong> {medical.patientName}</div>
-                <div><strong>Role:</strong> {medical.patientRole}</div>
-                <div><strong>Age:</strong> {medical.patientAge ? `${medical.patientAge} years` : "N/A"}</div>
-                <div><strong>Faculty:</strong> {medical.patientFaculty || "N/A"}</div>
-                <div className="md:col-span-2"><strong>Email:</strong> {medical.patientEmail}</div>
-              </div>
-            </div>
+            <Box mb={4}>
+              <Box display="flex" alignItems="center" mb={2}>
+                <PersonIcon sx={{ fontSize: 24, color: "#45d27a", mr: 1 }} />
+                <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
+                  Patient Information
+                </Typography>
+              </Box>
+              <Grid container spacing={2}>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body1" gutterBottom>
+                    <strong>Name:</strong> {medical.patientName}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body1" gutterBottom>
+                    <strong>Role:</strong> {medical.patientRole}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body1" gutterBottom>
+                    <strong>Age:</strong> {medical.patientAge ? `${medical.patientAge} years` : "N/A"}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12} sm={6}>
+                  <Typography variant="body1" gutterBottom>
+                    <strong>Faculty:</strong> {medical.patientFaculty || "N/A"}
+                  </Typography>
+                </Grid>
+                <Grid item xs={12}>
+                  <Typography variant="body1" gutterBottom>
+                    <strong>Email:</strong> {medical.patientEmail}
+                  </Typography>
+                </Grid>
+              </Grid>
+            </Box>
 
-            <hr className="mb-6" />
+            <Divider sx={{ mb: 4 }} />
 
-            {/* Recommendations */}
-            <div className="mb-6">
-              <h4 className="text-lg font-semibold text-gray-800 mb-4">Medical Recommendations</h4>
-              <div className="bg-gray-50 border border-gray-200 rounded p-4">
-                <p className="whitespace-pre-wrap leading-relaxed">{medical.recommendations}</p>
-              </div>
-            </div>
+            {/* Medical Recommendations */}
+            <Box mb={4}>
+              <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600, mb: 2 }}>
+                Medical Recommendations
+              </Typography>
+              <Paper elevation={1} sx={{ p: 3, bgcolor: "#f9f9f9" }}>
+                <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                  {medical.recommendations}
+                </Typography>
+              </Paper>
+            </Box>
 
             {/* Additional Notes */}
             {medical.additionalNotes && (
-              <div className="mb-6">
-                <h4 className="text-lg font-semibold text-gray-800 mb-4">Additional Notes</h4>
-                <div className="bg-gray-50 border border-gray-200 rounded p-4">
-                  <p className="whitespace-pre-wrap leading-relaxed">{medical.additionalNotes}</p>
-                </div>
-              </div>
+              <Box mb={4}>
+                <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600, mb: 2 }}>
+                  Additional Notes
+                </Typography>
+                <Paper elevation={1} sx={{ p: 3, bgcolor: "#f9f9f9" }}>
+                  <Typography variant="body1" sx={{ whiteSpace: "pre-wrap", lineHeight: 1.6 }}>
+                    {medical.additionalNotes}
+                  </Typography>
+                </Paper>
+              </Box>
             )}
 
-            <hr className="mb-6" />
+            <Divider sx={{ mb: 4 }} />
 
             {/* Dates */}
-            <div>
-              <p className="mb-2"><strong>Date of Issue:</strong> {formatDate(medical.medicalDate)}</p>
-              <p className="mb-2"><strong>Certificate ID:</strong> {medical.id}</p>
+            <Box mb={4}>
+              <Typography variant="body1" gutterBottom>
+                <strong>Date of Issue:</strong> {formatDate(medical.medicalDate)}
+              </Typography>
+              <Typography variant="body1" gutterBottom>
+                <strong>Certificate ID:</strong> {medical.id}
+              </Typography>
               {medical.appointment && (
-                <p className="mb-2"><strong>Appointment Date:</strong> {formatDate(medical.appointment.appointmentDateTime)}</p>
+                <Typography variant="body1" gutterBottom>
+                  <strong>Appointment Date:</strong> {formatDate(medical.appointment.appointmentDateTime)}
+                </Typography>
               )}
-            </div>
-          </div>
-        </div>
+            </Box>
+
+            {/* Doctor Signature and Seal */}
+            {(signatureImage || sealImage) && (
+              <>
+                <Divider sx={{ mb: 4 }} />
+                <Box>
+                  <Box display="flex" alignItems="center" mb={3}>
+                    <ImageIcon sx={{ fontSize: 24, color: "#45d27a", mr: 1 }} />
+                    <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
+                      Doctor Authentication
+                    </Typography>
+                  </Box>
+                  <Grid container spacing={3}>
+                    {signatureImage && (
+                      <Grid item xs={12} md={6}>
+                        <Box textAlign="center">
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+                            Doctor Signature
+                          </Typography>
+                          <Paper elevation={1} sx={{ p: 3, bgcolor: "#f9f9f9" }}>
+                            <img
+                              src={signatureImage}
+                              alt="Doctor Signature"
+                              style={{
+                                maxWidth: '100%',
+                                maxHeight: '200px',
+                                objectFit: 'contain',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px'
+                              }}
+                              onError={(e) => {
+                                console.error("Signature image failed to load:", signatureImage);
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                            {!signatureImage && (
+                              <Typography variant="body2" color="error">
+                                Signature image failed to load
+                              </Typography>
+                            )}
+                          </Paper>
+                        </Box>
+                      </Grid>
+                    )}
+                    {sealImage && (
+                      <Grid item xs={12} md={6}>
+                        <Box textAlign="center">
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2 }}>
+                            Doctor Seal
+                          </Typography>
+                          <Paper elevation={1} sx={{ p: 3, bgcolor: "#f9f9f9" }}>
+                            <img
+                              src={sealImage}
+                              alt="Doctor Seal"
+                              style={{
+                                maxWidth: '100%',
+                                maxHeight: '200px',
+                                objectFit: 'contain',
+                                border: '1px solid #ddd',
+                                borderRadius: '4px'
+                              }}
+                              onError={(e) => {
+                                console.error("Seal image failed to load:", sealImage);
+                                e.target.style.display = 'none';
+                              }}
+                            />
+                            {!sealImage && (
+                              <Typography variant="body2" color="error">
+                                Seal image failed to load
+                              </Typography>
+                            )}
+                          </Paper>
+                        </Box>
+                      </Grid>
+                    )}
+                  </Grid>
+                </Box>
+              </>
+            )}
+          </Paper>
+        </Grid>
 
         {/* Doctor Actions */}
         {role !== "Student" && role !== "Staff" && (
-          <div className="lg:col-span-1">
-            <div className="bg-white border border-gray-200 rounded-lg p-6 shadow-md">
-              <div className="flex items-center mb-4">
-                <div className="w-8 h-8 bg-green-500 rounded-full flex items-center justify-center mr-3">
-                  <span className="text-white text-sm">🏥</span>
-                </div>
-                <h4 className="text-lg font-semibold text-gray-800">Certificate Actions</h4>
-              </div>
-              <hr className="mb-6" />
+          <Grid item xs={12} md={4}>
+            <Paper elevation={2} sx={{ p: 3 }}>
+              <Box display="flex" alignItems="center" mb={2}>
+                <MedicalIcon sx={{ fontSize: 24, color: "#45d27a", mr: 1 }} />
+                <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
+                  Certificate Actions
+                </Typography>
+              </Box>
+              <Divider sx={{ mb: 3 }} />
 
-              <div className="mb-6">
-                <p className="text-sm font-semibold mb-2">Status:</p>
-                <div
-                  className={`inline-flex items-center px-3 py-1 rounded-full text-sm ${
-                    medical.isSentToCourseUnit
-                      ? "bg-green-100 text-green-800 border border-green-200"
-                      : "bg-gray-100 text-gray-800 border border-gray-200"
-                  }`}
-                >
-                  {medical.isSentToCourseUnit && <span className="mr-1">✓</span>}
-                  {medical.isSentToCourseUnit ? "Sent to Course Unit" : "Not Sent"}
-                </div>
+              <Box mb={3}>
+                <Typography variant="body2" sx={{ fontWeight: 600, mb: 1 }}>
+                  Status:
+                </Typography>
+                <Chip
+                  size="small"
+                  label={medical.isSentToCourseUnit ? "Sent to Course Unit" : "Not Sent"}
+                  color={medical.isSentToCourseUnit ? "success" : "default"}
+                  variant={medical.isSentToCourseUnit ? "filled" : "outlined"}
+                />
                 {medical.isSentToCourseUnit && medical.sentToCourseUnitAt && (
-                  <p className="text-xs text-gray-500 mt-2">
+                  <Typography variant="caption" color="text.secondary" sx={{ mt: 1, display: 'block' }}>
                     Sent on: {formatDate(medical.sentToCourseUnitAt)}
-                  </p>
+                  </Typography>
                 )}
-              </div>
+              </Box>
 
               {!medical.isSentToCourseUnit && (
-                <button
+                <Button
+                  fullWidth
+                  variant="contained"
+                  startIcon={sending ? <CircularProgress size={20} color="inherit" /> : <SendIcon />}
                   onClick={handleSendToCourseUnit}
                   disabled={sending}
-                  className={`w-full px-4 py-2 rounded text-white font-medium ${
-                    sending ? "bg-gray-400 cursor-not-allowed" : "bg-green-500 hover:bg-green-600"
-                  }`}
+                  sx={{
+                    backgroundColor: "#45d27a",
+                    "&:hover": { backgroundColor: "#3ab86a" },
+                    "&:disabled": { backgroundColor: "#cccccc" }
+                  }}
                 >
-                  {sending ? (
-                    <span className="flex items-center justify-center">
-                      <div className="animate-spin rounded-full h-4 w-4 border-b-2 border-white mr-2"></div>
-                      Sending...
-                    </span>
-                  ) : (
-                    "📤 Send to Course Unit"
-                  )}
-                </button>
+                  {sending ? "Sending..." : "Send to Course Unit"}
+                </Button>
               )}
-            </div>
-          </div>
+            </Paper>
+          </Grid>
         )}
-      </div>
-    </div>
+      </Grid>
+    </Box>
   );
 };
 

@@ -17,6 +17,7 @@ import org.springframework.web.bind.annotation.RestController;
 import com.mis.model.AccountStatus;
 import com.mis.model.AuditLog;
 import com.mis.model.SupportTicket;
+import com.mis.model.Role;
 import com.mis.model.User;
 import com.mis.service.AdminService;
 import com.mis.service.AuditService;
@@ -44,8 +45,11 @@ public class AdminController {
      * Example URL for pending users: /api/admin/users?status=PENDING_APPROVAL
      */
     @GetMapping("/users")
-    public ResponseEntity<List<User>> getUsers(@RequestParam(required = false) Optional<AccountStatus> status) {
-        List<User> users = adminService.findUsersByStatus(status);
+    public ResponseEntity<List<User>> getUsers(
+            @RequestParam(required = false) Optional<AccountStatus> status,
+            @RequestParam(required = false) Optional<Role> role,
+            @RequestParam(required = false) Optional<String> searchTerm) {
+        List<User> users = adminService.findUsersByCriteria(status, role, searchTerm);
         return ResponseEntity.ok(users);
     }
 
@@ -66,8 +70,11 @@ public class AdminController {
      * Endpoint to get all audit logs in descending order of their timestamp.
      */
     @GetMapping("/audit-logs")
-    public ResponseEntity<List<AuditLog>> getAuditLogs() {
-        List<AuditLog> auditLogs = auditService.getAllAuditLogs();
+    public ResponseEntity<List<AuditLog>> getAuditLogs(
+            @RequestParam(required = false) Optional<String> searchTerm,
+            @RequestParam(required = false) Optional<String> startDate,
+            @RequestParam(required = false) Optional<String> endDate) {
+        List<AuditLog> auditLogs = auditService.findAuditLogsByCriteria(searchTerm, startDate, endDate);
         return ResponseEntity.ok(auditLogs);
     }
     
@@ -107,6 +114,19 @@ public class AdminController {
         try {
             User disabledUser = adminService.disableUser(userId);
             return ResponseEntity.ok(disabledUser);
+        } catch (RuntimeException e) {
+            return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
+        }
+    }
+
+    /**
+     * Endpoint to reactivate a user account.
+     */
+    @PutMapping("/users/{userId}/reactivate")
+    public ResponseEntity<?> reactivateUser(@PathVariable String userId) {
+        try {
+            User reactivatedUser = adminService.reactivateUser(userId);
+            return ResponseEntity.ok(reactivatedUser);
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));
         }

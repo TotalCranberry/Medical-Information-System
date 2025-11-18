@@ -1,8 +1,8 @@
 package com.mis.service.Prescription;
 
-import com.mis.dto.prescription.PrescriptionCreateRequest;
-import com.mis.dto.prescription.PrescriptionItemRequest;
-import com.mis.dto.prescription.ManualDispenseRequest;
+import com.mis.dto.Prescription.PrescriptionCreateRequest;
+import com.mis.dto.Prescription.PrescriptionItemRequest;
+import com.mis.dto.Prescription.ManualDispenseRequest;
 import com.mis.model.Prescription.Prescription;
 import com.mis.model.Prescription.PrescriptionItem;
 import com.mis.model.Role;
@@ -121,7 +121,7 @@ public class PrescriptionService {
      * Read prescription as DTO (safe for JSON serialization, avoids Hibernate proxy issues).
      */
     @Transactional(readOnly = true)
-    public com.mis.dto.prescription.PrescriptionResponse getByIdAsDto(String prescriptionId) {
+    public com.mis.dto.Prescription.PrescriptionResponse getByIdAsDto(String prescriptionId) {
         Prescription prescription = getByIdOrThrow(prescriptionId);
         return com.mis.mapper.Prescription.PrescriptionMapper.toResponse(prescription);
     }

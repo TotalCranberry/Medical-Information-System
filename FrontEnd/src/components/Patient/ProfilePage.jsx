@@ -2,7 +2,6 @@ import React, { useState, useEffect } from "react";
 import {
   Button, TextField, Typography, Paper, Box, Switch, FormControlLabel,
   Divider, IconButton, InputAdornment, Snackbar, Alert,
-  Dialog, DialogActions, DialogContent, DialogContentText, DialogTitle,
   Select, MenuItem, FormControl, InputLabel
 } from "@mui/material";
 import { Visibility, VisibilityOff } from "@mui/icons-material";
@@ -13,7 +12,6 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
   const [name, setName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState(null);
   const [gender, setGender] = useState("");
-  const [confirmOpen, setConfirmOpen] = useState(false);
   const [notifications, setNotifications] = useState(true);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -36,12 +34,10 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
     setMessage({ text: "", type: "" });
 
     try {
-      // Prepare data for update
-      const updateData = { name, gender: gender };
+      const updateData = { name, gender };
       
-      // Include DOB for Student and Staff roles only if it's not already set
       if ((user?.role === "Student" || user?.role === "Staff") && dateOfBirth && !user?.dateOfBirth) {
-        updateData.dateOfBirth = dateOfBirth.toISOString().split('T')[0]; // Format as YYYY-MM-DD
+        updateData.dateOfBirth = dateOfBirth.toISOString().split('T')[0];
       }
       
       const { user: updatedUser, message } = await updateProfile(updateData);
@@ -53,16 +49,6 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
     } catch (error) {
       setMessage({ text: error.message, type: "error" });
     }
-  };
-
-  const handleGenderChange = (e) => {
-    setGender(e.target.value);
-    setConfirmOpen(true);
-  };
-
-  const handleConfirmGenderChange = () => {
-    setConfirmOpen(false);
-    handleProfileSave({ preventDefault: () => {} });
   };
 
   const handlePasswordChange = async (e) => {
@@ -83,7 +69,6 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
   }
 
   return (
-    // FIX: Changed to a column layout to stack the forms vertically
     <Box display="flex" flexDirection="column" alignItems="center" justifyContent="center" gap={4}>
       <Paper elevation={3} sx={{ p: 4, borderRadius: 4, width: '100%', maxWidth: 420 }}>
         <Typography variant="h4" fontWeight={700} color="primary" mb={2}>
@@ -100,14 +85,12 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
             variant="outlined"
           />
           
-          {/* DOB Field for Student and Staff */}
           {(user?.role === "Student" || user?.role === "Staff") && (
             <TextField
               label="Date of Birth"
               type="date"
               value={dateOfBirth ? dateOfBirth.toISOString().split('T')[0] : ''}
               onChange={(e) => {
-                // Only allow changing DOB if it's not already set
                 if (!user?.dateOfBirth) {
                   setDateOfBirth(e.target.value ? new Date(e.target.value) : null);
                 }
@@ -115,26 +98,25 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
               fullWidth
               margin="normal"
               variant="outlined"
-              InputLabelProps={{
-                shrink: true,
-              }}
-              // Disable the field if DOB is already set
+              InputLabelProps={{ shrink: true }}
               disabled={!!user?.dateOfBirth}
-              helperText={user?.dateOfBirth ? "Date of birth cannot be changed once set" : ""}
+              helperText={user?.dateOfBirth ? "Date of birth cannot be changed once set." : ""}
             />
           )}
 
+          {/* FIX: Gender field is no longer disabled and can be changed */}
           <FormControl fullWidth margin="normal">
             <InputLabel>Gender</InputLabel>
             <Select
               value={gender}
-              onChange={handleGenderChange}
+              onChange={(e) => setGender(e.target.value)}
               label="Gender"
-              disabled={!!user?.gender}
+              // The "disabled" prop has been removed to allow changes
             >
               <MenuItem value="Male">Male</MenuItem>
               <MenuItem value="Female">Female</MenuItem>
             </Select>
+            {/* The helper text has also been removed */}
           </FormControl>
           
           <TextField
@@ -173,6 +155,7 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
           <Typography variant="h5" fontWeight={700} color="primary" mb={2}>Change Password</Typography>
           <Divider sx={{ mb: 3 }} />
           <Box component="form" onSubmit={handlePasswordChange}>
+            {/* ... password fields remain the same */}
             <TextField
               label="Current Password"
               type={showCurrentPassword ? "text" : "password"}
@@ -217,24 +200,6 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
           {message.text}
         </Alert>
       </Snackbar>
-
-      <Dialog
-        open={confirmOpen}
-        onClose={() => setConfirmOpen(false)}
-      >
-        <DialogTitle>Confirm Gender Change</DialogTitle>
-        <DialogContent>
-          <DialogContentText>
-            Are you sure you want to set your gender to {gender}? This cannot be changed later.
-          </DialogContentText>
-        </DialogContent>
-        <DialogActions>
-          <Button onClick={() => setConfirmOpen(false)}>Cancel</Button>
-          <Button onClick={handleConfirmGenderChange} autoFocus>
-            Confirm
-          </Button>
-        </DialogActions>
-      </Dialog>
     </Box>
   );
 };

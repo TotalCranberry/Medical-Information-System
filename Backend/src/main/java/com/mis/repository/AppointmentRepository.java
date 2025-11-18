@@ -1,6 +1,7 @@
 package com.mis.repository;
 
 import java.util.Date;
+import java.time.LocalDate;
 import java.util.List;
 
 import org.springframework.data.jpa.repository.JpaRepository;
@@ -31,7 +32,10 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
     long countByStatus(AppointmentStatus status);
     
     @Query("SELECT a FROM Appointment a WHERE a.status = :status AND a.appointmentDateTime >= :startOfDay AND a.appointmentDateTime < :endOfDay ORDER BY a.appointmentDateTime ASC")
-    List<Appointment> findByStatusAndDateRange(@Param("status") AppointmentStatus status, 
-                                             @Param("startOfDay") Date startOfDay, 
+    List<Appointment> findByStatusAndDateRange(@Param("status") AppointmentStatus status,
+                                             @Param("startOfDay") Date startOfDay,
                                              @Param("endOfDay") Date endOfDay);
+
+    @Query("SELECT a FROM Appointment a WHERE CAST(a.appointmentDateTime AS LocalDate) = :date")
+    List<Appointment> findByAppointmentDate(@Param("date") LocalDate date);
 }
