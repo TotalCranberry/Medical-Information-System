@@ -32,13 +32,13 @@ public class MedicineService {
 
         Medicine entity;
         if (existing.isPresent()) {
-            // Update stock, mfg, expiry,unitPrice
+            // Update stock, mfg, expiry, unitPrice, lowStockQuantity
             entity = existing.get();
             entity.setStock(dto.getStock());
             entity.setMfg(dto.getMfg());
             entity.setExpiry(dto.getExpiry());
-            entity.setUnit(dto.getUnit());
             entity.setUnitPrice(dto.getUnitPrice());
+            entity.setLowStockQuantity(dto.getLowStockQuantity());
             entity.setLastUpdate(dto.getLastUpdate());
         } else {
             // Add new medicine

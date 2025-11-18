@@ -178,7 +178,8 @@ const UpdateInventoryPage = () => {
     expiry: "",
     manufacturer: "",
     category: "",
-    unitPrice: ""
+    unitPrice: "",
+    lowStockQuantity: ""
   });
 
   /** Load inventory */
@@ -253,7 +254,8 @@ const UpdateInventoryPage = () => {
     const payload = {
       ...formData,
       stock: formData.stock === "" ? 0 : parseInt(formData.stock, 10),
-      unitPrice: formData.unitPrice === "" ? 0 : parseFloat(formData.unitPrice)
+      unitPrice: formData.unitPrice === "" ? 0 : parseFloat(formData.unitPrice),
+      lowStockQuantity: formData.lowStockQuantity === "" ? null : formData.lowStockQuantity
     };
 
     saveMedicine(payload)
@@ -298,7 +300,8 @@ const UpdateInventoryPage = () => {
       expiry: "",
       manufacturer: "",
       category: "",
-      unitPrice: ""
+      unitPrice: "",
+      lowStockQuantity: ""
     });
     setSearchTerm("");
     setMode("add");
@@ -347,7 +350,8 @@ const UpdateInventoryPage = () => {
       manufacturer: "Manufacturer",
       category: "Category",
       stock: "Stock Quantity",
-      unitPrice: "Unit Price (Rs.)"
+      unitPrice: "Unit Price (Rs.)",
+      lowStockQuantity: "Low Stock Threshold"
     };
     return map[field] || field;
   };
@@ -361,9 +365,12 @@ const UpdateInventoryPage = () => {
     const expiry = medicine?.expiry ? new Date(medicine.expiry) : null;
     const days = expiry ? Math.ceil((expiry.getTime() - current.getTime()) / (1000 * 3600 * 24)) : null;
 
+    // Use configurable low stock threshold, fallback to 50 if not set
+    const lowStockThreshold = medicine.lowStockQuantity ? parseInt(medicine.lowStockQuantity) : 50;
+
     if (expiry && days < 0)   return { bg: "#ffebee", color: "#c62828", tag: "Expired", tagColor: THEME.error };
     if (expiry && days <= 30) return { bg: "#fff3e0", color: "#f57c00", tag: "Near Expiry", tagColor: THEME.warning };
-    if (medicine.stock < 50)  return { bg: "#fff3cd", color: "#856404", tag: "Low Stock", tagColor: "#856404" };
+    if (medicine.stock < lowStockThreshold)  return { bg: "#fff3cd", color: "#856404", tag: "Low Stock", tagColor: "#856404" };
     return { bg: "transparent", color: "inherit", tag: "OK", tagColor: THEME.success };
   };
 
@@ -379,7 +386,10 @@ const UpdateInventoryPage = () => {
       const days = Math.ceil((expiry.getTime() - new Date().getTime()) / (1000 * 3600 * 24));
       return days >= 0 && days <= 30;
     }).length,
-    lowStock: inventory.filter(med => med.stock < 50).length,
+    lowStock: inventory.filter(med => {
+        const lowStockThreshold = med.lowStockQuantity ? parseInt(med.lowStockQuantity) : 50;
+        return med.stock < lowStockThreshold;
+    }).length,
   };
 
   const searchOptions = [
@@ -703,7 +713,7 @@ const UpdateInventoryPage = () => {
                     label={formatLabel(field)}
                     value={formData[field]}
                     onChange={(e) => handleChange(field, e.target.value)}
-                    disabled={mode === "update" && !["stock", "mfg", "expiry", "unitPrice"].includes(field)}
+                    disabled={mode === "update" && !["stock", "mfg", "expiry", "unitPrice", "lowStockQuantity"].includes(field)}
                     size="medium"
                     sx={{
                       ...inputSx,
@@ -787,6 +797,27 @@ const UpdateInventoryPage = () => {
                     startAdornment: (
                       <InputAdornment position="start">
                         <PriceIcon sx={{ color: THEME.gray }} />
+                      </InputAdornment>
+                    )
+                  }}
+                />
+              </Grid>
+
+              {/* Low Stock Quantity */}
+              <Grid item xs={12} sm={6} md={4}>
+                <TextField
+                  fullWidth
+                  label={formatLabel("lowStockQuantity")}
+                  type="number"
+                  inputProps={{ min: 0 }}
+                  value={formData.lowStockQuantity}
+                  onChange={(e) => handleChange("lowStockQuantity", e.target.value)}
+                  size="medium"
+                  sx={inputSx}
+                  InputProps={{
+                    startAdornment: (
+                      <InputAdornment position="start">
+                        <WarningIcon sx={{ color: THEME.gray }} />
                       </InputAdornment>
                     )
                   }}
