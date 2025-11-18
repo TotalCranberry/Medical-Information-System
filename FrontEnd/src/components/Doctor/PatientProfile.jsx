@@ -193,10 +193,14 @@ const PatientProfile = () => {
     }
   };
 
-  // Separated function to fetch medical record with robust error handling
   const fetchMedicalRecordData = async () => {
     try {
       setRecordStatus('loading');
+      if (patientData?.role === 'Staff') {
+          setMedicalRecord(null);
+          setRecordStatus('not_found');
+          return;
+      }
       const recordData = await getMedicalRecord(patientId);
       setMedicalRecord(recordData);
       setRecordStatus('found');
@@ -548,7 +552,7 @@ const PatientProfile = () => {
             </Grid>
           </Paper>
 
-          {/* Medical Record Section (New) */}
+          {/* Medical Record Section */}
           {recordStatus === 'error' && (
             <Alert severity="error" sx={{ mb: 3 }}>
               Could not load the patient's medical record form. (Status: Server Error)

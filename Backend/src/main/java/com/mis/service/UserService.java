@@ -57,7 +57,7 @@ public class UserService {
         
         user.setId(UUID.randomUUID().toString());
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
-        if (user.getRole() == Role.Student || user.getRole() == Role.Staff) {
+        if (user.getRole() == Role.Student) {
             user.setStatus(AccountStatus.ACTIVE);
         } else {
             user.setStatus(AccountStatus.PENDING_APPROVAL);
@@ -75,7 +75,7 @@ public class UserService {
         } else if (savedUser.getRole() == Role.Staff) {
             Staff staff = new Staff();
             staff.setUser(savedUser); 
-            staff.setFaculty(faculty);
+            staff.setFaculty("N/A");
             staffRepository.save(staff);
         }
         
