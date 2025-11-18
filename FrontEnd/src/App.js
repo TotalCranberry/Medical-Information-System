@@ -389,6 +389,9 @@ function App() {
           {/* Profile (common) */}
           <Route path="profile" element={<ProfilePage user={user} onProfileUpdate={handleProfileUpdate} />} />
 
+          {/* Shared Routes */}
+          <Route path="prescription-print" element={<PrescriptionPrint user={user} />} />
+
           {/* Patient Routes */}
           <Route path="patient/dashboard" element={<DashboardTab user={user} appointments={appointments} medicals={medicals} diagnoses={diagnoses} reports={reports} prescriptions={prescriptions} />} />
           <Route path="patient/appointments" element={<AppointmentsTab appointments={appointments} onBookSuccess={handleBookAppointment} onCancel={handleCancelAppointment} />} />

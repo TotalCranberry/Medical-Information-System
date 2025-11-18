@@ -1,9 +1,11 @@
-import React from "react";
-import { Link as RouterLink } from "react-router-dom";
-import { Box, Typography, Paper, Table, TableBody, TableCell, 
-  TableContainer, TableHead, TableRow, Link, Grid, Divider, Chip,
+import React, { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { Box, Typography, Paper, Table, TableBody, TableCell,
+  TableContainer, TableHead, TableRow, Link, Grid, Divider, Chip, Button,
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
+import VisibilityIcon from "@mui/icons-material/Visibility";
+import { getCompletedPrescriptionsForPatient } from "../../api/prescription";
 
 const ReportsTab = ({
   diagnoses = [],
@@ -12,6 +14,8 @@ const ReportsTab = ({
   labReports = [],
 }) => {
   const theme = useTheme();
+  const navigate = useNavigate();
+  const [completedPrescriptions, setCompletedPrescriptions] = useState([]);
 
   const getStatusChipColor = (status) => {
     if (!status) return "default";
@@ -20,6 +24,37 @@ const ReportsTab = ({
     if (s === "pending" || s === "scheduled") return "warning";
     if (s === "cancelled") return "error";
     return "default";
+  };
+
+  // Load completed prescriptions
+  useEffect(() => {
+    const loadCompletedPrescriptions = async () => {
+      try {
+        console.log("DEBUG: ReportsTab - Loading completed prescriptions");
+        const data = await getCompletedPrescriptionsForPatient();
+        console.log("DEBUG: ReportsTab - Received prescriptions data:", data);
+        // Sort by date (recent to past)
+        const sorted = data.sort((a, b) => new Date(b.prescriptionDate || b.createdAt) - new Date(a.prescriptionDate || a.createdAt));
+        console.log("DEBUG: ReportsTab - Sorted prescriptions:", sorted);
+        setCompletedPrescriptions(sorted);
+      } catch (error) {
+        console.error("Failed to load completed prescriptions:", error);
+        setCompletedPrescriptions([]);
+      }
+    };
+
+    loadCompletedPrescriptions();
+  }, []);
+
+  const handleViewPrescription = (prescription) => {
+    // Navigate to prescription print page instead of opening dialog
+    navigate('/prescription-print', {
+      state: {
+        prescription: prescription,
+        fromCompletedTab: true,
+        readOnly: true
+      }
+    });
   };
 
   return (
@@ -118,11 +153,11 @@ const ReportsTab = ({
           </Paper>
         </Grid>
 
-        {/* Prescriptions */}
+        {/* Completed Prescriptions */}
         <Grid item xs={12} sx={{ minWidth: 700 }}>
           <Paper elevation={2} sx={{ p: 3, borderRadius: 4, width: "100%" }}>
             <Typography variant="h6" fontWeight={600} mb={2}>
-              Prescriptions
+              Completed Prescriptions
             </Typography>
             <Divider sx={{ mb: 2 }} />
             <TableContainer sx={{ maxHeight: 300, width: "100%" }}>
@@ -130,30 +165,39 @@ const ReportsTab = ({
                 <TableHead>
                   <TableRow>
                     <TableCell>Date</TableCell>
-                    <TableCell>Details</TableCell>
-                    <TableCell>Status</TableCell>
+                    <TableCell>Doctor</TableCell>
+                    <TableCell>Action</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {prescriptions.length === 0 ? (
+                  {completedPrescriptions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={3} align="center">
-                        No prescriptions found
+                        No completed prescriptions found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    prescriptions.map((rx) => (
+                    completedPrescriptions.slice(0, 5).map(rx => (
                       <TableRow key={rx.id} hover>
                         <TableCell>
-                          {new Date(rx.date).toLocaleDateString()}
+                          {new Date(rx.prescriptionDate || rx.createdAt).toLocaleDateString()}
                         </TableCell>
-                        <TableCell>{rx.details || rx.medicine || "N/A"}</TableCell>
+                        <TableCell>{rx.doctorName}</TableCell>
                         <TableCell>
-                          <Chip
-                            label={rx.status || "Unknown"}
+                          <Button
                             size="small"
-                            color={getStatusChipColor(rx.status)}
-                          />
+                            variant="outlined"
+                            startIcon={<VisibilityIcon />}
+                            onClick={() => handleViewPrescription(rx)}
+                            sx={{
+                              minWidth: "auto",
+                              px: 1,
+                              py: 0.5,
+                              fontSize: "0.75rem",
+                            }}
+                          >
+                            View
+                          </Button>
                         </TableCell>
                       </TableRow>
                     ))
