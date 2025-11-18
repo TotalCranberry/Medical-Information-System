@@ -27,6 +27,15 @@ import {
   fetchPatientMedicals
 } from "../../api/appointments";
 
+// 1. Import the new API and Component
+import { getMedicalRecord } from '../../api/patient';
+import ViewPatientMedicalRecord from './ViewPatientMedicalRecord';
+
+// (Assuming you have a 'getPatientDetails' API function)
+// This import is here from your file, but it's not used.
+// We'll use fetchPatientProfile instead as your file does.
+// import { getPatientDetails } from '../../api/patients';
+
 const PatientProfile = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
@@ -61,6 +70,9 @@ const PatientProfile = () => {
   const [editingVitals, setEditingVitals] = useState(false);
   const [saving, setSaving] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(true);
+
+  // --- ADDED STATE FOR MEDICAL RECORD ---
+  const [medicalRecord, setMedicalRecord] = useState(null);
 
   // Helper function to safely get patient information with multiple fallbacks
   const getPatientInfo = (field) => {
@@ -123,6 +135,20 @@ const PatientProfile = () => {
       setRecentDiagnoses(profileData.recentDiagnoses || []);
       
       await loadMedicals();
+
+      // --- ADDED MEDICAL RECORD FETCH ---
+      try {
+        const recordData = await getMedicalRecord(patientId);
+        setMedicalRecord(recordData);
+      } catch (recordError) {
+        if (recordError.message.includes('404')) {
+          setMedicalRecord(null); // No record found, this is not an error
+        } else {
+          // Log other errors, but don't block the page
+          console.error("Failed to fetch medical record:", recordError);
+        }
+      }
+      // --- END OF ADDITION ---
       
       if (profileData.latestVitals) {
         setCurrentVitals({
@@ -171,6 +197,20 @@ const PatientProfile = () => {
       setRecentDiagnoses(profileData.recentDiagnoses || []);
       
       await loadMedicals();
+
+      // --- ADDED MEDICAL RECORD FETCH ---
+      try {
+        const recordData = await getMedicalRecord(patientId);
+        setMedicalRecord(recordData);
+      } catch (recordError) {
+        if (recordError.message.includes('404')) {
+          setMedicalRecord(null); // No record found, this is not an error
+        } else {
+          // Log other errors, but don't block the page
+          console.error("Failed to fetch medical record:", recordError);
+        }
+      }
+      // --- END OF ADDITION ---
       
       if (vitalsData.length > 0) {
         const latestVitals = vitalsData[0];
@@ -508,6 +548,16 @@ const PatientProfile = () => {
               </Grid>
             </Grid>
           </Paper>
+
+          {/* --- ADDED MEDICAL RECORD COMPONENT --- */}
+          {medicalRecord ? (
+            <ViewPatientMedicalRecord record={medicalRecord} />
+          ) : (
+            <Alert severity="info" sx={{ mb: 3 }}>
+              This patient has not submitted a medical form.
+            </Alert>
+          )}
+          {/* --- END OF ADDITION --- */}
 
           {/* Vitals Section */}
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>

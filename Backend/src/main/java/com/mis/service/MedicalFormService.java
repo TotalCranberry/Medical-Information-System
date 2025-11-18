@@ -1,13 +1,21 @@
 package com.mis.service;
 
 import com.mis.dto.MedicalFormRequest;
+import com.mis.dto.MedicalRecordResponseDTO;
+import com.mis.mapper.MedicalRecordMapper;
 import com.mis.model.DentalExam;
 import com.mis.model.EyeExam;
 import com.mis.model.MedicalRecord;
 import com.mis.model.PhysicalExam;
 import com.mis.model.User;
+import com.mis.repository.DentalExamRepository;
+import com.mis.repository.EyeExamRepository;
 import com.mis.repository.MedicalRecordRepository;
+import com.mis.repository.PhysicalExamRepository;
 import com.mis.repository.UserRepository;
+
+import java.util.Optional;
+
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -16,10 +24,18 @@ public class MedicalFormService {
 
     private final MedicalRecordRepository medicalRecordRepository;
     private final UserRepository userRepository;
+    private final EyeExamRepository eyeExamRepository;
+    private final DentalExamRepository dentalExamRepository;
+    private final PhysicalExamRepository physicalExamRepository;
 
-    public MedicalFormService(MedicalRecordRepository medicalRecordRepository, UserRepository userRepository) {
+    public MedicalFormService(MedicalRecordRepository medicalRecordRepository, UserRepository userRepository,
+            EyeExamRepository eyeExamRepository, DentalExamRepository dentalExamRepository,
+            PhysicalExamRepository physicalExamRepository) {
         this.medicalRecordRepository = medicalRecordRepository;
         this.userRepository = userRepository;
+        this.eyeExamRepository = eyeExamRepository;
+        this.dentalExamRepository = dentalExamRepository;
+        this.physicalExamRepository = physicalExamRepository;
     }
 
     @Transactional
@@ -70,4 +86,26 @@ public class MedicalFormService {
 
         medicalRecordRepository.save(savedMedicalRecord);
     }
+
+    @Transactional(readOnly = true)
+    public Optional<MedicalRecordResponseDTO> getFullMedicalRecordByUserId(String userId) {
+        Optional<MedicalRecord> medicalRecordOpt = medicalRecordRepository.findByUserId(userId);
+        
+        if (medicalRecordOpt.isEmpty()) {
+            return Optional.empty();
+        }
+
+        MedicalRecord record = medicalRecordOpt.get();
+        Long recordId = record.getId();
+
+        // Fetch associated data
+        EyeExam eyeExam = eyeExamRepository.findByMedicalRecordId(recordId);
+        DentalExam dentalExam = dentalExamRepository.findByMedicalRecordId(recordId);
+        PhysicalExam physicalExam = physicalExamRepository.findByMedicalRecordId(recordId);
+
+        // Map to DTO
+        MedicalRecordResponseDTO dto = MedicalRecordMapper.toMedicalRecordResponseDTO(record, eyeExam, dentalExam, physicalExam);
+        return Optional.of(dto);
+    }
+
 }

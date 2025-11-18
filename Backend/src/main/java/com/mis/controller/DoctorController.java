@@ -13,6 +13,7 @@ import java.util.stream.Collectors;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PathVariable;
@@ -22,6 +23,7 @@ import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import java.util.Optional;
 import com.mis.dto.DiagnosisRequest;
 import com.mis.dto.MedicalRequest;
 import com.mis.dto.PatientDTO;
@@ -42,6 +44,8 @@ import com.mis.repository.StaffRepository;
 import com.mis.repository.StudentRepository;
 import com.mis.repository.UserRepository;
 import com.mis.repository.VitalsRepository;
+import com.mis.service.MedicalFormService;
+import com.mis.dto.MedicalRecordResponseDTO; 
 
 import jakarta.validation.Valid;
 
@@ -56,11 +60,12 @@ public class DoctorController {
     private final MedicalRepository medicalRepository;
     private final StudentRepository studentRepository;
     private final StaffRepository staffRepository;
+    private final MedicalFormService medicalFormService;
 
     public DoctorController(AppointmentRepository appointmentRepository, UserRepository userRepository,
-                          VitalsRepository vitalsRepository, DiagnosisRepository diagnosisRepository,
-                          MedicalRepository medicalRepository, StudentRepository studentRepository, 
-                          StaffRepository staffRepository) {
+            VitalsRepository vitalsRepository, DiagnosisRepository diagnosisRepository,
+            MedicalRepository medicalRepository, StudentRepository studentRepository,
+            StaffRepository staffRepository, MedicalFormService medicalFormService) {
         this.appointmentRepository = appointmentRepository;
         this.userRepository = userRepository;
         this.vitalsRepository = vitalsRepository;
@@ -68,6 +73,7 @@ public class DoctorController {
         this.medicalRepository = medicalRepository;
         this.studentRepository = studentRepository;
         this.staffRepository = staffRepository;
+        this.medicalFormService = medicalFormService;
     }
 
     // NEW: Get all patients (Students and Staff) for the doctor's patient search
@@ -398,6 +404,15 @@ public class DoctorController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Error sending medical to course unit: " + e.getMessage()));
         }
+    }
+
+    @GetMapping("/patient/{patientId}/medical-record")
+    @PreAuthorize("hasAuthority('Doctor')")
+    public ResponseEntity<MedicalRecordResponseDTO> getPatientMedicalRecord(@PathVariable String patientId) {
+        Optional<MedicalRecordResponseDTO> dtoOpt = medicalFormService.getFullMedicalRecordByUserId(patientId);
+        
+        return dtoOpt.map(ResponseEntity::ok)
+                     .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // Helper method to calculate age from LocalDate

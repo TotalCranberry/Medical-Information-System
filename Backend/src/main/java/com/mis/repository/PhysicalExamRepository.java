@@ -6,4 +6,5 @@ import org.springframework.stereotype.Repository;
 
 @Repository
 public interface PhysicalExamRepository extends JpaRepository<PhysicalExam, Long> {
+    PhysicalExam findByMedicalRecordId(Long medicalRecordId);
 }
