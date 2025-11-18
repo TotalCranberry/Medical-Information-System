@@ -31,6 +31,7 @@ import {
 // Import API and Component for Medical Record
 import { getMedicalRecord } from '../../api/patient';
 import ViewPatientMedicalRecord from './ViewPatientMedicalRecord';
+import ViewMedicalDialog from './ViewMedicalDialog';
 
 const PatientProfile = () => {
   const { patientId } = useParams();
@@ -67,6 +68,10 @@ const PatientProfile = () => {
   const [saving, setSaving] = useState(false);
   const [apiAvailable, setApiAvailable] = useState(true);
   const [diagnosisSaved, setDiagnosisSaved] = useState(false);
+
+  // Medical Dialog State
+  const [medicalDialogOpen, setMedicalDialogOpen] = useState(false);
+  const [selectedMedicalId, setSelectedMedicalId] = useState(null);
 
   // --- Medical Record State ---
   const [medicalRecord, setMedicalRecord] = useState(null);
@@ -353,7 +358,18 @@ const PatientProfile = () => {
   };
 
   const handleViewMedical = (medicalId) => {
-    navigate(`/doctor/view-medical/${medicalId}`);
+    setSelectedMedicalId(medicalId);
+    setMedicalDialogOpen(true);
+  };
+
+  const handleCloseMedicalDialog = () => {
+    setMedicalDialogOpen(false);
+    setSelectedMedicalId(null);
+  };
+
+  const handleMedicalUpdate = () => {
+    // Reload medicals list when a medical is updated (e.g., sent to course unit)
+    loadMedicals();
   };
 
   const getPatientAge = () => {
@@ -895,7 +911,10 @@ const PatientProfile = () => {
                               size="small"
                               variant="outlined"
                               startIcon={<ViewIcon />}
-                              onClick={() => handleViewMedical(medical.id)}
+                              onClick={() => {
+                                console.log("View button clicked for medical:", medical);
+                                handleViewMedical(medical.id);
+                              }}
                               sx={{
                                 borderColor: "#45d27a",
                                 color: "#45d27a",
@@ -938,6 +957,14 @@ const PatientProfile = () => {
           </Paper>
         </Grid>
       </Grid>
+
+      {/* Medical Certificate Dialog */}
+      <ViewMedicalDialog
+        open={medicalDialogOpen}
+        onClose={handleCloseMedicalDialog}
+        medicalId={selectedMedicalId}
+        onMedicalUpdate={handleMedicalUpdate}
+      />
     </Box>
   );
 };
