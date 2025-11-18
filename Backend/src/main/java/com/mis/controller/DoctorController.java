@@ -9,10 +9,9 @@ import java.util.Date;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import java.util.stream.Collectors;
-
-import org.springframework.web.multipart.MultipartFile;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -28,9 +27,8 @@ import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
 
-import java.util.Optional;
 import com.mis.dto.DiagnosisRequest;
-import com.mis.dto.MedicalRequest;
+import com.mis.dto.MedicalRecordResponseDTO;
 import com.mis.dto.PatientDTO;
 import com.mis.dto.VitalsRequest;
 import com.mis.model.Appointment;
@@ -50,9 +48,6 @@ import com.mis.repository.StudentRepository;
 import com.mis.repository.UserRepository;
 import com.mis.repository.VitalsRepository;
 import com.mis.service.MedicalFormService;
-import com.mis.dto.MedicalRecordResponseDTO; 
-
-import jakarta.validation.Valid;
 
 @RestController
 @RequestMapping("/api/doctor")
@@ -493,7 +488,7 @@ public class DoctorController {
     }
 
     @GetMapping("/patient/{patientId}/medical-record")
-    @PreAuthorize("hasAuthority('Doctor')")
+    @PreAuthorize("hasRole('Doctor')")
     public ResponseEntity<MedicalRecordResponseDTO> getPatientMedicalRecord(@PathVariable String patientId) {
         Optional<MedicalRecordResponseDTO> dtoOpt = medicalFormService.getFullMedicalRecordByUserId(patientId);
         

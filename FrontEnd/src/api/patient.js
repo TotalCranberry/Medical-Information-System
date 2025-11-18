@@ -5,5 +5,5 @@ export async function submitMedicalForm(formData) {
 }
 
 export const getMedicalRecord = (patientId) => {
-  return apiFetch(`/api/doctor/patient/${patientId}/medical-record`);
+  return apiFetch(`/doctor/patient/${patientId}/medical-record`);
 };

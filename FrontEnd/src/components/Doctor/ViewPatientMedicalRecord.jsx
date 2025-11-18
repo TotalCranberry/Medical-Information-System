@@ -1,14 +1,14 @@
 import React from 'react';
 import {
   Paper, Typography, Table, TableBody, TableCell,
-  TableRow, TableContainer, Box, Grid
+  TableRow, TableContainer
 } from '@mui/material';
 
 // Helper component for creating a row
 const DataRow = ({ label, value }) => (
   <TableRow>
     <TableCell sx={{ fontWeight: 'bold', width: '30%' }}>{label}</TableCell>
-    <TableCell>{value || 'N/A'}</TableCell>
+    <TableCell>{value && value !== "null" ? value : 'N/A'}</TableCell>
   </TableRow>
 );
 
@@ -24,8 +24,15 @@ const SectionHeader = ({ title }) => (
 );
 
 const ViewPatientMedicalRecord = ({ record }) => {
+  // Debug log to see what data actually arrives
+  console.log("DEBUG: ViewPatientMedicalRecord received:", record);
+
+  if (!record) {
+    return <Typography color="error">Error: Medical record data is empty.</Typography>;
+  }
+
   return (
-    <Paper elevation={3} sx={{ p: 3, mt: 3 }}>
+    <Paper elevation={3} sx={{ p: 3, mt: 3, mb: 3 }}>
       <Typography variant="h5" gutterBottom fontWeight={700} color="primary">
         Submitted Medical Record
       </Typography>
@@ -35,7 +42,7 @@ const ViewPatientMedicalRecord = ({ record }) => {
             {/* Medical History */}
             <SectionHeader title="Medical History" />
             <DataRow label="Past Hospital Admissions" value={record.pastHospitalAdmissions} />
-            <DataRow label="Chronic Illnesses" value={record.chronicIllesses} />
+            <DataRow label="Chronic Illnesses" value={record.chronicIllnesses} />
             <DataRow label="Physical Disabilities" value={record.physicalDisabilities} />
             <DataRow label="Allergies" value={record.allergies} />
 
@@ -47,8 +54,14 @@ const ViewPatientMedicalRecord = ({ record }) => {
 
             {/* Eye Exam */}
             <SectionHeader title="Eye Exam" />
-            <DataRow label="Vision (No Glasses)" value={`R: ${record.visionWithoutGlasses?.right || 'N/A'}, L: ${record.visionWithoutGlasses?.left || 'N/A'}`} />
-            <DataRow label="Vision (With Glasses)" value={`R: ${record.visionWithGlasses?.right || 'N/A'}, L: ${record.visionWithGlasses?.left || 'N/A'}`} />
+            <DataRow 
+              label="Vision (No Glasses)" 
+              value={record.visionWithoutGlasses ? `R: ${record.visionWithoutGlasses.right || '-'}, L: ${record.visionWithoutGlasses.left || '-'}` : 'N/A'} 
+            />
+            <DataRow 
+              label="Vision (With Glasses)" 
+              value={record.visionWithGlasses ? `R: ${record.visionWithGlasses.right || '-'}, L: ${record.visionWithGlasses.left || '-'}` : 'N/A'} 
+            />
             <DataRow label="Color Vision" value={record.colorVision} />
             
             {/* Dental Exam */}

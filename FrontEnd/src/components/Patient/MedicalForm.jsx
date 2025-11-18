@@ -91,6 +91,7 @@ const MedicalForm = ({ user, onProfileUpdate }) => {
             {!isAlreadySet && (
                 <Typography variant="body1" gutterBottom sx={{ mb: 2 }}>
                     Please fill out this form carefully by looking at the medical form provided to you from a government hospital.
+                    You can only submit this form once, so ensure all information is accurate before submission.
                 </Typography>
             )}
 

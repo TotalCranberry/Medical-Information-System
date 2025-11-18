@@ -1,5 +1,6 @@
 package com.mis.mapper;
 
+import java.util.HashMap;
 import java.util.Map;
 
 import com.mis.dto.MedicalRecordResponseDTO;
@@ -23,10 +24,16 @@ public class MedicalRecordMapper {
         dto.setEmergencyContactAddress(record.getEmergencyContactAddress());
         dto.setEmergencyContactPhone(record.getEmergencyContactPhone());
 
-        // Map EyeExam fields (if they exist)
+        // Map EyeExam fields 
         if (eye != null) {
-            dto.setVisionWithoutGlasses(Map.of("right", eye.getVisionWithoutGlassesRight(), "left", eye.getVisionWithoutGlassesLeft()));
-            dto.setVisionWithGlasses(Map.of("right", eye.getVisionWithGlassesRight(), "left", eye.getVisionWithGlassesLeft()));
+            dto.setVisionWithoutGlasses(createMap(
+                "right", eye.getVisionWithoutGlassesRight(), 
+                "left", eye.getVisionWithoutGlassesLeft()
+            ));
+            dto.setVisionWithGlasses(createMap(
+                "right", eye.getVisionWithGlassesRight(), 
+                "left", eye.getVisionWithGlassesLeft()
+            ));
             dto.setColorVision(eye.getColorVision());
         }
 
@@ -44,5 +51,12 @@ public class MedicalRecordMapper {
         }
         
         return dto;
+    }
+
+    private static Map<String, String> createMap(String k1, String v1, String k2, String v2) {
+        Map<String, String> map = new HashMap<>();
+        map.put(k1, v1);
+        map.put(k2, v2);
+        return map;
     }
 }
