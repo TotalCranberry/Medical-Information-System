@@ -123,10 +123,13 @@ const PrescriptionPrint = ({ user }) => {
     (async () => {
       if (!passedRx?.id) return; // guard, but still call the hook
       try {
+        console.log("DEBUG: PrescriptionPrint - Fetching fresh prescription data for ID:", passedRx.id);
         setLoading(true);
         const fresh = await getPrescriptionById(passedRx.id);
+        console.log("DEBUG: PrescriptionPrint - Fresh prescription data received:", fresh);
         if (alive) setRxFresh(fresh);
-      } catch {
+      } catch (error) {
+        console.error("DEBUG: PrescriptionPrint - Failed to fetch fresh prescription:", error);
         /* keep using passedRx */
       } finally {
         if (alive) setLoading(false);
@@ -144,6 +147,10 @@ const PrescriptionPrint = ({ user }) => {
 
   const items = useMemo(() => normalizeItems(rx), [rx]);
   console.log("DEBUG: PrescriptionPrint - normalized items:", items);
+  console.log("DEBUG: PrescriptionPrint - items length:", items.length);
+  if (items.length > 0) {
+    console.log("DEBUG: PrescriptionPrint - first item details:", items[0]);
+  }
 
   const resultsMap = useMemo(() => buildResultsMap(dispenseResults), [dispenseResults]);
 
