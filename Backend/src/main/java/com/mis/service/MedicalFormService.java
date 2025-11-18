@@ -1,5 +1,10 @@
 package com.mis.service;
 
+import java.util.Optional;
+
+import org.springframework.stereotype.Service;
+import org.springframework.transaction.annotation.Transactional;
+
 import com.mis.dto.MedicalFormRequest;
 import com.mis.dto.MedicalRecordResponseDTO;
 import com.mis.mapper.MedicalRecordMapper;
@@ -13,11 +18,6 @@ import com.mis.repository.EyeExamRepository;
 import com.mis.repository.MedicalRecordRepository;
 import com.mis.repository.PhysicalExamRepository;
 import com.mis.repository.UserRepository;
-
-import java.util.Optional;
-
-import org.springframework.stereotype.Service;
-import org.springframework.transaction.annotation.Transactional;
 
 @Service
 public class MedicalFormService {
@@ -89,7 +89,7 @@ public class MedicalFormService {
 
     @Transactional(readOnly = true)
     public Optional<MedicalRecordResponseDTO> getFullMedicalRecordByUserId(String userId) {
-        Optional<MedicalRecord> medicalRecordOpt = medicalRecordRepository.findByUserId(userId);
+        Optional<MedicalRecord> medicalRecordOpt = medicalRecordRepository.findByUser_Id(userId);
         
         if (medicalRecordOpt.isEmpty()) {
             return Optional.empty();
@@ -99,9 +99,9 @@ public class MedicalFormService {
         Long recordId = record.getId();
 
         // Fetch associated data
-        EyeExam eyeExam = eyeExamRepository.findByMedicalRecordId(recordId);
-        DentalExam dentalExam = dentalExamRepository.findByMedicalRecordId(recordId);
-        PhysicalExam physicalExam = physicalExamRepository.findByMedicalRecordId(recordId);
+        EyeExam eyeExam = eyeExamRepository.findByMedicalRecordId(recordId).orElse(null);
+        DentalExam dentalExam = dentalExamRepository.findByMedicalRecordId(recordId).orElse(null);
+        PhysicalExam physicalExam = physicalExamRepository.findByMedicalRecordId(recordId).orElse(null);
 
         // Map to DTO
         MedicalRecordResponseDTO dto = MedicalRecordMapper.toMedicalRecordResponseDTO(record, eyeExam, dentalExam, physicalExam);
