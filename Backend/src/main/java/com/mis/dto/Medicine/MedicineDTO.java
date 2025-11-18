@@ -14,7 +14,6 @@ public class MedicineDTO {
     private String name;
     private String form;
     private String strength;
-    private String unit;
     private int stock;
     private String batch;
     private String mfg;
@@ -23,5 +22,6 @@ public class MedicineDTO {
     private String category;
     private Float unitPrice;
     private LocalDate lastUpdate;
+    private Integer lowStockQuantity;
 
 }
