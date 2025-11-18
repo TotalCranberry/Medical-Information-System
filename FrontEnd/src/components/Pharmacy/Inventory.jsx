@@ -131,11 +131,14 @@ const InventoryPage = () => {
         const timeDifference = expiryDate.getTime() - currentDate.getTime();
         const daysDifference = Math.ceil(timeDifference / (1000 * 3600 * 24));
 
+        // Use configurable low stock threshold, fallback to 50 if not set
+        const lowStockThreshold = medicine.lowStockQuantity ? parseInt(medicine.lowStockQuantity) : 50;
+
         if (daysDifference < 0) {
             return { bg: "#ffebee", color: "#c62828", status: "expired" };
         } else if (daysDifference <= 30) {
             return { bg: "#fff3e0", color: "#f57c00", status: "near-expiry" };
-        } else if (medicine.stock < 50) {
+        } else if (medicine.stock < lowStockThreshold) {
             return { bg: "#fff3cd", color: "#856404", status: "low-stock" };
         }
         return { bg: "transparent", color: "inherit", status: "normal" };
@@ -160,7 +163,10 @@ const InventoryPage = () => {
             const daysDifference = Math.ceil((expiryDate.getTime() - currentDate.getTime()) / (1000 * 3600 * 24));
             return daysDifference >= 0 && daysDifference <= 30;
         }).length,
-        lowStock: medicines.filter(med => med.stock < 50).length,
+        lowStock: medicines.filter(med => {
+            const lowStockThreshold = med.lowStockQuantity ? parseInt(med.lowStockQuantity) : 50;
+            return med.stock < lowStockThreshold;
+        }).length,
     };
 
     const clearSearch = () => {
@@ -184,10 +190,10 @@ const InventoryPage = () => {
             icon: WarningIcon,
             count: stats.nearExpiry
         },
-        { 
-            color: "#fff3cd", 
-            border: "#856404", 
-            label: "Low Stock (<50 units)", 
+        {
+            color: "#fff3cd",
+            border: "#856404",
+            label: "Low Stock (below threshold)",
             textColor: "#856404",
             icon: TrendingUpIcon,
             count: stats.lowStock
