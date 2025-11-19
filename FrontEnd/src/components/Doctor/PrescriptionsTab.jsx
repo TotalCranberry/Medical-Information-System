@@ -1,8 +1,10 @@
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import {
   Box, Typography, Paper, TextField, Button,
-  Alert, Snackbar, Grid, IconButton, Checkbox, FormControlLabel,
-  Select, MenuItem, FormControl, InputLabel, Autocomplete, Chip
+  Alert, Snackbar, Grid, IconButton, Checkbox, FormControlLabel, Switch,
+  Select, MenuItem, FormControl, InputLabel, Chip,
+  Dialog, DialogTitle, DialogContent, DialogActions,
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from "@mui/material";
 import { Add as AddIcon, Remove as RemoveIcon, Search as SearchIcon } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
@@ -11,7 +13,7 @@ import {
   formatPrescriptionForSubmission,
   validatePrescriptionForm
 } from "../../api/prescription";
-import { searchMedicines } from "../../api/medicine";
+import { getAllMedicines } from "../../api/medicine"; // Changed to getAllMedicines
 
 const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
   const navigate = useNavigate();
@@ -36,6 +38,7 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
     dosage: "",
     medicineId: null,
     medicineDetails: null,
+    isExternal: false, // To track if it's an outside medicine
     timings: {
       morning: false,
       afternoon: false,
@@ -59,8 +62,12 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
   const [alertMessage, setAlertMessage] = useState("");
   const [alertSeverity, setAlertSeverity] = useState("success");
   const [isSubmitting, setIsSubmitting] = useState(false);
-  const [medicineSearchResults, setMedicineSearchResults] = useState({});
-  const [searchLoading, setSearchLoading] = useState({});
+
+  // State for the new Medicine Browser Modal
+  const [isModalOpen, setIsModalOpen] = useState(false);
+  const [modalTargetIndex, setModalTargetIndex] = useState(null);
+  const [allMedicines, setAllMedicines] = useState([]);
+  const [modalSearchTerm, setModalSearchTerm] = useState("");
 
   const drugMethods = [
     "Oral", "Injection", "Inhale", "Topical", "Sublingual",
@@ -74,54 +81,45 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
     { value: "empty_stomach", label: "Empty Stomach" }
   ];
 
-
-  const searchMedicinesForIndex = async (index, searchTerm) => {
-    if (!searchTerm || searchTerm.length < 2) {
-      setMedicineSearchResults(prev => ({
-        ...prev,
-        [index]: []
-      }));
-      return;
-    }
-
-    setSearchLoading(prev => ({ ...prev, [index]: true }));
-
-    try {
-      const response = await searchMedicines(searchTerm, "name");
-      if (response && Array.isArray(response)) {
-        setMedicineSearchResults(prev => ({
-          ...prev,
-          [index]: response || []
-        }));
-      } else {
-        setMedicineSearchResults(prev => ({
-          ...prev,
-          [index]: []
-        }));
+  // Fetch all medicines when the component mounts
+  useEffect(() => {
+    const fetchMedicines = async () => {
+      try {
+        const response = await getAllMedicines();
+        setAllMedicines(response || []);
+      } catch (error) {
+        console.error("Failed to fetch medicines:", error);
+        showAlertMessage("Could not load medicine inventory.", "error");
       }
-    } catch (error) {
-      console.error("Error searching medicines:", error);
-      setMedicineSearchResults(prev => ({
-        ...prev,
-        [index]: []
-      }));
-    } finally {
-      setSearchLoading(prev => ({ ...prev, [index]: false }));
-    }
+    };
+    fetchMedicines();
+  }, []);
+
+  const openMedicineModal = (index) => {
+    setModalTargetIndex(index);
+    setIsModalOpen(true);
+  };
+
+  const closeMedicineModal = () => {
+    setIsModalOpen(false);
+    setModalTargetIndex(null);
+    setModalSearchTerm(""); // Reset search on close
   };
 
   const handleMedicineSelect = (index, selectedMedicine) => {
+    const updatedMedications = [...formData.medications];
     if (selectedMedicine) {
-      const updatedMedications = [...formData.medications];
       updatedMedications[index].medicine = selectedMedicine.name;
       updatedMedications[index].dosage = `${selectedMedicine.strength}${selectedMedicine.unit || ''}`;
       updatedMedications[index].medicineId = selectedMedicine.id;
       updatedMedications[index].medicineDetails = selectedMedicine;
-      setFormData(prev => ({
-        ...prev,
-        medications: updatedMedications
-      }));
     }
+    setFormData(prev => ({
+      ...prev,
+      medications: updatedMedications
+    }));
+    // Close the modal after selection
+    closeMedicineModal();
   };
 
   const handleInputChange = (field, value) => {
@@ -139,6 +137,24 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
       medications: updatedMedications
     }));
   };
+
+  const handleExternalSwitch = (index, isChecked) => {
+    const updatedMedications = [...formData.medications];
+    const medication = updatedMedications[index];
+
+    medication.isExternal = isChecked;
+
+    // If switching to external, clear inventory-specific data
+    if (isChecked) {
+      medication.medicine = "";
+      medication.dosage = "";
+      medication.medicineId = null;
+      medication.medicineDetails = null;
+    }
+
+    setFormData(prev => ({ ...prev, medications: updatedMedications }));
+  };
+
 
   const handleTimingChange = (index, timing, checked) => {
     const updatedMedications = [...formData.medications];
@@ -163,13 +179,6 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
         ...prev,
         medications: updatedMedications
       }));
-
-
-      setMedicineSearchResults(prev => {
-        const updated = { ...prev };
-        delete updated[index];
-        return updated;
-      });
     }
   };
 
@@ -216,9 +225,6 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
           medications: [newMedication()],
           notes: ""
         });
-
-
-        setMedicineSearchResults({});
 
 
         // Redirect to doctor's dashboard after successful prescription creation
@@ -355,59 +361,51 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
 
 
                   <Grid container spacing={2} sx={{ mb: 2 }}>
-                    <Grid item xs={12} md={6}>
+                    <Grid item xs={12}>
                       <Typography variant="body2" sx={{ mb: 1, color: "#0c3c3c", fontWeight: 500 }}>
                         Medicine Name *
                       </Typography>
-                      <Autocomplete
-                          options={medicineSearchResults[index] || []}
-                          getOptionLabel={(option) => option.name || ""}
-                          renderOption={(props, option) => (
-                              <Box component="li" {...props}>
-                                <Box>
-                                  <Typography variant="body2" sx={{ fontWeight: 600 }}>
-                                    {option.name} - {option.strength}{option.unit || ''}
-                                  </Typography>
-                                  <Typography variant="caption" sx={{ color: '#666' }}>
-                                    {option.form} • {option.brand} • {option.category} • Stock: {option.stockQuantity}
-                                  </Typography>
-                                </Box>
-                              </Box>
-                          )}
-                          renderInput={(params) => (
-                              <TextField
-                                  {...params}
-                                  size="small"
-                                  placeholder="Search medicines..."
-                                  value={medication.medicine}
-                                  onChange={(e) => {
-                                    handleMedicationChange(index, 'medicine', e.target.value);
-                                    searchMedicinesForIndex(index, e.target.value);
-                                  }}
-                                  InputProps={{
-                                    ...params.InputProps,
-                                    startAdornment: <SearchIcon sx={{ color: '#666', mr: 1 }} />,
-                                  }}
-                                  sx={{
-                                    '& .MuiOutlinedInput-root': {
-                                      backgroundColor: '#f8f9fa',
-                                      '& fieldset': { borderColor: '#e0e0e0' },
-                                      '&:hover fieldset': { borderColor: '#45d27a' },
-                                      '&.Mui-focused fieldset': { borderColor: '#45d27a' },
-                                    },
-                                  }}
-                              />
-                          )}
-                          value={medicineSearchResults[index]?.find(med => med.name === medication.medicine) || null}
-                          onChange={(event, newValue) => handleMedicineSelect(index, newValue)}
-                          onInputChange={(event, newInputValue) => {
-                            handleMedicationChange(index, 'medicine', newInputValue);
-                            searchMedicinesForIndex(index, newInputValue);
-                          }}
-                          loading={searchLoading[index]}
-                          freeSolo
-                          filterOptions={(x) => x}
+                      <FormControlLabel
+                        control={
+                          <Switch
+                            checked={medication.isExternal}
+                            onChange={(e) => handleExternalSwitch(index, e.target.checked)}
+                            size="small"
+                          />
+                        }
+                        label="Prescribe Externally"
+                        sx={{ mb: 1, color: '#666', '& .MuiFormControlLabel-label': { fontSize: '0.8rem' } }}
                       />
+                      <Box sx={{ display: 'flex', gap: 1, alignItems: 'center' }}>
+                        {medication.isExternal ? (
+                          <TextField
+                            fullWidth
+                            size="small"
+                            placeholder="Enter medicine name manually"
+                            value={medication.medicine}
+                            onChange={(e) => handleMedicationChange(index, 'medicine', e.target.value)}
+                          />
+                        ) : (
+                          <>
+                            <TextField
+                              fullWidth
+                              size="small"
+                              readOnly
+                              value={medication.medicine || "No medicine selected"}
+                              sx={{ '& .MuiInputBase-root': { backgroundColor: '#f0f0f0' } }}
+                            />
+                            <Button
+                              variant="contained"
+                              onClick={() => openMedicineModal(index)}
+                              startIcon={<SearchIcon />}
+                              sx={{ backgroundColor: "#0c3c3c", '&:hover': { backgroundColor: "#1a5656" }, flexShrink: 0 }}
+                            >
+                              Browse
+                            </Button>
+                          </>
+                        )}
+                      </Box>
+
                       {medication.medicineDetails && (
                           <Box sx={{ mt: 1, display: 'flex', gap: 1, flexWrap: 'wrap' }}>
                             <Chip
@@ -425,7 +423,9 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
                           </Box>
                       )}
                     </Grid>
-                    <Grid item xs={12} md={3}>
+                  </Grid>
+                  <Grid container spacing={2} sx={{ mb: 2 }}>
+                    <Grid item xs={12} md={6}>
                       <Typography variant="body2" sx={{ mb: 1, color: "#0c3c3c", fontWeight: 500 }}>
                         Dosage *
                       </Typography>
@@ -445,7 +445,7 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
                           }}
                       />
                     </Grid>
-                    <Grid item xs={12} md={3}>
+                    <Grid item xs={12} md={6}>
                       <Typography variant="body2" sx={{ mb: 1, color: "#0c3c3c", fontWeight: 500 }}>
                         Duration (Days) *
                       </Typography>
@@ -692,6 +692,76 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
             {alertMessage}
           </Alert>
         </Snackbar>
+
+        {/* Medicine Browser Modal */}
+        <Dialog open={isModalOpen} onClose={closeMedicineModal} fullWidth maxWidth="md">
+          <DialogTitle sx={{ backgroundColor: '#0c3c3c', color: '#fff' }}>
+            Browse Medicine Inventory
+          </DialogTitle>
+          <DialogContent sx={{ p: 2, mt: 2 }}>
+            <TextField
+              fullWidth
+              variant="outlined"
+              placeholder="Search by name"
+              value={modalSearchTerm}
+              onChange={(e) => setModalSearchTerm(e.target.value)}
+              InputProps={{
+                startAdornment: <SearchIcon sx={{ color: '#666', mr: 1 }} />,
+              }}
+              sx={{ mb: 2 }}
+            />
+            <TableContainer component={Paper} sx={{ maxHeight: 400 }}>
+              <Table stickyHeader>
+                <TableHead>
+                  <TableRow>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Name</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Strength</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Form</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Stock</TableCell>
+                    <TableCell sx={{ fontWeight: 'bold', backgroundColor: '#f5f5f5' }}>Action</TableCell>
+                  </TableRow>
+                </TableHead>
+                <TableBody>
+                  {allMedicines
+                    .filter(med => {
+                      const term = modalSearchTerm.toLowerCase();
+                      // Add null checks to prevent crash if fields are missing
+                      const nameMatch = med.name ? med.name.toLowerCase().includes(term) : false;
+                      const brandMatch = med.brand ? med.brand.toLowerCase().includes(term) : false;
+                      const categoryMatch = med.category ? med.category.toLowerCase().includes(term) : false;
+                      return nameMatch || brandMatch || categoryMatch;
+                    })
+                    .map(med => (
+                      <TableRow key={med.id} hover>
+                        <TableCell>{med.name}</TableCell>
+                        <TableCell>{med.strength}{med.unit}</TableCell>
+                        <TableCell>{med.form}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={med.stock}
+                            size="small"
+                            color={med.stock > (med.lowStockQuantity || 50) ? "success" : med.stock > 10 ? "warning" : "error"}
+                          />
+                        </TableCell>
+                        <TableCell>
+                          <Button
+                            size="small"
+                            variant="outlined"
+                            onClick={() => handleMedicineSelect(modalTargetIndex, med)}
+                          >
+                            Select
+                          </Button>
+                        </TableCell>
+                      </TableRow>
+                    ))}
+                </TableBody>
+              </Table>
+            </TableContainer>
+          </DialogContent>
+          <DialogActions>
+            <Button onClick={closeMedicineModal}>Cancel</Button>
+          </DialogActions>
+        </Dialog>
       </Box>
   );
 };

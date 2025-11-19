@@ -57,7 +57,6 @@ public class MedicineService {
             case "name" -> results = medicineRepository.findByNameContainingIgnoreCase(value);
             case "generic" -> results = medicineRepository.findByGenericContainingIgnoreCase(value);
             case "manufacturer" -> results = medicineRepository.findByManufacturerContainingIgnoreCase(value);
-            case "batch" -> results = medicineRepository.findByBatchContainingIgnoreCase(value);
             case "category" -> results = medicineRepository.findByCategoryContainingIgnoreCase(value);
             default -> throw new IllegalArgumentException("Invalid search filter");
         }
@@ -70,9 +69,4 @@ public class MedicineService {
         medicineRepository.deleteById(id);
     }
 
-    // ✅ New: Find by Brand Name + Manufacturer
-    public Optional<MedicineDTO> findByNameAndManufacturer(String name, String manufacturer) {
-        return medicineRepository.findByNameAndManufacturer(name, manufacturer)
-                .map(MedicineMapper::toDto);
-    }
 }

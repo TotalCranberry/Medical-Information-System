@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { getInvoice } from "../../api/invoice";
+import { getInvoice, getInvoiceById } from "../../api/invoice";
 import UOPLogo from "../../assets/UOP_logo.jpeg";
 
 // ---- THEME TOKENS (match PrescriptionPrint) ----
@@ -32,8 +32,8 @@ const normalizeInvoice = (raw) => {
 
   const patient = raw.patient || {};
   const patientName = raw.patientName || patient.name || patient.fullName || "-";
-  const patientAge = patient.age ?? raw.patientAge;
-  const patientGender = patient.gender || raw.patientGender;
+  const patientAge = raw.patientAge ?? patient.age ?? null;
+  const patientGender = raw.patientGender ?? patient.gender ?? null;
 
   const createdAt = raw.createdAt || raw.date || raw.issuedAt || new Date().toISOString();
   const id = raw.id || raw.invoiceId || raw.number || "-";
@@ -84,7 +84,7 @@ const normalizeInvoice = (raw) => {
 };
 
 const InvoicePrint = () => {
-  const { prescriptionId } = useParams();
+  const { id } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
 
@@ -101,7 +101,14 @@ const InvoicePrint = () => {
     (async () => {
       try {
         setState((s) => ({ ...s, loading: true, error: null }));
-        const raw = await getInvoice(prescriptionId);
+        let raw;
+        // Try to get by invoice ID first (for staff invoices)
+        try {
+          raw = await getInvoiceById(id);
+        } catch {
+          // Fallback to prescription ID (for prescription invoices)
+          raw = await getInvoice(id);
+        }
         const norm = normalizeInvoice(raw);
         if (alive) setState({ loading: false, error: null, invoice: norm });
       } catch (e) {
@@ -109,7 +116,7 @@ const InvoicePrint = () => {
       }
     })();
     return () => { alive = false; };
-  }, [prescriptionId]);
+  }, [id]);
 
   const onPrint = () => {
     window.print();
@@ -334,10 +341,8 @@ const InvoicePrint = () => {
           <div className="card" style={{ background: "#fcfffe" }}>
             <div style={{ fontWeight: 800, marginBottom: 8, color: THEME.primary }}>Billed To</div>
             <div style={{ marginBottom: 4 }}><strong>Name:</strong> {invoice.patientName}</div>
-            <div>
-              <strong>Age / Sex:</strong> {(invoice.patientAge ?? "-")}
-              {invoice.patientGender ? ` / ${invoice.patientGender}` : ""}
-            </div>
+            <div style={{ marginBottom: 4 }}><strong>Age:</strong> {invoice.patientAge ?? "-"}</div>
+            <div><strong>Sex:</strong> {invoice.patientGender ?? "-"}</div>
           </div>
         </div>
 

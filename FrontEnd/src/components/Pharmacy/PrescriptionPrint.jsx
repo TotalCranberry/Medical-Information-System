@@ -186,8 +186,8 @@ const PrescriptionPrint = ({ user }) => {
   const patient = rx.patient || {};
   const doctor = rx.doctor || {};
   const patientName = patient.name || rx.patientName || '-';
-  const patientAge = patient.age ?? rx.patientAge;
-  const patientGender = patient.gender || rx.patientGender;
+  const patientAge = rx.patientAge ?? patient.age ?? rx.patientAge;
+  const patientGender = rx.patientGender || patient.gender || rx.patientGender;
   const doctorName = doctor.name || rx.doctorName || '-';
   const doctorRegNo = doctor.regNo || doctor.registrationNumber || rx.doctorRegNo || '';
 
@@ -435,7 +435,8 @@ const PrescriptionPrint = ({ user }) => {
               <div className="card" style={{ background: '#fcfffe' }}>
                 <div style={{ fontWeight: 800, marginBottom: 8, color: THEME.primary }}>Patient Information</div>
                 <div style={{ marginBottom: 4 }}><strong>Name:</strong> {patientName}</div>
-                <div><strong>Age / Sex:</strong> {(patientAge ?? '-')}{(patientGender ? ` / ${patientGender}` : '')}</div>
+                <div style={{ marginBottom: 4 }}><strong>Age:</strong> {patientAge ?? '-'}</div>
+                <div><strong>Sex:</strong> {patientGender ?? '-'}</div>
                 {patient.role && (
                   <div style={{ marginTop: 4 }}><strong>Role:</strong> {patient.role}</div>
                 )}
@@ -443,7 +444,6 @@ const PrescriptionPrint = ({ user }) => {
               <div className="card" style={{ background: '#fcfffe' }}>
                 <div style={{ fontWeight: 800, marginBottom: 8, color: THEME.primary }}>Prescribed By</div>
                 <div style={{ marginBottom: 4 }}><strong>Doctor:</strong> {doctorName}</div>
-                <div style={{ marginBottom: 4 }}><strong>Reg. No:</strong> {doctorRegNo || '-'}</div>
                 {rx.department && (
                   <div><strong>Department:</strong> {rx.department}</div>
                 )}

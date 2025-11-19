@@ -12,6 +12,8 @@ import com.mis.model.enums.RouteOfAdministration;
 import com.mis.model.enums.TimeOfDay;
 import com.mis.repository.Prescription.PrescriptionItemRepository;
 import com.mis.repository.Prescription.PrescriptionRepository;
+import com.mis.repository.StaffRepository;
+import com.mis.repository.StudentRepository;
 import com.mis.repository.UserRepository;
 import com.mis.repository.Medicine.MedicineRepository;
 
@@ -34,6 +36,8 @@ public class PrescriptionService {
     private final PrescriptionRepository prescriptionRepository;
     private final PrescriptionItemRepository prescriptionItemRepository;
     private final UserRepository userRepository;
+    private final StudentRepository studentRepository;
+    private final StaffRepository staffRepository;
     private final MedicineRepository medicineRepository;
     private final com.mis.service.Invoice.InvoiceService invoiceService;
 
@@ -123,7 +127,7 @@ public class PrescriptionService {
     @Transactional(readOnly = true)
     public com.mis.dto.Prescription.PrescriptionResponse getByIdAsDto(String prescriptionId) {
         Prescription prescription = getByIdOrThrow(prescriptionId);
-        return com.mis.mapper.Prescription.PrescriptionMapper.toResponse(prescription);
+        return com.mis.mapper.Prescription.PrescriptionMapper.toResponse(prescription, studentRepository, staffRepository);
     }
 
     /**
@@ -160,18 +164,7 @@ public class PrescriptionService {
      */
     @Transactional(readOnly = true)
     public List<Prescription> getCompletedPrescriptions() {
-        Calendar cal = Calendar.getInstance();
-        cal.set(Calendar.HOUR_OF_DAY, 0);
-        cal.set(Calendar.MINUTE, 0);
-        cal.set(Calendar.SECOND, 0);
-        Date startDate = cal.getTime();
-
-        cal.set(Calendar.HOUR_OF_DAY, 23);
-        cal.set(Calendar.MINUTE, 59);
-        cal.set(Calendar.SECOND, 59);
-        Date endDate = cal.getTime();
-
-        return prescriptionRepository.findByIsActiveAndUpdatedAtBetween(false, startDate, endDate);
+        return prescriptionRepository.findByIsActiveOrderByPrescriptionDateDesc(false);
     }
 
     /**
@@ -460,10 +453,9 @@ public class PrescriptionService {
             }
         }
 
-        // Then prioritize medicines with manufacturer/batch info (more specific)
+        // Then prioritize medicines with manufacturer info (more specific)
         for (Medicine med : candidates) {
-            if ((med.getManufacturer() != null && !med.getManufacturer().isBlank()) ||
-                (med.getBatch() != null && !med.getBatch().isBlank())) {
+            if (med.getManufacturer() != null && !med.getManufacturer().isBlank()) {
                 return med;
             }
         }

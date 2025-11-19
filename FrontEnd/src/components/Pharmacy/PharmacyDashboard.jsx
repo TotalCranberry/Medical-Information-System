@@ -1,19 +1,18 @@
-import React, { useMemo } from "react";
+import React, { useState, useEffect, useMemo } from "react";
 import AnnouncementDisplay from "../AnnouncementDisplay";
 import {
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
   Box,
   Typography,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
   Grid
 } from "@mui/material";
-
-import { 
+import dayjs from "dayjs";
+import {
   BarChart,
   Bar,
   XAxis,
@@ -21,48 +20,184 @@ import {
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
-  Cell
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from "recharts";
-
-const prescriptions = [
-  { time: "10:30 AM", patient: "John Doe" },
-  { time: "11:00 AM", patient: "Jane Smith" },
-  { time: "11:30 AM", patient: "David Lee" }
-];
-
-const inventory = [
-  { medicine: "Paracetamol 500mg", stock: 150 },
-  { medicine: "Amoxicillin 250mg", stock: 80 },
-  { medicine: "Cough Syrup 100ml", stock: 15 }
-];
-
-const patientData = [
-  { day: "Mon", count: 12 },
-  { day: "Tue", count: 18 },
-  { day: "Wed", count: 10 },
-  { day: "Thu", count: 22 },
-  { day: "Fri", count: 15 },
-  { day: "Sat", count: 8 },
-  { day: "Sun", count: 14 }
-];
-
-const colors = [
-  "#FF6B6B",
-  "#FFD93D",
-  "#6BCB77",
-  "#4D96FF",
-  "#F08A5D",
-  "#C77DFF",
-  "#3AB4F2"
-];
+import {
+  ErrorOutline,
+  WarningAmber,
+  Inventory,
+  CheckCircleOutline
+} from "@mui/icons-material";
+import {
+  getPrescriptionsForPharmacy,
+  getCompletedPrescriptionsForPharmacy
+} from "../../api/prescription";
+// Assuming you have an API function to get all medicines
+import { getAllMedicines } from "../../api/medicine";
 
 const PharmacyDashboard = ({ user }) => {
+  const [weeklyData, setWeeklyData] = useState([]);
+  const [dailyData, setDailyData] = useState([]);
+  const [notifications, setNotifications] = useState([]);
+
   // Build a nice display name from whatever fields you have
   const pharmacistName = useMemo(() => {
     const direct = (user?.name || user?.fullName || "").trim();
     const combo = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
     return direct || combo || user?.username || "Pharmacist";
   }, [user]);
+
+  // Helper function to process completed prescriptions by weekday for current week
+  const processWeeklyData = (completedPrescriptions) => {
+    const now = dayjs();
+    const startOfWeek = now.startOf('week'); // Monday
+    const endOfWeek = now.endOf('week'); // Sunday
+
+    const dayCounts = { 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0 };
+
+    completedPrescriptions.forEach(prescription => {
+      // For completed prescriptions, the completion date is `updatedAt`
+      const completionDate = dayjs(prescription.updatedAt);
+      if (completionDate.isBetween(startOfWeek, endOfWeek, null, '[]')) {
+        const dayName = completionDate.format('ddd');
+        dayCounts[dayName]++;
+      }
+    });
+
+    setWeeklyData(Object.entries(dayCounts).map(([day, count]) => ({ day, count })));
+  };
+
+  // Helper function to process daily pending and completed prescriptions
+  const processDailyData = (pendingPrescriptions, completedPrescriptions) => {
+    const today = dayjs().startOf('day');
+
+    // Count pending prescriptions for today based on their creation date
+    const pendingToday = pendingPrescriptions.filter(p => {
+      const date = dayjs(p.prescriptionDate || p.createdAt);
+      return date.isSame(today, 'day');
+    }).length;
+
+    // Count prescriptions completed today based on their update date
+    const completedToday = completedPrescriptions.filter(p => {
+      const date = dayjs(p.updatedAt);
+      return date.isSame(today, 'day');
+    }).length;
+
+    setDailyData([
+      { name: "Pending", value: pendingToday, color: "#FF6B35" },
+      { name: "Completed", value: completedToday, color: "#4CAF50" }
+    ]);
+  };
+
+  // Helper function to process medicine inventory for notifications
+  const processMedicineData = (medicines) => {
+    const alerts = [];
+    const today = dayjs().startOf('day');
+
+    medicines.forEach(med => {
+      // Check for low stock
+      if (med.stock != null && med.stock < (med.lowStockQuantity || 50)) {
+        alerts.push({
+          type: 'Low Stock',
+          message: `${med.name} is low in stock (${med.stock} remaining).`,
+          icon: <Inventory color="warning" />,
+        });
+      }
+      
+      // Only process expiry if the date exists
+      if (med.expiry) {
+        const expiryDate = dayjs(med.expiry);
+        // Check for expired medicines
+        if (expiryDate.isBefore(today, 'day')) {
+          alerts.push({
+            type: 'Expired',
+            message: `${med.name} has expired on ${expiryDate.format('YYYY-MM-DD')}.`,
+            icon: <ErrorOutline color="error" />,
+          });
+        } else if (expiryDate.diff(today, 'day') <= 30) { // Check if expiry is within 30 days from today
+          const daysLeft = expiryDate.diff(today, 'day');
+          alerts.push({
+            type: 'Nearly Expired',
+            message: `${med.name} will expire in ${daysLeft} day(s).`,
+            icon: <WarningAmber sx={{ color: '#ED6C02' }} />,
+          });
+        }
+      }
+    });
+    setNotifications(alerts);
+  };
+
+  // This function is no longer needed with the new logic
+  /*
+  const processDailyData_old = (prescriptions) => {
+    const today = dayjs().startOf('day');
+
+    const todayPrescriptions = prescriptions.filter(prescription => {
+      const dateField = prescription.isActive ? (prescription.prescriptionDate || prescription.createdAt) : (prescription.updatedAt || prescription.prescriptionDate);
+      const date = dayjs(dateField);
+      return date.isSame(today, 'day');
+    });
+
+    let pending = 0;
+    let completed = 0;
+
+    todayPrescriptions.forEach(prescription => {
+      if (prescription.isActive) {
+        pending++;
+      } else {
+        completed++;
+      }
+    });
+
+    setDailyData([
+      { name: "Pending", value: pending, color: "#FF6B35" },
+      { name: "Completed", value: completed, color: "#4CAF50" }
+    ]);
+  };
+  */
+
+  // Fetch data on component mount
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [pendingResponse, completedResponse, medicineResponse] = await Promise.all([
+          getPrescriptionsForPharmacy(),
+          getCompletedPrescriptionsForPharmacy(),
+          getAllMedicines() // Fetch medicine data
+        ]);
+        processWeeklyData(completedResponse || []);
+        processDailyData(pendingResponse || [], completedResponse || []);
+        processMedicineData(medicineResponse || []);
+      } catch (error) {
+        console.error("Failed to fetch prescriptions:", error);
+      }
+    };
+
+    fetchData();
+  }, []);
+
+  // Dynamic updates every 30 seconds
+  useEffect(() => {
+    const interval = setInterval(async () => {
+      try {
+        const [pendingResponse, completedResponse, medicineResponse] = await Promise.all([
+          getPrescriptionsForPharmacy(),
+          getCompletedPrescriptionsForPharmacy(),
+          getAllMedicines()
+        ]);
+        processWeeklyData(completedResponse || []);
+        processDailyData(pendingResponse || [], completedResponse || []);
+        processMedicineData(medicineResponse || []);
+      } catch (error) {
+        console.error("Failed to fetch prescriptions:", error);
+      }
+    }, 30000); // 30 seconds
+
+    return () => clearInterval(interval);
+  }, []);
 
   return (
     <Box
@@ -85,229 +220,199 @@ const PharmacyDashboard = ({ user }) => {
           pl: { xs: 1, md: 2 }
         }}
       >
-        {/* ✅ Use the computed name here */}
         Welcome, {pharmacistName}
       </Typography>
 
-      <Grid
-        container
-        spacing={{ xs: 2, md: 3, lg: 4 }}
-        justifyContent="flex-start"
-        alignItems="stretch"
-        mb={4}
-      >
+      <Grid container spacing={3} sx={{ mt: 2 }}>
         <Grid item xs={12} md={4}>
           <Paper
             elevation={4}
             sx={{
-              height: 320,
-              p: { xs: 2, sm: 2.5, md: 3 },
-              borderLeft: "6px solid #45d27a",
-              borderRadius: "12px",
-              display: "flex",
-              flexDirection: "column"
+              p: 3,
+              height: 300,
+              background: '#f0f8ff', // Light blue, eye-friendly
+              borderRadius: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center'
             }}
           >
             <Typography
               variant="h6"
               sx={{
                 mb: 2,
-                fontWeight: 800,
-                textAlign: "center",
-                fontSize: { xs: "1.1rem", sm: "1.3rem", md: "1.5rem" }
+                fontWeight: 600,
+                textAlign: 'center',
+                color: '#0c3c3c'
               }}
             >
-              Pending Prescriptions
+              📊 Weekly Completed Prescriptions
             </Typography>
-            <TableContainer sx={{ flexGrow: 1 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: { xs: "0.85rem", md: "0.95rem" },
-                        textAlign: "center",
-                        py: 1
-                      }}
-                    >
-                      Time
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: { xs: "0.85rem", md: "0.95rem" },
-                        textAlign: "center",
-                        py: 1
-                      }}
-                    >
-                      Patient Name
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {prescriptions.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={2}
-                        align="center"
-                        sx={{ fontSize: { xs: "0.9rem", md: "1rem" }, py: 2 }}
-                      >
-                        No pending prescriptions
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    prescriptions.map((p, index) => (
-                      <TableRow
-                        key={index}
-                        sx={{ "&:hover": { backgroundColor: "#f5f7fa" } }}
-                      >
-                        <TableCell align="center" sx={{ py: 1.5, fontSize: { xs: "0.85rem", md: "0.9rem" } }}>
-                          {p.time}
-                        </TableCell>
-                        <TableCell align="center" sx={{ py: 1.5, fontSize: { xs: "0.85rem", md: "0.9rem" } }}>
-                          {p.patient}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <Paper
-            elevation={4}
-            sx={{
-              height: 320,
-              p: { xs: 2, sm: 2.5, md: 3 },
-              borderLeft: "6px solid #45d27a",
-              borderRadius: "12px",
-              display: "flex",
-              flexDirection: "column"
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 2,
-                fontWeight: 800,
-                textAlign: "center",
-                fontSize: { xs: "1.1rem", sm: "1.3rem", md: "1.5rem" }
-              }}
-            >
-              Inventory Status
-            </Typography>
-            <TableContainer sx={{ flexGrow: 1 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: { xs: "0.85rem", md: "0.95rem" },
-                        textAlign: "center",
-                        py: 1
-                      }}
-                    >
-                      Medicine
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: { xs: "0.85rem", md: "0.95rem" },
-                        textAlign: "center",
-                        py: 1
-                      }}
-                    >
-                      Stock
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {inventory.map((item, index) => (
-                    <TableRow
-                      key={index}
-                      sx={{
-                        backgroundColor:
-                          item.stock < 20 ? "#fff3cd" : "transparent"
-                      }}
-                    >
-                      <TableCell
-                        align="center"
-                        sx={{
-                          fontWeight: item.stock < 20 ? 700 : 500,
-                          color: item.stock < 20 ? "red" : "inherit",
-                          py: 1.5,
-                          fontSize: { xs: "0.8rem", md: "0.85rem" }
-                        }}
-                      >
-                        {item.medicine}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{
-                          fontWeight: item.stock < 20 ? 700 : 500,
-                          color: item.stock < 20 ? "red" : "inherit",
-                          py: 1.5,
-                          fontSize: { xs: "0.85rem", md: "0.9rem" }
-                        }}
-                      >
-                        {item.stock}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <Paper
-            elevation={4}
-            sx={{
-              height: 320,
-              p: { xs: 2, sm: 2.5, md: 3 },
-              borderLeft: "6px solid #45d27a",
-              borderRadius: "12px",
-              display: "flex",
-              flexDirection: "column"
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 2,
-                fontWeight: 800,
-                textAlign: "center",
-                fontSize: { xs: "1.1rem", sm: "1.3rem", md: "1.5rem" }
-              }}
-            >
-              Weekly Patient Count
-            </Typography>
-            <Box sx={{ flexGrow: 1, minHeight: 0 }}>
+            <Box sx={{ width: '100%', height: 200 }}>
               <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={patientData}
-                  margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="count" barSize={25}>
-                    {patientData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={colors[index % colors.length]}
-                      />
-                    ))}
-                  </Bar>
+                <BarChart data={weeklyData} margin={{ top: 10, right: 10, left: 10, bottom: 10 }}>
+                  <defs>
+                    <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                      <stop offset="0%" stopColor="#FFD700" />
+                      <stop offset="50%" stopColor="#FFA500" />
+                      <stop offset="100%" stopColor="#FF8C00" />
+                    </linearGradient>
+                    <filter id="shadow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="2" dy="2" stdDeviation="3" floodColor="rgba(0,0,0,0.3)" />
+                    </filter>
+                  </defs>
+                  <CartesianGrid strokeDasharray="3 3" stroke="#e0e0e0" />
+                  <XAxis
+                    dataKey="day"
+                    tick={{ fontSize: 10, fill: '#333' }}
+                    axisLine={{ stroke: '#ccc' }}
+                  />
+                  <YAxis
+                    tick={{ fontSize: 10, fill: '#333' }}
+                    axisLine={{ stroke: '#ccc' }}
+                  />
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #ccc',
+                      borderRadius: 8,
+                      color: '#333'
+                    }}
+                  />
+                  <Bar
+                    dataKey="count"
+                    fill="url(#barGradient)"
+                    radius={[2, 2, 0, 0]}
+                    filter="url(#shadow)"
+                  />
                 </BarChart>
               </ResponsiveContainer>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Paper
+            elevation={4}
+            sx={{
+              p: 3,
+              height: 300,
+              background: '#f0f8ff',
+              borderRadius: 3,
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+              alignItems: 'center'
+            }}
+          >
+            <Typography
+              variant="h6"
+              sx={{
+                mb: 2,
+                fontWeight: 600,
+                textAlign: 'center',
+                color: '#0c3c3c'
+              }}
+            >
+              🥧 Daily Status (3D View)
+            </Typography>
+            <Box sx={{ width: '100%', height: 200 }}>
+              <ResponsiveContainer width="100%" height="100%">
+                <PieChart>
+                  <defs>
+                    <filter id="pieShadow" x="-20%" y="-20%" width="140%" height="140%">
+                      <feDropShadow dx="3" dy="3" stdDeviation="4" floodColor="rgba(0,0,0,0.2)" />
+                    </filter>
+                  </defs>
+                  <Pie
+                    data={dailyData}
+                    cx="50%"
+                    cy="50%"
+                    outerRadius={70}
+                    dataKey="value"
+                    filter="url(#pieShadow)"
+                    label={({ name, percent }) => `${name} ${(percent * 100).toFixed(0)}%`}
+                  >
+                    {dailyData.map((entry, index) => (
+                      <Cell key={`cell-${index}`} fill={entry.color} />
+                    ))}
+                  </Pie>
+                  <Tooltip
+                    contentStyle={{
+                      backgroundColor: '#fff',
+                      border: '1px solid #ccc',
+                      borderRadius: 8,
+                      color: '#333'
+                    }}
+                  />
+                  <Legend
+                    verticalAlign="bottom"
+                    height={36}
+                    iconType="circle"
+                  />
+                </PieChart>
+              </ResponsiveContainer>
+            </Box>
+          </Paper>
+        </Grid>
+
+        <Grid item xs={12} md={4}>
+          <Paper
+            elevation={4}
+            sx={{
+              p: 3,
+              height: 300,
+              background: '#f0f8ff',
+              borderRadius: 3,
+              display: 'flex',
+              flexDirection: 'column',
+            }}
+          >
+            <Typography variant="h6" sx={{ fontWeight: 600, color: '#0c3c3c', mb: 1 }}>
+              🔔 Notifications
+            </Typography>
+            <Box sx={{ overflowY: 'auto', width: '100%', flexGrow: 1 }}>
+              {notifications.length > 0 ? (
+                <List dense>
+                  {notifications.map((item, index) => (
+                    <React.Fragment key={index}>
+                      <ListItem>
+                        <ListItemIcon sx={{ minWidth: 36 }}>
+                          {item.icon}
+                        </ListItemIcon>
+                        <ListItemText
+                          primary={item.type}
+                          secondary={item.message}
+                          primaryTypographyProps={{ fontWeight: 'bold', fontSize: '0.9rem' }}
+                          secondaryTypographyProps={{ fontSize: '0.8rem' }}
+                        />
+                      </ListItem>
+                      {index < notifications.length - 1 && <Divider variant="inset" component="li" />}
+                    </React.Fragment>
+                  ))}
+                </List>
+              ) : (
+                <Box
+                  sx={{
+                    display: 'flex',
+                    flexDirection: 'column',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    height: '100%',
+                    textAlign: 'center',
+                    color: '#0c3c3c'
+                  }}
+                >
+                  <CheckCircleOutline sx={{ fontSize: 48, color: 'green', mb: 1 }} />
+                  <Typography variant="h6" sx={{ fontWeight: 600 }}>
+                    All Clear!
+                  </Typography>
+                  <Typography variant="body2" sx={{ color: '#666' }}>
+                    No urgent notifications. Keep up the great work!
+                  </Typography>
+                </Box>
+              )}
             </Box>
           </Paper>
         </Grid>

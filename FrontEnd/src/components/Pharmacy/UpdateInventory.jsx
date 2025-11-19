@@ -166,6 +166,7 @@ const UpdateInventoryPage = () => {
   const [snackbar, setSnackbar] = useState({ open: false, success: true, message: "" });
   const [loading, setLoading] = useState(false);
   const [formExpanded, setFormExpanded] = useState(true);
+  const [originalStock, setOriginalStock] = useState(0);
 
   const [formData, setFormData] = useState({
     generic: "",
@@ -173,7 +174,6 @@ const UpdateInventoryPage = () => {
     form: "",
     strength: "",
     stock: "",
-    batch: "",
     mfg: "",
     expiry: "",
     manufacturer: "",
@@ -204,45 +204,23 @@ const UpdateInventoryPage = () => {
 
   /** Search */
   const handleSearch = () => {
-    if (searchFilter === "name+manufacturer") {
-      const { name, manufacturer } = formData;
-      if (!name || !manufacturer) {
-        setSnackbar({ open: true, success: false, message: "Please enter both Brand Name and Manufacturer." });
-        return;
-      }
-      apiFetch(`/medicines/search/by-name-and-manufacturer?name=${name}&manufacturer=${manufacturer}`, "GET", null, true)
-        .then((res) => {
-          if (res) {
-            setMode("update");
-            setFormData(res);
-            setFormExpanded(true);
-          } else {
-            setMode("add");
-            setFormExpanded(true);
-          }
-        })
-        .catch(() => {
-          setMode("add");
-          setFormExpanded(true);
-          setSnackbar({ open: true, success: false, message: "Medicine not found." });
-        });
-      return;
-    }
-
     searchMedicines(searchTerm, searchFilter)
       .then((res) => {
         if (res && res.length > 0) {
           setMode("update");
-          setFormData(res[0]);
+          setOriginalStock(res[0].stock);
+          setFormData({ ...res[0], stock: "" });
           setFormExpanded(true);
         } else {
           setMode("add");
+          setOriginalStock(0);
           setFormData(prev => ({ ...prev, [searchFilter]: searchTerm }));
           setFormExpanded(true);
         }
       })
       .catch(() => {
         setMode("add");
+        setOriginalStock(0);
         setFormData(prev => ({ ...prev, [searchFilter]: searchTerm }));
         setFormExpanded(true);
         setSnackbar({ open: true, success: false, message: "Search failed." });
@@ -251,9 +229,10 @@ const UpdateInventoryPage = () => {
 
   /** Submit add/update */
   const handleSubmit = () => {
+    const stockValue = formData.stock === "" ? 0 : parseInt(formData.stock, 10);
     const payload = {
       ...formData,
-      stock: formData.stock === "" ? 0 : parseInt(formData.stock, 10),
+      stock: mode === "update" ? originalStock + stockValue : stockValue,
       unitPrice: formData.unitPrice === "" ? 0 : parseFloat(formData.unitPrice),
       lowStockQuantity: formData.lowStockQuantity === "" ? null : formData.lowStockQuantity
     };
@@ -272,7 +251,6 @@ const UpdateInventoryPage = () => {
           form: "",
           strength: "",
           stock: "",
-          batch: "",
           mfg: "",
           expiry: "",
           manufacturer: "",
@@ -295,7 +273,6 @@ const UpdateInventoryPage = () => {
       form: "",
       strength: "",
       stock: "",
-      batch: "",
       mfg: "",
       expiry: "",
       manufacturer: "",
@@ -305,6 +282,7 @@ const UpdateInventoryPage = () => {
     });
     setSearchTerm("");
     setMode("add");
+    setOriginalStock(0);
     setSnackbar({ open: true, success: true, message: "Form cleared. Ready to add new medicine!" });
   };
 
@@ -332,11 +310,8 @@ const UpdateInventoryPage = () => {
     }
   };
 
-  /** Suggestions (single-field search only) */
-  const suggestions =
-    searchFilter === "name+manufacturer"
-      ? []
-      : [...new Set(inventory.map((m) => m[searchFilter]?.toString() || ""))];
+  /** Suggestions */
+  const suggestions = [...new Set(inventory.map((m) => m[searchFilter]?.toString() || ""))];
 
   const formatLabel = (field) => {
     const map = {
@@ -344,7 +319,6 @@ const UpdateInventoryPage = () => {
       name: "Brand Name",
       form: "Form",
       strength: "Strength",
-      batch: "Batch Number",
       mfg: "Manufacturing Date",
       expiry: "Expiry Date",
       manufacturer: "Manufacturer",
@@ -356,7 +330,7 @@ const UpdateInventoryPage = () => {
     return map[field] || field;
   };
 
-  const formFields = ["generic", "name", "form", "strength", "batch", "manufacturer", "category"];
+  const formFields = ["generic", "name", "form", "strength", "manufacturer", "category"];
   const dateFields = ["mfg", "expiry"];
 
   /** Row status coloring */
@@ -395,10 +369,8 @@ const UpdateInventoryPage = () => {
   const searchOptions = [
     { value: "name", label: "Brand Name", icon: PharmacyIcon },
     { value: "generic", label: "Generic Name", icon: PharmacyIcon },
-    { value: "batch", label: "Batch Number", icon: CategoryIcon },
     { value: "manufacturer", label: "Manufacturer", icon: BusinessIcon },
     { value: "category", label: "Category", icon: CategoryIcon },
-    { value: "name+manufacturer", label: "Brand Name + Manufacturer", icon: SearchIcon },
   ];
 
   if (loading) {
@@ -552,108 +524,67 @@ const UpdateInventoryPage = () => {
             </Grid>
 
             <Grid item xs={12} sm={6} md={6} sx={{ position: "relative" }}>
-              {searchFilter === "name+manufacturer" ? (
-                <Grid container spacing={2}>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Brand Name"
-                      value={formData.name}
-                      onChange={(e) => handleChange("name", e.target.value)}
-                      size="medium"
-                      sx={inputSx}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <PharmacyIcon sx={{ color: THEME.gray }} />
-                          </InputAdornment>
-                        )
-                      }}
-                    />
-                  </Grid>
-                  <Grid item xs={12} sm={6}>
-                    <TextField
-                      fullWidth
-                      label="Manufacturer"
-                      value={formData.manufacturer}
-                      onChange={(e) => handleChange("manufacturer", e.target.value)}
-                      size="medium"
-                      sx={inputSx}
-                      InputProps={{
-                        startAdornment: (
-                          <InputAdornment position="start">
-                            <BusinessIcon sx={{ color: THEME.gray }} />
-                          </InputAdornment>
-                        )
-                      }}
-                    />
-                  </Grid>
-                </Grid>
-              ) : (
-                <>
-                  <TextField
-                    fullWidth
-                    label={`Search by ${formatLabel(searchFilter)}`}
-                    value={searchTerm}
-                    onChange={(e) => setSearchTerm(e.target.value)}
-                    size="medium"
-                    sx={inputSx}
-                    InputProps={{
-                      startAdornment: (
-                        <InputAdornment position="start">
-                          <SearchIcon sx={{ color: THEME.gray }} />
-                        </InputAdornment>
-                      ),
-                      endAdornment: searchTerm && (
-                        <InputAdornment position="end">
-                          <IconButton onClick={() => setSearchTerm("")} size="small">
-                            <ClearIcon />
-                          </IconButton>
-                        </InputAdornment>
-                      ),
-                    }}
-                  />
+              <TextField
+                fullWidth
+                label={`Search by ${formatLabel(searchFilter)}`}
+                value={searchTerm}
+                onChange={(e) => setSearchTerm(e.target.value)}
+                size="medium"
+                sx={inputSx}
+                InputProps={{
+                  startAdornment: (
+                    <InputAdornment position="start">
+                      <SearchIcon sx={{ color: THEME.gray }} />
+                    </InputAdornment>
+                  ),
+                  endAdornment: searchTerm && (
+                    <InputAdornment position="end">
+                      <IconButton onClick={() => setSearchTerm("")} size="small">
+                        <ClearIcon />
+                      </IconButton>
+                    </InputAdornment>
+                  ),
+                }}
+              />
 
-                  {searchTerm && suggestions.length > 0 && (
-                    <Paper
-                      elevation={12}
-                      sx={{
-                        position: "absolute",
-                        top: "100%",
-                        left: 0,
-                        right: 0,
-                        zIndex: 10,
-                        maxHeight: 220,
-                        overflowY: "auto",
-                        borderRadius: "14px",
-                        mt: 1,
-                        border: `1px solid rgba(12,60,60,0.08)`
-                      }}
-                    >
-                      {suggestions
-                        .filter((s) => s.toLowerCase().includes(searchTerm.toLowerCase()))
-                        .map((s, i) => (
-                          <Box
-                            key={i}
-                            sx={{
-                              p: 2,
-                              cursor: "pointer",
-                              fontSize: "0.95rem",
-                              display: "flex",
-                              alignItems: "center",
-                              transition: "background-color 0.2s ease",
-                              "&:hover": { backgroundColor: "rgba(69,210,122,0.06)" },
-                              borderBottom: i < suggestions.length - 1 ? "1px solid #eee" : "none"
-                            }}
-                            onClick={() => setSearchTerm(s)}
-                          >
-                            <PersonIcon sx={{ mr: 1, fontSize: "1.1rem", color: THEME.gray }} />
-                            {s}
-                          </Box>
-                        ))}
-                    </Paper>
-                  )}
-                </>
+              {searchTerm && suggestions.length > 0 && (
+                <Paper
+                  elevation={12}
+                  sx={{
+                    position: "absolute",
+                    top: "100%",
+                    left: 0,
+                    right: 0,
+                    zIndex: 10,
+                    maxHeight: 220,
+                    overflowY: "auto",
+                    borderRadius: "14px",
+                    mt: 1,
+                    border: `1px solid rgba(12,60,60,0.08)`
+                  }}
+                >
+                  {suggestions
+                    .filter((s) => s.toLowerCase().includes(searchTerm.toLowerCase()))
+                    .map((s, i) => (
+                      <Box
+                        key={i}
+                        sx={{
+                          p: 2,
+                          cursor: "pointer",
+                          fontSize: "0.95rem",
+                          display: "flex",
+                          alignItems: "center",
+                          transition: "background-color 0.2s ease",
+                          "&:hover": { backgroundColor: "rgba(69,210,122,0.06)" },
+                          borderBottom: i < suggestions.length - 1 ? "1px solid #eee" : "none"
+                        }}
+                        onClick={() => setSearchTerm(s)}
+                      >
+                        <PersonIcon sx={{ mr: 1, fontSize: "1.1rem", color: THEME.gray }} />
+                        {s}
+                      </Box>
+                    ))}
+                </Paper>
               )}
             </Grid>
 
@@ -728,7 +659,6 @@ const UpdateInventoryPage = () => {
                           {field === "name" && <PharmacyIcon sx={{ color: THEME.gray }} />}
                           {field === "form" && <CategoryIcon sx={{ color: THEME.gray }} />}
                           {field === "strength" && <TrendingUpIcon sx={{ color: THEME.gray }} />}
-                          {field === "batch" && <CategoryIcon sx={{ color: THEME.gray }} />}
                           {field === "manufacturer" && <BusinessIcon sx={{ color: THEME.gray }} />}
                           {field === "category" && <CategoryIcon sx={{ color: THEME.gray }} />}
                         </InputAdornment>
@@ -765,7 +695,7 @@ const UpdateInventoryPage = () => {
               <Grid item xs={12} sm={6} md={4}>
                 <TextField
                   fullWidth
-                  label={formatLabel("stock")}
+                  label={mode === "update" ? "Quantity to Add" : formatLabel("stock")}
                   type="number"
                   value={formData.stock}
                   onChange={(e) => handleChange("stock", e.target.value)}
@@ -891,7 +821,7 @@ const UpdateInventoryPage = () => {
                 <TableRow>
                   {[
                     "Generic", "Brand Name", "Form", "Strength", "Stock",
-                    "Unit Price", "Batch", "MFG Date", "Expiry Date",
+                    "Unit Price", "MFG Date", "Expiry Date",
                     "Manufacturer", "Last Updated", "Category", "Actions"
                   ].map((header) => (
                     <TableCell
@@ -1002,26 +932,19 @@ const UpdateInventoryPage = () => {
                               icon={medicine.stock < 50 ? <WarningIcon /> : <CheckCircleIcon />}
                             />
                           </TableCell>
-                          <TableCell sx={{ 
-                            fontSize: "0.95rem", 
-                            color: row.color, 
-                            textAlign: "center", 
-                            fontWeight: 600 
+                          <TableCell sx={{
+                            fontSize: "0.95rem",
+                            color: row.color,
+                            textAlign: "center",
+                            fontWeight: 600
                           }}>
                             {price}
                           </TableCell>
-                          <TableCell sx={{ 
-                            fontSize: "0.95rem", 
-                            color: row.color, 
-                            textAlign: "center" 
-                          }}>
-                            {medicine.batch}
-                          </TableCell>
-                          <TableCell sx={{ 
-                            fontSize: "0.95rem", 
-                            color: row.color, 
-                            textAlign: "center", 
-                            whiteSpace: 'nowrap' 
+                          <TableCell sx={{
+                            fontSize: "0.95rem",
+                            color: row.color,
+                            textAlign: "center",
+                            whiteSpace: 'nowrap'
                           }}>
                             {medicine.mfg}
                           </TableCell>

@@ -361,7 +361,10 @@ export default function ViewPrescriptionDialog({ open, onClose, rx }) {
   const toggleSelect = (key) => {
     setSelections((prev) => {
       const cur = prev[key] || { checked: false, qty: "" };
-      return { ...prev, [key]: { ...cur, checked: !cur.checked } };
+      const newChecked = !cur.checked;
+      const stock = cur.stock ?? null;
+      const qty = newChecked && stock === 0 ? "0" : cur.qty;
+      return { ...prev, [key]: { ...cur, checked: newChecked, qty } };
     });
   };
 
@@ -480,13 +483,13 @@ export default function ViewPrescriptionDialog({ open, onClose, rx }) {
     items.forEach((it) => {
       const sel = selections[it.key];
       const qty = sel?.qty ? parseInt(sel.qty, 10) : 0;
-      if (sel?.checked && qty > 0) {
+      if (sel?.checked) {
         payloadItems.push({
           itemId: it.id ?? null,
           quantity: qty,
           medicineName: it.medicineName || null,
           dispensedQuantity: qty,
-          dispensedStatus: 1,
+          dispensedStatus: qty > 0 ? 1 : 0,
         });
       }
     });
@@ -501,7 +504,7 @@ export default function ViewPrescriptionDialog({ open, onClose, rx }) {
     }
     const payloadItems = buildPayload();
     if (payloadItems.length === 0) {
-      setSnack({ open: true, severity: "warning", msg: "Select at least one medicine and enter units to dispense." });
+      setSnack({ open: true, severity: "warning", msg: "Select at least one medicine to dispense." });
       return;
     }
     setConfirmOpen(true);
@@ -533,7 +536,7 @@ export default function ViewPrescriptionDialog({ open, onClose, rx }) {
 
   // ---------- Enhanced Derived summary ----------
   const selectedCount = useMemo(
-    () => Object.values(selections).filter((s) => s.checked && (parseInt(s.qty || "0", 10) > 0)).length,
+    () => Object.values(selections).filter((s) => s.checked).length,
     [selections]
   );
   const totalUnits = useMemo(

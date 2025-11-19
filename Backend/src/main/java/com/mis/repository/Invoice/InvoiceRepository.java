@@ -4,9 +4,11 @@ import com.mis.model.Invoice.Invoice;
 import org.springframework.data.jpa.repository.JpaRepository;
 import org.springframework.stereotype.Repository;
 
+import java.util.List;
 import java.util.Optional;
 
 @Repository
 public interface InvoiceRepository extends JpaRepository<Invoice, Long> {
     Optional<Invoice> findTopByPrescription_IdOrderByCreatedAtDesc(String prescriptionId);
+    List<Invoice> findByPatient_RoleOrderByCreatedAtDesc(com.mis.model.Role role);
 }

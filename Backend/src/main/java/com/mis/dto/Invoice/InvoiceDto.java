@@ -1,5 +1,6 @@
 package com.mis.dto.Invoice;
 
+import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.util.List;
 
@@ -7,6 +8,8 @@ public class InvoiceDto {
     private Long id;
     private String prescriptionId;
     private String patientName;
+    private Integer patientAge;
+    private String patientGender;
     private Double totalAmount;
     private LocalDateTime createdAt;
     private List<InvoiceItemDto> invoiceItems;
@@ -35,6 +38,22 @@ public class InvoiceDto {
 
     public void setPatientName(String patientName) {
         this.patientName = patientName;
+    }
+
+    public Integer getPatientAge() {
+        return patientAge;
+    }
+
+    public void setPatientAge(Integer patientAge) {
+        this.patientAge = patientAge;
+    }
+
+    public String getPatientGender() {
+        return patientGender;
+    }
+
+    public void setPatientGender(String patientGender) {
+        this.patientGender = patientGender;
     }
 
     public Double getTotalAmount() {
