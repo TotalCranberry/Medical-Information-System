@@ -411,6 +411,21 @@ const PatientProfile = () => {
     }
   };
 
+  const normalRanges = {
+    temperatureC: { min: 36.5, max: 37.5 },
+    heartRate: { min: 60, max: 100 },
+    systolicBp: { min: 90, max: 120 },
+    diastolicBp: { min: 60, max: 80 },
+    respiratoryRate: { min: 12, max: 20 },
+    oxygenSaturation: { min: 95, max: 100 }
+  };
+
+  const isNormal = (field, value) => {
+    if (!normalRanges[field] || value == null) return true;
+    const range = normalRanges[field];
+    return value >= range.min && value <= range.max;
+  };
+
   if (loading) {
     return (
         <Box display="flex" justifyContent="center" alignItems="center" minHeight="400px">
@@ -737,6 +752,47 @@ const PatientProfile = () => {
             </Grid>
           </Paper>
 
+          {/* Last Vitals Display */}
+          {vitals.length > 0 && (
+            <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600, mb: 2 }}>
+                Last Vitals Recorded on {formatDate(vitals[0].recordedAt)}
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 1 }}>
+                <Typography variant="body2">
+                  Height: <span style={{ color: 'black' }}>{vitals[0].heightCm || 'N/A'} cm</span>
+                </Typography>
+                <Typography variant="body2">
+                  Weight: <span style={{ color: 'black' }}>{vitals[0].weightKg || 'N/A'} kg</span>
+                </Typography>
+                <Typography variant="body2">
+                  Temperature: <span style={{ color: isNormal('temperatureC', vitals[0].temperatureC) ? 'green' : 'red' }}>{vitals[0].temperatureC || 'N/A'} °C</span>
+                </Typography>
+                <Typography variant="body2">
+                  Heart Rate: <span style={{ color: isNormal('heartRate', vitals[0].heartRate) ? 'green' : 'red' }}>{vitals[0].heartRate || 'N/A'} bpm</span>
+                </Typography>
+                <Typography variant="body2">
+                  Systolic BP: <span style={{ color: isNormal('systolicBp', vitals[0].systolicBp) ? 'green' : 'red' }}>{vitals[0].systolicBp || 'N/A'} mmHg</span>
+                </Typography>
+                <Typography variant="body2">
+                  Diastolic BP: <span style={{ color: isNormal('diastolicBp', vitals[0].diastolicBp) ? 'green' : 'red' }}>{vitals[0].diastolicBp || 'N/A'} mmHg</span>
+                </Typography>
+                <Typography variant="body2">
+                  Respiratory Rate: <span style={{ color: isNormal('respiratoryRate', vitals[0].respiratoryRate) ? 'green' : 'red' }}>{vitals[0].respiratoryRate || 'N/A'} /min</span>
+                </Typography>
+                <Typography variant="body2">
+                  Oxygen Saturation: <span style={{ color: isNormal('oxygenSaturation', vitals[0].oxygenSaturation) ? 'green' : 'red' }}>{vitals[0].oxygenSaturation || 'N/A'}%</span>
+                </Typography>
+                {vitals[0].notes && (
+                  <Typography variant="body2" sx={{ gridColumn: '1 / -1' }}>
+                    Notes: <span style={{ color: 'black' }}>{vitals[0].notes}</span>
+                  </Typography>
+                )}
+              </Box>
+            </Paper>
+          )}
+
           {/* Diagnosis Section */}
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600, mb: 2 }}>
@@ -750,58 +806,50 @@ const PatientProfile = () => {
                 </Alert>
             )}
 
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                    fullWidth
-                    label="Diagnosis"
-                    value={diagnosis}
-                    onChange={(e) => setDiagnosis(e.target.value)}
-                    multiline
-                    rows={3}
-                    placeholder="Enter diagnosis for today's consultation..."
-                    disabled={!apiAvailable}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                    fullWidth
-                    label="Additional Notes"
-                    value={diagnosisNotes}
-                    onChange={(e) => setDiagnosisNotes(e.target.value)}
-                    multiline
-                    rows={2}
-                    placeholder="Additional notes or recommendations..."
-                    disabled={!apiAvailable}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Button
-                    onClick={handleSaveDiagnosis}
-                    variant="contained"
-                    disabled={saving || !diagnosis.trim() || !apiAvailable}
-                    sx={{ backgroundColor: "#45d27a", "&:hover": { backgroundColor: "#3ab86a" } }}
-                >
-                  Save Diagnosis
-                </Button>
-              </Grid>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                  fullWidth
+                  label="Diagnosis"
+                  value={diagnosis}
+                  onChange={(e) => setDiagnosis(e.target.value)}
+                  multiline
+                  rows={8}
+                  placeholder="Enter diagnosis for today's consultation..."
+                  disabled={!apiAvailable}
+              />
+              <TextField
+                  fullWidth
+                  label="Additional Notes"
+                  value={diagnosisNotes}
+                  onChange={(e) => setDiagnosisNotes(e.target.value)}
+                  multiline
+                  rows={6}
+                  placeholder="Additional notes or recommendations..."
+                  disabled={!apiAvailable}
+              />
+              <Button
+                  onClick={handleSaveDiagnosis}
+                  variant="contained"
+                  disabled={saving || !diagnosis.trim() || !apiAvailable}
+                  sx={{ backgroundColor: "#45d27a", "&:hover": { backgroundColor: "#3ab86a" } }}
+              >
+                Save Diagnosis
+              </Button>
               {diagnosisSaved && currentAppointmentId && (
-                <Grid item xs={12}>
-                  <Button
-                      onClick={handleCompleteAppointment}
-                      variant="contained"
-                      disabled={saving}
-                      sx={{
-                        backgroundColor: "#1976D2",
-                        "&:hover": { backgroundColor: "#1565C0" },
-                        mt: 1
-                      }}
-                  >
-                    Complete Appointment
-                  </Button>
-                </Grid>
+                <Button
+                    onClick={handleCompleteAppointment}
+                    variant="contained"
+                    disabled={saving}
+                    sx={{
+                      backgroundColor: "#1976D2",
+                      "&:hover": { backgroundColor: "#1565C0" },
+                      mt: 1
+                    }}
+                >
+                  Complete Appointment
+                </Button>
               )}
-            </Grid>
+            </Box>
           </Paper>
 
           {/* Recent Diagnoses */}
