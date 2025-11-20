@@ -6,7 +6,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from "@mui/material";
-import { Add as AddIcon, Remove as RemoveIcon, Search as SearchIcon } from "@mui/icons-material";
+import { Add as AddIcon, Remove as RemoveIcon, Search as SearchIcon, ArrowBack as ArrowBackIcon } from "@mui/icons-material";
 import { useNavigate, useLocation } from "react-router-dom";
 import {
   createPrescription,
@@ -188,6 +188,15 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
     setShowAlert(true);
   };
 
+  const handleBackToProfile = () => {
+    navigate(`/doctor/patients/${finalPatientId}`, {
+      state: {
+        patient: patientFromState,
+        appointmentId: finalAppointmentId
+      }
+    });
+  };
+
   const handleSubmit = async () => {
 
     const validation = validatePrescriptionForm(formData);
@@ -249,19 +258,29 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
 
   return (
       <Box>
-        <Typography
-            variant="h4"
-            gutterBottom
+        <Box sx={{ mb: 3 }}>
+          <Button
+            startIcon={<ArrowBackIcon />}
+            onClick={handleBackToProfile}
             sx={{
-              color: "#0c3c3c",
-              fontWeight: 700,
-              mb: { xs: 2, md: 4 },
-              ml: { xs: 0, md: 2 },
-              textAlign: { xs: "center", md: "left" }
+              mb: 2,
+              color: '#0c3c3c',
+              '&:hover': { backgroundColor: 'rgba(12, 60, 60, 0.1)' }
             }}
-        >
-          Write Prescription
-        </Typography>
+          >
+            Back to Patient Profile
+          </Button>
+          <Typography
+              variant="h4"
+              sx={{
+                color: "#0c3c3c",
+                fontWeight: 700,
+                textAlign: { xs: "center", md: "left" }
+              }}
+          >
+            Write Prescription
+          </Typography>
+        </Box>
 
         <Paper elevation={2} sx={{ p: 3 }}>
           <Typography

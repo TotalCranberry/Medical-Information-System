@@ -226,10 +226,10 @@ export default function UserManagement() {
                         <InputLabel>Role Filter</InputLabel>
                         <Select value={roleFilter || ''} label="Role Filter" onChange={(e) => setRoleFilter(e.target.value || null)}>
                             <MenuItem value="">All Roles</MenuItem>
-                            <MenuItem value="STUDENT">Student</MenuItem>
-                            <MenuItem value="DOCTOR">Doctor</MenuItem>
-                            <MenuItem value="STAFF">Staff</MenuItem>
-                            <MenuItem value="ADMIN">Admin</MenuItem>
+                            <MenuItem value="Student">Student</MenuItem>
+                            <MenuItem value="Doctor">Doctor</MenuItem>
+                            <MenuItem value="Staff">Staff</MenuItem>
+                            <MenuItem value="Admin">Admin</MenuItem>
                         </Select>
                     </FormControl>
                     <Tooltip title="Refresh Users">

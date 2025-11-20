@@ -53,9 +53,9 @@ public class MedicalFormRequest {
     @Data
     @NoArgsConstructor
     public static class PhysicalExam {
-        private double weightKg;
-        private double heightCm;
-        private double bmi;
+        private String weightKg;
+        private String heightCm;
+        private String bmi;
         private String vaccinationStatus;
     }
 }

@@ -70,6 +70,11 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
     );
   };
 
+  const shouldDisableTime = (timeValue, view) => {
+    const hour = timeValue.getHours();
+    return hour < 9 || hour === 12 || hour > 15;
+  };
+
   return (
     <>
       <LocalizationProvider dateAdapter={AdapterDateFns}>
@@ -123,9 +128,10 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                     onChange={setTime}
                     minutesStep={10}
                     ampm={false}
+                    shouldDisableTime={shouldDisableTime}
                     slotProps={{
                       textField: {
-                        helperText: "Select a time between 9:00 AM - 12:00 PM and 1:00 PM - 4:00 PM",
+                        helperText: "Select a time between 9:00 - 12:00 and 13:00 - 16:00 ",
                         required: true,
                         sx: { flexGrow: 1, minWidth: 120 },
                       },

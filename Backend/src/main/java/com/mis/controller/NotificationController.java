@@ -24,7 +24,7 @@ public class NotificationController {
 
     @GetMapping
     public ResponseEntity<List<Notification>> getUnreadNotifications(Authentication authentication) {
-        User user = userRepository.findByEmail(authentication.getName())
+        User user = userRepository.findById(authentication.getName())
                 .orElseThrow(() -> new RuntimeException("User not found"));
         List<Notification> notifications = notificationService.getUnreadNotifications(user);
         return ResponseEntity.ok(notifications);

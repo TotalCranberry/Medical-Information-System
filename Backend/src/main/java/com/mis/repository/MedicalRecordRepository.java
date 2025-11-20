@@ -9,5 +9,5 @@ import com.mis.model.MedicalRecord;
 
 @Repository
 public interface MedicalRecordRepository extends JpaRepository<MedicalRecord, Long> {
-    Optional<MedicalRecord> findByUserId(String userId);
+    Optional<MedicalRecord> findByUser_Id(String userId);
 }
