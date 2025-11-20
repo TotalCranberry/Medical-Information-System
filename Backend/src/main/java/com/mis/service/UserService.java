@@ -137,11 +137,23 @@ public class UserService {
         }
         
         if (request.getDateOfBirth() != null) {
-            updateRoleSpecificProfile(user, request.getDateOfBirth(), null);
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), null, null, null, null);
         }
 
         if (request.getGender() != null && !request.getGender().isEmpty()) {
-            updateRoleSpecificProfile(user, request.getDateOfBirth(), request.getGender());
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), request.getGender(), null, null, null);
+        }
+
+        if (request.getHostel() != null && !request.getHostel().isEmpty()) {
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), request.getGender(), request.getHostel(), null, null);
+        }
+
+        if (request.getRoomNumber() != null && !request.getRoomNumber().isEmpty()) {
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), request.getGender(), request.getHostel(), request.getRoomNumber(), null);
+        }
+
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isEmpty()) {
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), request.getGender(), request.getHostel(), request.getRoomNumber(), request.getPhoneNumber());
         }
 
         User savedUser = userRepository.save(user);
@@ -151,7 +163,7 @@ public class UserService {
         return savedUser;
     }
 
-    private void updateRoleSpecificProfile(User user, LocalDate dateOfBirth, String gender) {
+    private void updateRoleSpecificProfile(User user, LocalDate dateOfBirth, String gender, String hostel, String roomNumber, String phoneNumber) {
         if (user.getRole() == Role.Student) {
             Student student = studentRepository.findById(user.getId())
                 .orElseThrow(() -> new RuntimeException("Student profile not found"));
@@ -160,6 +172,15 @@ public class UserService {
             }
             if (gender != null) {
                 student.setGender(gender);
+            }
+            if (hostel != null) {
+                student.setHostel(hostel);
+            }
+            if (roomNumber != null) {
+                student.setRoomNumber(roomNumber);
+            }
+            if (phoneNumber != null) {
+                student.setPhoneNumber(phoneNumber);
             }
             studentRepository.save(student);
         } else if (user.getRole() == Role.Staff) {
@@ -188,7 +209,6 @@ public class UserService {
             staff = staffRepository.findById(user.getId()).orElse(null);
         }
         // 3. FIND THE MEDICAL RECORD
-        // We use .orElse(null) in case the record doesn't exist yet
         MedicalRecord medicalRecord = medicalRecordRepository.findByUser_Id(userId).orElse(null); 
         
         // 4. PASS THE MEDICAL RECORD TO THE MAPPER
@@ -294,14 +314,11 @@ public class UserService {
         if (principal instanceof UserDetails ud) {
             username = ud.getUsername();
         } else if (principal instanceof String s) {
-            // Sometimes Spring stores just the username string
             username = s;
         } else {
             throw new IllegalStateException("Unsupported principal type: " + principal.getClass());
         }
 
-        // 🔁 PICK ONE that matches your schema:
-        // If you log in with email:
         return userRepository.findByEmail(username)
                 .orElseThrow(() -> new IllegalStateException("Logged-in user not found by email: " + username));
     }

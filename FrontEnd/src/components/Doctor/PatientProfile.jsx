@@ -492,6 +492,19 @@ const PatientProfile = () => {
             <Typography variant="body1" gutterBottom>
               <strong>Age:</strong> {getPatientInfo('age')}
             </Typography>
+            {getPatientInfo('role') === 'Student' && (
+                <>
+                    <Typography variant="body1" gutterBottom>
+                        <strong>Hostel:</strong> {getPatientInfo('hostel') || 'N/A'}
+                    </Typography>
+                    <Typography variant="body1" gutterBottom>
+                        <strong>Room No:</strong> {getPatientInfo('roomNumber') || 'N/A'}
+                    </Typography>
+                    <Typography variant="body1" gutterBottom>
+                        <strong>Phone:</strong> {getPatientInfo('phoneNumber') || 'N/A'}
+                    </Typography>
+                </>
+            )}
           </Paper>
         </Grid>
 
