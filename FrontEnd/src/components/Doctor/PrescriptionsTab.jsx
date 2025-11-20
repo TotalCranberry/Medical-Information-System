@@ -6,10 +6,7 @@ import {
   Dialog, DialogTitle, DialogContent, DialogActions,
   Table, TableBody, TableCell, TableContainer, TableHead, TableRow
 } from "@mui/material";
-
-// Only keeping necessary icons
 import { Add as AddIcon, Remove as RemoveIcon, Search as SearchIcon, ArrowBack as ArrowBackIcon } from "@mui/icons-material";
-
 import { useNavigate, useLocation } from "react-router-dom";
 
 // API Functions
@@ -266,6 +263,15 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
   };
 
   // --- 5. Submission ---
+
+  const handleBackToProfile = () => {
+    navigate(`/doctor/patients/${finalPatientId}`, {
+      state: {
+        patient: patientFromState,
+        appointmentId: finalAppointmentId
+      }
+    });
+  };
 
   const handleSubmit = async () => {
     // 1. Validate

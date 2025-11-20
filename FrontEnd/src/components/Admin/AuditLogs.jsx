@@ -19,7 +19,7 @@ import { History } from '@mui/icons-material';
 import { fetchAuditLogs } from '../../api/admin';
 import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
-import { DateTimePicker } from '@mui/x-date-pickers/DateTimePicker';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'; 
 
 export default function AuditLogPage() {
     const [auditLogs, setAuditLogs] = useState([]);
@@ -29,9 +29,10 @@ export default function AuditLogPage() {
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+    
     const [searchTerm, setSearchTerm] = useState('');
-    const [startDate, setStartDate] = useState(new Date());
-    const [endDate, setEndDate] = useState(new Date());
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
 
     const showSnackbar = (message, severity = 'success') => {
         setSnackbarMessage(message);
@@ -47,9 +48,11 @@ export default function AuditLogPage() {
         try {
             setLoading(true);
             setError('');
+            
             const data = await fetchAuditLogs(searchTerm, startDate, endDate);
             setAuditLogs(data);
         } catch (err) {
+            console.error(err);
             setError('Failed to fetch audit logs. Please try again.');
             showSnackbar('Failed to fetch audit logs. Please try again.', 'error');
         } finally {
@@ -59,10 +62,19 @@ export default function AuditLogPage() {
 
     useEffect(() => {
         loadAuditLogs();
-    }, []);
+    }, []); 
 
     const handleSearch = () => {
         loadAuditLogs();
+    };
+
+    const clearFilters = () => {
+        setSearchTerm('');
+        setStartDate(null);
+        setEndDate(null);
+        setTimeout(() => {
+             fetchAuditLogs('', null, null).then(setAuditLogs).catch(console.error);
+        }, 0);
     };
 
     const formatTimestamp = (timestamp) => {
@@ -78,39 +90,53 @@ export default function AuditLogPage() {
             </Box>
 
             <Paper elevation={2} sx={{ p: 3 }}>
-                <Box sx={{ display: 'flex', gap: 2, mb: 2 }}>
+                {/* Search and Filter Bar */}
+                <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
                     <TextField
                         label="Search by User Email"
                         variant="outlined"
+                        size="small"
                         value={searchTerm}
                         onChange={(e) => setSearchTerm(e.target.value)}
-                        sx={{ flexGrow: 1 }}
+                        sx={{ minWidth: 250 }}
                     />
+                    
                     <LocalizationProvider dateAdapter={AdapterDateFns}>
-                        <DateTimePicker
+                        <DatePicker
                             label="Start Date"
+                            inputFormat="dd/MM/yyyy"
                             value={startDate}
                             onChange={(newValue) => setStartDate(newValue)}
-                            renderInput={(params) => <TextField {...params} />}
+                            slotProps={{ textField: { size: 'small' } }}
                         />
-                        <DateTimePicker
+                        <DatePicker
                             label="End Date"
+                            inputFormat="dd/MM/yyyy"
                             value={endDate}
                             onChange={(newValue) => setEndDate(newValue)}
-                            renderInput={(params) => <TextField {...params} />}
+                            slotProps={{ textField: { size: 'small' } }}
                         />
                     </LocalizationProvider>
-                    <Button variant="contained" onClick={handleSearch}>Search</Button>
+                    
+                    <Button 
+                        variant="contained" 
+                        onClick={handleSearch}
+                        sx={{ height: 40 }}
+                    >
+                        Search
+                    </Button>
+                    <Button 
+                        variant="outlined" 
+                        onClick={clearFilters}
+                        sx={{ height: 40 }}
+                    >
+                        Clear Filters
+                    </Button>
                 </Box>
+
                 {error && (
                     <Alert severity="error" sx={{ mb: 2 }}>
                         {error}
-                    </Alert>
-                )}
-
-                {success && (
-                    <Alert severity="success" sx={{ mb: 2 }}>
-                        {success}
                     </Alert>
                 )}
 
@@ -125,7 +151,7 @@ export default function AuditLogPage() {
                             No Audit Logs Found
                         </Typography>
                         <Typography color="text.secondary">
-                            There are no audit logs to display at this time.
+                            Try adjusting your search filters to see more results.
                         </Typography>
                     </Box>
                 ) : (

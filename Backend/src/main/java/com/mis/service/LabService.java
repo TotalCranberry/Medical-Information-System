@@ -1,10 +1,17 @@
 package com.mis.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.mis.model.LabRequest;
 import com.mis.model.LabResult;
 import com.mis.model.LabResultFile;
 import com.mis.repository.LabRequestRepository;
 import com.mis.repository.LabResultRepository;
+
 import com.mis.repository.LabResultFileRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.web.multipart.MultipartFile;
@@ -13,20 +20,25 @@ import java.time.LocalDateTime;
 import java.util.List;
 import java.util.UUID;
 
+
 @Service
 public class LabService {
 
     private final LabRequestRepository labRequestRepository;
     private final LabResultRepository labResultRepository;
+    private final NotificationService notificationService;
     private final LabResultFileRepository labResultFileRepository;
+
 
     public LabService(
             LabRequestRepository labRequestRepository,
             LabResultRepository labResultRepository,
+            NotificationService notificationService,
             LabResultFileRepository labResultFileRepository
     ) {
         this.labRequestRepository = labRequestRepository;
         this.labResultRepository = labResultRepository;
+        this.notificationService = notificationService;
         this.labResultFileRepository = labResultFileRepository;
     }
 
@@ -48,6 +60,13 @@ public class LabService {
         }
         
         request.setStatus(status);
+
+        // Check if status is COMPLETED and send notification
+        if (status == LabRequest.Status.COMPLETED) {
+            String message = "Your lab request for " + request.getTestType() + " has been completed.";
+            
+            notificationService.createNotification(request.getPatient(), message);
+        }
         return labRequestRepository.save(request);
     }
 

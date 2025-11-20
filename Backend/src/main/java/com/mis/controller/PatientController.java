@@ -26,12 +26,14 @@ import com.mis.dto.MedicalFormRequest;
 import com.mis.model.Appointment;
 import com.mis.model.AppointmentStatus;
 import com.mis.model.Diagnosis;
+import com.mis.model.LabRequest; // Import LabRequest
 import com.mis.model.LabResult;
 import com.mis.model.Medical;
 import com.mis.model.Prescription.Prescription;
 import com.mis.model.User;
 import com.mis.repository.AppointmentRepository;
 import com.mis.repository.DiagnosisRepository;
+import com.mis.repository.LabRequestRepository; // Import Repository
 import com.mis.repository.LabResultRepository;
 import com.mis.repository.MedicalRepository;
 import com.mis.repository.Prescription.PrescriptionRepository;
@@ -39,6 +41,7 @@ import com.mis.repository.UserRepository;
 import com.mis.service.MedicalFormService;
 
 import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/patient") 
 public class PatientController {
@@ -49,19 +52,27 @@ public class PatientController {
     private final MedicalRepository medicalRepository;
     private final PrescriptionRepository prescriptionRepository;
     private final LabResultRepository labResultRepository;
+    private final LabRequestRepository labRequestRepository; // Declare repository
     private final MedicalFormService medicalFormService;
 
-    public PatientController(AppointmentRepository appointmentRepository, DiagnosisRepository diagnosisRepository, LabResultRepository labResultRepository, MedicalRepository medicalRepository, PrescriptionRepository prescriptionRepository, UserRepository userRepository, MedicalFormService medicalFormService) {
+    // Update Constructor to include LabRequestRepository
+    public PatientController(AppointmentRepository appointmentRepository, 
+                             DiagnosisRepository diagnosisRepository, 
+                             LabResultRepository labResultRepository, 
+                             LabRequestRepository labRequestRepository, // Inject here
+                             MedicalRepository medicalRepository, 
+                             PrescriptionRepository prescriptionRepository, 
+                             UserRepository userRepository, 
+                             MedicalFormService medicalFormService) {
         this.appointmentRepository = appointmentRepository;
         this.diagnosisRepository = diagnosisRepository;
         this.labResultRepository = labResultRepository;
+        this.labRequestRepository = labRequestRepository; // Assign here
         this.medicalRepository = medicalRepository;
         this.prescriptionRepository = prescriptionRepository;
         this.userRepository = userRepository;
         this.medicalFormService = medicalFormService;
     }
-
-    
 
     @GetMapping("/appointments")
     public ResponseEntity<List<?>> getAppointments(Authentication authentication) {
@@ -72,6 +83,8 @@ public class PatientController {
         return ResponseEntity.ok(appointments);
     }
 
+    // ... [Existing Appointment Logic: createAppointment, cancelAppointment] ...
+    
     @PostMapping("/appointments")
     public ResponseEntity<?> createAppointment(Authentication authentication, @Valid @RequestBody AppointmentRequest request) {
         if (appointmentRepository.existsByAppointmentDateTimeAndStatusNot(request.getAppointmentDateTime(), AppointmentStatus.Cancelled)) {
@@ -86,12 +99,10 @@ public class PatientController {
         DayOfWeek day = ldt.getDayOfWeek();
         LocalTime time = ldt.toLocalTime();
 
-        // Check for weekends
         if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {
             return ResponseEntity.badRequest().body(Map.of("message","Appointments cannot be booked on weekends."));
         }
 
-        // Check for valid clinic hours
         LocalTime morningStart = LocalTime.of(9, 0);
         LocalTime morningEnd = LocalTime.of(12, 0);
         LocalTime afternoonStart = LocalTime.of(13, 30);
@@ -104,7 +115,6 @@ public class PatientController {
             return ResponseEntity.badRequest().body("Invalid appointment time. Please book between 9:00 AM - 12:00 PM or 1:30 PM - 4:00 PM.");
         }
 
-        // If all checks pass, create the appointment 
         String userId = authentication.getName();
         User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
 
@@ -124,26 +134,23 @@ public class PatientController {
     public ResponseEntity<?> cancelAppointment(Authentication authentication, @PathVariable String appointmentId) {
         String userId = authentication.getName();
 
-        // Find the appointment by its ID
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
 
-        // Security Check: Ensure the user owns this appointment
         if (!appointment.getPatient().getId().equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message","You are not authorized to cancel this appointment."));
         }
 
-        // Business Rule: Only allow cancellation if the appointment is still PENDING
         if (appointment.getStatus() != AppointmentStatus.Scheduled) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message","This appointment can no longer be cancelled."));
         }
 
-        // Update the status to CANCELLED
         appointment.setStatus(AppointmentStatus.Cancelled);
         appointmentRepository.save(appointment);
 
         return ResponseEntity.ok().body(Map.of("message","Appointment cancelled successfully."));
     }
+
 
     @GetMapping("/prescriptions")
     public ResponseEntity<List<Prescription>> getPrescriptions(Authentication authentication) {
@@ -159,6 +166,16 @@ public class PatientController {
         User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
         List<LabResult> labResults = labResultRepository.findByPatientOrderByCreatedAtDesc(patient); 
         return ResponseEntity.ok(labResults);
+    }
+    
+    // NEW ENDPOINT: Get Lab Requests
+    @GetMapping("/lab-requests")
+    public ResponseEntity<List<LabRequest>> getLabRequests(Authentication authentication) {
+        String userId = authentication.getName();
+        User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
+        // Fetch requests ordered by date (using the method added to repository in previous step)
+        List<LabRequest> requests = labRequestRepository.findByPatientOrderByOrderDateDesc(patient);
+        return ResponseEntity.ok(requests);
     }
 
     @GetMapping("/reports/diagnoses")
@@ -196,6 +213,4 @@ public class PatientController {
                 .orElseThrow(() -> new RuntimeException("Medical not found"));
         return ResponseEntity.ok(medical);
     }
-
 }
-
