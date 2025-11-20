@@ -204,7 +204,7 @@ const PrescriptionsPage = () => {
   const [invoiceExists, setInvoiceExists] = useState({});
 
   // Filters
-  const [dateFilter, setDateFilter] = useState(null);
+  const [dateFilter, setDateFilter] = useState(dayjs());
   const [statusFilter, setStatusFilter] = useState("All");
   const [searchText, setSearchText] = useState("");
 
@@ -351,8 +351,8 @@ const PrescriptionsPage = () => {
 
   // ---- Summary ----
   const summary = {
-    Pending: { count: pending.length, icon: PendingIcon, color: THEME.warning },
-    Completed: { count: completed.length, icon: CheckCircleIcon, color: THEME.success },
+    Pending: { count: filteredPending.length, icon: PendingIcon, color: THEME.warning },
+    Completed: { count: filteredCompleted.length, icon: CheckCircleIcon, color: THEME.success },
   };
 
   const clearFilters = () => {

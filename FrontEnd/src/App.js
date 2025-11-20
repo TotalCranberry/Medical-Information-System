@@ -52,6 +52,7 @@ import Prescriptions from "./components/Pharmacy/Prescriptions";
 import UpdateInventory from "./components/Pharmacy/UpdateInventory";
 import PrescriptionPrint from "./components/Pharmacy/PrescriptionPrint";
 import Invoice from "./components/Pharmacy/Invoice";
+import ViewInvoices from "./components/Pharmacy/ViewInvoices";
 
 // Doctor pages
 import DoctorDashboard from './components/Doctor/DoctorDashboard';
@@ -149,6 +150,7 @@ const navLinksConfig = {
   pharmacist: [
     { label: "Dashboard", path: "/pharmacist/dashboard", icon: <DashboardIcon /> },
     { label: "View Prescriptions", path: "/pharmacist/view-prescriptions", icon: <ReceiptLongIcon /> },
+    { label: "View Invoices", path: "/pharmacist/view-invoices", icon: <ReceiptLongIcon /> },
     { label: "Inventory Search", path: "/pharmacist/inventory-search", icon: <InventoryIcon /> },
     { label: "Inventory Update", path: "/pharmacist/inventory-update", icon: <EditNoteIcon /> },
   ],
@@ -406,10 +408,11 @@ function App() {
           {/* Pharmacist Routes */}
           <Route path="pharmacist/dashboard" element={<PharmacyDashboard user={user} />} />
           <Route path="pharmacist/view-prescriptions" element={<Prescriptions />} />
+          <Route path="pharmacist/view-invoices" element={<ViewInvoices />} />
           <Route path="pharmacist/inventory-search" element={<InventoryPage />} />
           <Route path="pharmacist/inventory-update" element={<UpdateInventory />} />
           <Route path="pharmacist/prescription-print" element={<PrescriptionPrint user={user} />} />
-          <Route path="invoice/:prescriptionId" element={<Invoice />} />
+          <Route path="invoice/:id" element={<Invoice />} />
 
           {/* Doctor Routes - UPDATED with Medical Routes */}
           <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />

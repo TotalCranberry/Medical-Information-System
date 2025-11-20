@@ -16,6 +16,5 @@ public interface MedicineRepository extends JpaRepository<Medicine, Long> {
     List<Medicine> findByNameContainingIgnoreCase(String name);
     List<Medicine> findByGenericContainingIgnoreCase(String generic);
     List<Medicine> findByManufacturerContainingIgnoreCase(String manufacturer);
-    List<Medicine> findByBatchContainingIgnoreCase(String batch);
     List<Medicine> findByCategoryContainingIgnoreCase(String category);
 }

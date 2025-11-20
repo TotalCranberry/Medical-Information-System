@@ -108,6 +108,7 @@ const InventoryPage = () => {
     const [loading, setLoading] = useState(true);
     const [searchMethod, setSearchMethod] = useState("generic");
     const [searchTerm, setSearchTerm] = useState("");
+    const [selectedFilter, setSelectedFilter] = useState(null);
 
     useEffect(() => {
         const loadData = async () => {
@@ -144,29 +145,57 @@ const InventoryPage = () => {
         return { bg: "transparent", color: "inherit", status: "normal" };
     };
 
+    // Status checking functions for filtering (allow multiple statuses)
+    const isExpired = (medicine) => {
+        const currentDate = new Date();
+        const expiryDate = new Date(medicine.expiry);
+        return expiryDate < currentDate;
+    };
+
+    const isNearExpiry = (medicine) => {
+        const currentDate = new Date();
+        const expiryDate = new Date(medicine.expiry);
+        const timeDifference = expiryDate.getTime() - currentDate.getTime();
+        const daysDifference = Math.ceil(timeDifference / (1000 * 3600 * 24));
+        return daysDifference >= 0 && daysDifference <= 30;
+    };
+
+    const isLowStock = (medicine) => {
+        const lowStockThreshold = medicine.lowStockQuantity ? parseInt(medicine.lowStockQuantity) : 50;
+        return medicine.stock < lowStockThreshold;
+    };
+
+    const isNormal = (medicine) => {
+        return !isExpired(medicine) && !isNearExpiry(medicine) && !isLowStock(medicine);
+    };
+
     const filtered = medicines.filter((med) => {
         const value = med[searchMethod]?.toString().toLowerCase();
-        return value?.includes((searchTerm || "").toLowerCase());
+        const matchesSearch = value?.includes((searchTerm || "").toLowerCase());
+        if (!matchesSearch) return false;
+        if (!selectedFilter) return true;
+
+        // Check if medicine matches the selected filter status
+        switch (selectedFilter) {
+            case "expired":
+                return isExpired(med);
+            case "near-expiry":
+                return isNearExpiry(med);
+            case "low-stock":
+                return isLowStock(med);
+            case "normal":
+                return isNormal(med);
+            default:
+                return true;
+        }
     });
 
     // Calculate statistics
     const stats = {
         total: medicines.length,
-        expired: medicines.filter(med => {
-            const currentDate = new Date();
-            const expiryDate = new Date(med.expiry);
-            return expiryDate < currentDate;
-        }).length,
-        nearExpiry: medicines.filter(med => {
-            const currentDate = new Date();
-            const expiryDate = new Date(med.expiry);
-            const daysDifference = Math.ceil((expiryDate.getTime() - currentDate.getTime()) / (1000 * 3600 * 24));
-            return daysDifference >= 0 && daysDifference <= 30;
-        }).length,
-        lowStock: medicines.filter(med => {
-            const lowStockThreshold = med.lowStockQuantity ? parseInt(med.lowStockQuantity) : 50;
-            return med.stock < lowStockThreshold;
-        }).length,
+        expired: medicines.filter(med => isExpired(med)).length,
+        nearExpiry: medicines.filter(med => isNearExpiry(med)).length,
+        lowStock: medicines.filter(med => isLowStock(med)).length,
     };
 
     const clearSearch = () => {
@@ -174,23 +203,26 @@ const InventoryPage = () => {
     };
 
     const statusLegend = [
-        { 
-            color: "#ffebee", 
-            border: "#c62828", 
-            label: "Expired", 
+        {
+            status: "expired",
+            color: "#ffebee",
+            border: "#c62828",
+            label: "Expired",
             textColor: "#c62828",
             icon: ErrorIcon,
             count: stats.expired
         },
-        { 
-            color: "#fff3e0", 
-            border: "#f57c00", 
-            label: "Near Expiry (≤30 days)", 
+        {
+            status: "near-expiry",
+            color: "#fff3e0",
+            border: "#f57c00",
+            label: "Near Expiry (≤30 days)",
             textColor: "#f57c00",
             icon: WarningIcon,
             count: stats.nearExpiry
         },
         {
+            status: "low-stock",
             color: "#fff3cd",
             border: "#856404",
             label: "Low Stock (below threshold)",
@@ -198,13 +230,23 @@ const InventoryPage = () => {
             icon: TrendingUpIcon,
             count: stats.lowStock
         },
-        { 
-            color: "#e8f5e8", 
-            border: "#4caf50", 
-            label: "Normal Stock", 
+        {
+            status: "normal",
+            color: "#e8f5e8",
+            border: "#4caf50",
+            label: "Normal Stock",
             textColor: "#2e7d32",
             icon: CheckCircleIcon,
-            count: stats.total - stats.expired - stats.nearExpiry - stats.lowStock
+            count: medicines.filter(med => isNormal(med)).length
+        },
+        {
+            status: null,
+            color: "#f3f4f6",
+            border: THEME.primary,
+            label: "Show All",
+            textColor: THEME.primary,
+            icon: InventoryIcon,
+            count: stats.total
         }
     ];
 
@@ -214,7 +256,6 @@ const InventoryPage = () => {
         { value: "form", label: "Form", icon: CategoryIcon },
         { value: "strength", label: "Strength", icon: TrendingUpIcon },
         { value: "stock", label: "Stock", icon: InventoryIcon },
-        { value: "batch", label: "Batch Number", icon: CategoryIcon },
         { value: "mfg", label: "Manufacturing Date", icon: CategoryIcon },
         { value: "expiry", label: "Expiry Date", icon: WarningIcon },
         { value: "manufacturer", label: "Manufacturer", icon: CategoryIcon },
@@ -360,7 +401,17 @@ const InventoryPage = () => {
                         {statusLegend.map((stat, index) => (
                             <Grow in timeout={1000 + index * 200} key={stat.label}>
                                 <Grid item xs={12} sm={6} md={3}>
-                                    <Card sx={cardSx}>
+                                    <Card
+                                        sx={{
+                                            ...cardSx,
+                                            cursor: "pointer",
+                                            ...(selectedFilter === stat.status && {
+                                                border: `3px solid ${stat.border}`,
+                                                boxShadow: `0 0 20px ${stat.color}`
+                                            })
+                                        }}
+                                        onClick={() => setSelectedFilter(selectedFilter === stat.status ? null : stat.status)}
+                                    >
                                         <CardContent sx={{ textAlign: "center", p: 3 }}>
                                             <Avatar sx={{ 
                                                 bgcolor: `${stat.textColor}15`, 
@@ -460,8 +511,8 @@ const InventoryPage = () => {
                                     <TableHead sx={{ bgcolor: "rgba(12, 60, 60, 0.04)" }}>
                                         <TableRow>
                                             {[
-                                                "Generic Name", "Brand Name", "Form", "Strength", 
-                                                "Stock (units)", "Unit Price (Rs.)", "Batch No.", 
+                                                "Generic Name", "Brand Name", "Form", "Strength",
+                                                "Stock (units)", "Unit Price (Rs.)",
                                                 "MFG Date", "Expiry Date", "Manufacturer", "Category"
                                             ].map((header) => (
                                                 <TableCell
@@ -487,7 +538,7 @@ const InventoryPage = () => {
                                     <TableBody>
                                         {filtered.length === 0 ? (
                                             <TableRow>
-                                                <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
+                                                <TableCell colSpan={10} align="center" sx={{ py: 6 }}>
                                                     <Box display="flex" flexDirection="column" alignItems="center">
                                                         <Avatar sx={{ 
                                                             bgcolor: `${THEME.gray}15`, 
@@ -578,32 +629,24 @@ const InventoryPage = () => {
                                                                     }}
                                                                 />
                                                             </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
+                                                            <TableCell sx={{
+                                                                fontSize: "1rem",
+                                                                color: rowStyle.color,
+                                                                textAlign: "center",
                                                                 fontWeight: 600,
-                                                                py: 2 
+                                                                py: 2
                                                             }}>
-                                                                {med.unitPrice !== null && med.unitPrice !== undefined 
-                                                                    ? `Rs. ${parseFloat(med.unitPrice).toFixed(2)}` 
+                                                                {med.unitPrice !== null && med.unitPrice !== undefined
+                                                                    ? `Rs. ${parseFloat(med.unitPrice).toFixed(2)}`
                                                                     : "-"}
                                                             </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                py: 2 
-                                                            }}>
-                                                                {med.batch}
-                                                            </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                py: 2, 
-                                                                whiteSpace: 'nowrap', 
-                                                                width: 140 
+                                                            <TableCell sx={{
+                                                                fontSize: "1rem",
+                                                                color: rowStyle.color,
+                                                                textAlign: "center",
+                                                                py: 2,
+                                                                whiteSpace: 'nowrap',
+                                                                width: 140
                                                             }}>
                                                                 {med.mfg}
                                                             </TableCell>
