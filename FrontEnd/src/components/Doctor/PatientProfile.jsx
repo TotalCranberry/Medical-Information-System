@@ -348,11 +348,7 @@ const PatientProfile = () => {
 
   const handleWritePrescription = () => {
     const apptId = currentAppointmentId;
-    if (!apptId) {
-      alert("No appointment selected. Open this profile from an appointment, or include ?appointmentId=...");
-      return;
-    }
-    navigate(`/doctor/prescriptions?appointmentId=${apptId}`, {
+    navigate(`/doctor/prescriptions${apptId ? `?appointmentId=${apptId}` : ''}`, {
       state: {
         appointmentId: apptId,
         patient: patientData,
