@@ -22,7 +22,6 @@ public class Medicine {
     private String form;
     private String strength;
     private int stock;
-    private String batch;
     private String mfg;
     private String expiry;
     private String manufacturer;

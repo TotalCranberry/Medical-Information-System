@@ -1,661 +1,428 @@
 import React, { useState, useEffect } from "react";
 import {
-    Box,
-    Typography,
-    Paper,
-    TextField,
-    Table,
-    TableHead,
-    TableRow,
-    TableCell,
-    TableBody,
-    Grid,
-    MenuItem,
-    Chip,
-    Avatar,
-    InputAdornment,
-    IconButton,
-    Fade,
-    Grow,
-    Skeleton,
-    Card,
-    CardContent
+  Box,
+  Typography,
+  Paper,
+  TextField,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  Grid,
+  MenuItem,
+  Chip,
+  Avatar,
+  InputAdornment,
+  IconButton,
+  Card,
+  CardContent
 } from "@mui/material";
+
+// Cleaned up icon imports to only use necessary ones
 import {
-    Search as SearchIcon,
-    Clear as ClearIcon,
-    Inventory as InventoryIcon,
-    Warning as WarningIcon,
-    Error as ErrorIcon,
-    CheckCircle as CheckCircleIcon,
-    LocalPharmacy as PharmacyIcon,
-    TrendingUp as TrendingUpIcon,
-    Category as CategoryIcon
+  Search as SearchIcon,
+  Clear as ClearIcon,
+  Inventory as InventoryIcon,
+  Warning as WarningIcon,
+  Error as ErrorIcon,
+  CheckCircle as CheckCircleIcon,
+  LocalPharmacy as PharmacyIcon,
+  TrendingUp as TrendingUpIcon,
+  Category as CategoryIcon
 } from "@mui/icons-material";
+
+// API Function
 import { getAllMedicines } from "../../api/medicine";
 
-const THEME = {
-    primary: "#0C3C3C",
-    accent: "#45D27A",
-    gray: "#6C6B6B",
-    white: "#ffffff",
-    lightGray: "#F8F9FA",
-    success: "#4CAF50",
-    warning: "#FF9800",
-    error: "#F44336",
-    background: "#FAFBFC"
+// --- Simple Color Configuration ---
+const colors = {
+  primary: "#0C3C3C",    // Dark Teal
+  accent: "#45D27A",     // Bright Green
+  gray: "#6C6B6B",
+  white: "#ffffff",
+  lightGray: "#F8F9FA",
+  success: "#4CAF50",
+  warning: "#FF9800",
+  error: "#F44336",
+  background: "#FAFBFC"
 };
-
-const inputSx = {
-    "& .MuiOutlinedInput-root": {
-        borderRadius: "16px",
-        backgroundColor: THEME.white,
-        transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-        boxShadow: "0 2px 8px rgba(12, 60, 60, 0.08)",
-        "&:hover": {
-            boxShadow: "0 4px 16px rgba(12, 60, 60, 0.12)",
-            transform: "translateY(-1px)",
-        },
-        "&.Mui-focused": {
-            boxShadow: "0 6px 20px rgba(69, 210, 122, 0.2)",
-            transform: "translateY(-2px)",
-        }
-    },
-    "& .MuiOutlinedInput-notchedOutline": {
-        borderColor: "rgba(12, 60, 60, 0.2)",
-        borderWidth: 1,
-    },
-    "&:hover .MuiOutlinedInput-notchedOutline": {
-        borderColor: THEME.primary,
-    },
-    "& .Mui-focused .MuiOutlinedInput-notchedOutline": {
-        borderColor: THEME.accent,
-        borderWidth: 2,
-    },
-    "& .MuiInputLabel-root": {
-        color: THEME.gray,
-        "&.Mui-focused": {
-            color: THEME.primary,
-        },
-    },
-};
-
-const cardSx = {
-    borderRadius: "20px",
-    background: `linear-gradient(135deg, ${THEME.white} 0%, #f8fffe 100%)`,
-    border: `1px solid rgba(69, 210, 122, 0.1)`,
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    "&:hover": {
-        transform: "translateY(-4px)",
-        boxShadow: "0 12px 35px rgba(12, 60, 60, 0.15)",
-    },
-};
-
-const tableRowSx = (rowStyle) => ({
-    backgroundColor: rowStyle.bg,
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    "&:hover": {
-        backgroundColor: rowStyle.bg === "transparent" ? "rgba(69, 210, 122, 0.04)" : rowStyle.bg,
-        transform: "scale(1.01)",
-        "& .MuiTableCell-root": {
-            borderColor: "rgba(69, 210, 122, 0.2)",
-        }
-    },
-});
 
 const InventoryPage = () => {
-    const [medicines, setMedicines] = useState([]);
-    const [loading, setLoading] = useState(true);
-    const [searchMethod, setSearchMethod] = useState("generic");
-    const [searchTerm, setSearchTerm] = useState("");
+  // --- State Variables ---
+  const [medicines, setMedicines] = useState([]);
+  const [isLoading, setIsLoading] = useState(true);
+  
+  // Search & Filter State
+  const [searchMethod, setSearchMethod] = useState("generic");
+  const [searchTerm, setSearchTerm] = useState("");
+  const [selectedFilter, setSelectedFilter] = useState(null);
 
-    useEffect(() => {
-        const loadData = async () => {
-            setLoading(true);
-            try {
-                const data = await getAllMedicines();
-                setMedicines(data);
-                // Small delay for smooth animation
-                setTimeout(() => setLoading(false), 500);
-            } catch (err) {
-                console.error("Error fetching medicines:", err);
-                setLoading(false);
-            }
-        };
-        loadData();
-    }, []);
-
-    const getRowColor = (medicine) => {
-        const currentDate = new Date();
-        const expiryDate = new Date(medicine.expiry);
-        const timeDifference = expiryDate.getTime() - currentDate.getTime();
-        const daysDifference = Math.ceil(timeDifference / (1000 * 3600 * 24));
-
-        // Use configurable low stock threshold, fallback to 50 if not set
-        const lowStockThreshold = medicine.lowStockQuantity ? parseInt(medicine.lowStockQuantity) : 50;
-
-        if (daysDifference < 0) {
-            return { bg: "#ffebee", color: "#c62828", status: "expired" };
-        } else if (daysDifference <= 30) {
-            return { bg: "#fff3e0", color: "#f57c00", status: "near-expiry" };
-        } else if (medicine.stock < lowStockThreshold) {
-            return { bg: "#fff3cd", color: "#856404", status: "low-stock" };
+  // --- 1. Load Data from API ---
+  useEffect(() => {
+    const loadData = async () => {
+      setIsLoading(true);
+      try {
+        const data = await getAllMedicines();
+        
+        // Safety check: ensure data is an array
+        if (Array.isArray(data)) {
+          setMedicines(data);
+        } else {
+          setMedicines([]);
         }
-        return { bg: "transparent", color: "inherit", status: "normal" };
+      } catch (error) {
+        console.error("Error loading inventory:", error);
+      }
+      
+      // Small delay to prevent flickering
+      setTimeout(() => {
+        setIsLoading(false);
+      }, 500);
     };
 
-    const filtered = medicines.filter((med) => {
-        const value = med[searchMethod]?.toString().toLowerCase();
-        return value?.includes((searchTerm || "").toLowerCase());
-    });
+    loadData();
+  }, []);
 
-    // Calculate statistics
-    const stats = {
-        total: medicines.length,
-        expired: medicines.filter(med => {
-            const currentDate = new Date();
-            const expiryDate = new Date(med.expiry);
-            return expiryDate < currentDate;
-        }).length,
-        nearExpiry: medicines.filter(med => {
-            const currentDate = new Date();
-            const expiryDate = new Date(med.expiry);
-            const daysDifference = Math.ceil((expiryDate.getTime() - currentDate.getTime()) / (1000 * 3600 * 24));
-            return daysDifference >= 0 && daysDifference <= 30;
-        }).length,
-        lowStock: medicines.filter(med => {
-            const lowStockThreshold = med.lowStockQuantity ? parseInt(med.lowStockQuantity) : 50;
-            return med.stock < lowStockThreshold;
-        }).length,
-    };
+  // --- 2. Helper Functions for Status Checks ---
 
-    const clearSearch = () => {
-        setSearchTerm("");
-    };
+  // Check if a medicine is expired
+  const checkExpired = (medicine) => {
+    if (!medicine.expiry) return false;
+    const today = new Date();
+    const expiryDate = new Date(medicine.expiry);
+    return expiryDate < today;
+  };
 
-    const statusLegend = [
-        { 
-            color: "#ffebee", 
-            border: "#c62828", 
-            label: "Expired", 
-            textColor: "#c62828",
-            icon: ErrorIcon,
-            count: stats.expired
-        },
-        { 
-            color: "#fff3e0", 
-            border: "#f57c00", 
-            label: "Near Expiry (≤30 days)", 
-            textColor: "#f57c00",
-            icon: WarningIcon,
-            count: stats.nearExpiry
-        },
-        {
-            color: "#fff3cd",
-            border: "#856404",
-            label: "Low Stock (below threshold)",
-            textColor: "#856404",
-            icon: TrendingUpIcon,
-            count: stats.lowStock
-        },
-        { 
-            color: "#e8f5e8", 
-            border: "#4caf50", 
-            label: "Normal Stock", 
-            textColor: "#2e7d32",
-            icon: CheckCircleIcon,
-            count: stats.total - stats.expired - stats.nearExpiry - stats.lowStock
-        }
-    ];
+  // Check if a medicine expires within 30 days
+  const checkNearExpiry = (medicine) => {
+    if (!medicine.expiry) return false;
+    const today = new Date();
+    const expiryDate = new Date(medicine.expiry);
+    
+    // Calculate difference in days
+    const timeDiff = expiryDate.getTime() - today.getTime();
+    const daysDiff = Math.ceil(timeDiff / (1000 * 3600 * 24));
 
-    const searchOptions = [
-        { value: "generic", label: "Generic Name", icon: PharmacyIcon },
-        { value: "name", label: "Brand Name", icon: PharmacyIcon },
-        { value: "form", label: "Form", icon: CategoryIcon },
-        { value: "strength", label: "Strength", icon: TrendingUpIcon },
-        { value: "stock", label: "Stock", icon: InventoryIcon },
-        { value: "batch", label: "Batch Number", icon: CategoryIcon },
-        { value: "mfg", label: "Manufacturing Date", icon: CategoryIcon },
-        { value: "expiry", label: "Expiry Date", icon: WarningIcon },
-        { value: "manufacturer", label: "Manufacturer", icon: CategoryIcon },
-        { value: "category", label: "Category", icon: CategoryIcon },
-    ];
+    // Return true if it's in the future but less than 30 days away
+    return daysDiff >= 0 && daysDiff <= 30;
+  };
 
-    if (loading) {
-        return (
-            <Box sx={{ px: 3, py: 5, backgroundColor: THEME.background, minHeight: "100vh" }}>
-                <Skeleton variant="text" width={400} height={60} sx={{ mb: 5 }} />
-                
-                {/* Search Section Skeleton */}
-                <Paper elevation={8} sx={{ p: 4, borderRadius: "24px", mb: 4 }}>
-                    <Skeleton variant="text" width={200} height={40} sx={{ mb: 3 }} />
-                    <Grid container spacing={3}>
-                        <Grid item xs={12} md={3}>
-                            <Skeleton variant="rectangular" height={56} sx={{ borderRadius: "16px" }} />
-                        </Grid>
-                        <Grid item xs={12} md={9}>
-                            <Skeleton variant="rectangular" height={56} sx={{ borderRadius: "16px" }} />
-                        </Grid>
-                    </Grid>
-                </Paper>
+  // Check if stock is low
+  const checkLowStock = (medicine) => {
+    // Use the medicine's specific threshold, or default to 50
+    let threshold = 50;
+    if (medicine.lowStockQuantity) {
+      threshold = parseInt(medicine.lowStockQuantity);
+    }
+    return medicine.stock < threshold;
+  };
 
-                {/* Statistics Cards Skeleton */}
-                <Grid container spacing={3} mb={4}>
-                    {[1, 2, 3, 4].map((i) => (
-                        <Grid item xs={12} sm={6} md={3} key={i}>
-                            <Skeleton variant="rectangular" height={120} sx={{ borderRadius: "20px" }} />
-                        </Grid>
-                    ))}
-                </Grid>
+  // Check if medicine is in good standing
+  const checkNormal = (medicine) => {
+    const isBad = checkExpired(medicine) || checkNearExpiry(medicine) || checkLowStock(medicine);
+    return !isBad;
+  };
 
-                {/* Table Skeleton */}
-                <Paper elevation={8} sx={{ p: 4, borderRadius: "24px" }}>
-                    <Skeleton variant="text" width={300} height={40} sx={{ mb: 3 }} />
-                    {[1, 2, 3, 4, 5].map((i) => (
-                        <Skeleton key={i} variant="rectangular" height={60} sx={{ mb: 1, borderRadius: "8px" }} />
-                    ))}
-                </Paper>
-            </Box>
-        );
+  // Get row colors based on status
+  const getRowStyle = (medicine) => {
+    if (checkExpired(medicine)) {
+      return { bg: "#ffebee", color: colors.error };
+    }
+    if (checkNearExpiry(medicine)) {
+      return { bg: "#fff3e0", color: colors.warning };
+    }
+    if (checkLowStock(medicine)) {
+      return { bg: "#fff3cd", color: "#856404" }; // Dark yellow text
+    }
+    // Default
+    return { bg: "transparent", color: "inherit" };
+  };
+
+  // --- 3. Filtering Logic ---
+  
+  const filteredMedicines = medicines.filter((med) => {
+    // Step 1: Check Search Term
+    let matchesSearch = true;
+    if (searchTerm) {
+      // Get the value to search (e.g., generic name, brand name)
+      const value = (med[searchMethod] || "").toString().toLowerCase();
+      if (!value.includes(searchTerm.toLowerCase())) {
+        matchesSearch = false;
+      }
     }
 
+    // Step 2: Check Status Filter (the boxes at the top)
+    let matchesFilter = true;
+    if (selectedFilter) {
+      if (selectedFilter === "expired" && !checkExpired(med)) matchesFilter = false;
+      else if (selectedFilter === "near-expiry" && !checkNearExpiry(med)) matchesFilter = false;
+      else if (selectedFilter === "low-stock" && !checkLowStock(med)) matchesFilter = false;
+      else if (selectedFilter === "normal" && !checkNormal(med)) matchesFilter = false;
+    }
+
+    return matchesSearch && matchesFilter;
+  });
+
+  // --- 4. Statistics for Cards ---
+  const stats = {
+    total: medicines.length,
+    expired: medicines.filter(checkExpired).length,
+    nearExpiry: medicines.filter(checkNearExpiry).length,
+    lowStock: medicines.filter(checkLowStock).length,
+    normal: medicines.filter(checkNormal).length
+  };
+
+  // Data for the top summary cards
+  const statusCards = [
+    { id: "expired", label: "Expired", count: stats.expired, color: colors.error, icon: ErrorIcon, bg: "#ffebee" },
+    { id: "near-expiry", label: "Near Expiry", count: stats.nearExpiry, color: colors.warning, icon: WarningIcon, bg: "#fff3e0" },
+    { id: "low-stock", label: "Low Stock", count: stats.lowStock, color: "#856404", icon: TrendingUpIcon, bg: "#fff3cd" },
+    { id: "normal", label: "Normal Stock", count: stats.normal, color: colors.success, icon: CheckCircleIcon, bg: "#e8f5e8" },
+    { id: null, label: "Show All", count: stats.total, color: colors.primary, icon: InventoryIcon, bg: "#f3f4f6" }
+  ];
+
+  const searchOptions = [
+    { value: "generic", label: "Generic Name" },
+    { value: "name", label: "Brand Name" },
+    { value: "category", label: "Category" },
+  ];
+
+  // --- 5. Render Loading State ---
+  if (isLoading) {
     return (
-        <Box sx={{ px: 3, py: 5, backgroundColor: THEME.background, minHeight: "100vh" }}>
-            <Fade in timeout={800}>
-                <Box>
-                    {/* Header */}
-                    <Box display="flex" alignItems="center" mb={5}>
-                        <Avatar sx={{ 
-                            bgcolor: THEME.primary, 
-                            mr: 2, 
-                            width: 56, 
-                            height: 56,
-                            boxShadow: "0 8px 25px rgba(12, 60, 60, 0.3)"
-                        }}>
-                            <InventoryIcon fontSize="large" />
-                        </Avatar>
-                        <Typography
-                            variant="h3"
-                            sx={{ 
-                                color: THEME.primary, 
-                                fontWeight: 800,
-                                background: `linear-gradient(135deg, ${THEME.primary} 0%, ${THEME.accent} 100%)`,
-                                backgroundClip: "text",
-                                textFillColor: "transparent",
-                                WebkitBackgroundClip: "text",
-                                WebkitTextFillColor: "transparent",
-                                lineHeight: 1.3,
-                                paddingBottom: "4px"
-                            }}
-                        >
-                            Inventory Management
-                        </Typography>
-                    </Box>
-
-                    {/* Search Section */}
-                    <Paper elevation={8} sx={{ ...cardSx, p: 4, mb: 4 }}>
-                        <Typography variant="h6" sx={{ 
-                            mb: 3, 
-                            fontWeight: 600, 
-                            color: THEME.primary,
-                            display: "flex",
-                            alignItems: "center"
-                        }}>
-                            <SearchIcon sx={{ mr: 1 }} />
-                            Search Medicine
-                        </Typography>
-                        <Grid container spacing={3}>
-                            <Grid item xs={12} md={3}>
-                                <TextField
-                                    select
-                                    fullWidth
-                                    label="Search By"
-                                    size="medium"
-                                    value={searchMethod}
-                                    onChange={(e) => {
-                                        setSearchMethod(e.target.value);
-                                        setSearchTerm("");
-                                    }}
-                                    sx={inputSx}
-                                >
-                                    {searchOptions.map((option) => (
-                                        <MenuItem key={option.value} value={option.value}>
-                                            <Box display="flex" alignItems="center">
-                                                <option.icon sx={{ mr: 1, fontSize: "1.2rem" }} />
-                                                {option.label}
-                                            </Box>
-                                        </MenuItem>
-                                    ))}
-                                </TextField>
-                            </Grid>
-                            <Grid item xs={12} md={9}>
-                                <TextField
-                                    fullWidth
-                                    label={`Search by ${searchOptions.find(opt => opt.value === searchMethod)?.label || searchMethod}`}
-                                    size="medium"
-                                    value={searchTerm}
-                                    onChange={(e) => setSearchTerm(e.target.value)}
-                                    sx={inputSx}
-                                    InputProps={{
-                                        startAdornment: (
-                                            <InputAdornment position="start">
-                                                <SearchIcon sx={{ color: THEME.gray }} />
-                                            </InputAdornment>
-                                        ),
-                                        endAdornment: searchTerm && (
-                                            <InputAdornment position="end">
-                                                <IconButton onClick={clearSearch} size="small">
-                                                    <ClearIcon />
-                                                </IconButton>
-                                            </InputAdornment>
-                                        ),
-                                    }}
-                                />
-                            </Grid>
-                        </Grid>
-                    </Paper>
-
-                    {/* Statistics Cards */}
-                    <Grid container spacing={3} mb={4}>
-                        {statusLegend.map((stat, index) => (
-                            <Grow in timeout={1000 + index * 200} key={stat.label}>
-                                <Grid item xs={12} sm={6} md={3}>
-                                    <Card sx={cardSx}>
-                                        <CardContent sx={{ textAlign: "center", p: 3 }}>
-                                            <Avatar sx={{ 
-                                                bgcolor: `${stat.textColor}15`, 
-                                                color: stat.textColor, 
-                                                width: 48, 
-                                                height: 48,
-                                                mx: "auto",
-                                                mb: 2
-                                            }}>
-                                                <stat.icon fontSize="medium" />
-                                            </Avatar>
-                                            <Typography variant="h4" sx={{ 
-                                                fontWeight: 800, 
-                                                color: stat.textColor,
-                                                mb: 1
-                                            }}>
-                                                {stat.count}
-                                            </Typography>
-                                            <Typography variant="body2" sx={{ 
-                                                color: THEME.gray,
-                                                fontWeight: 600,
-                                                fontSize: "0.9rem"
-                                            }}>
-                                                {stat.label}
-                                            </Typography>
-                                        </CardContent>
-                                    </Card>
-                                </Grid>
-                            </Grow>
-                        ))}
-                    </Grid>
-
-                    {/* Status Legend */}
-                    <Paper elevation={8} sx={{ ...cardSx, p: 3, mb: 4 }}>
-                        <Typography variant="h6" sx={{ 
-                            mb: 3, 
-                            fontWeight: 600, 
-                            textAlign: "center", 
-                            color: THEME.primary
-                        }}>
-                            Status Legend
-                        </Typography>
-                        <Box sx={{ 
-                            display: "flex", 
-                            flexWrap: "wrap", 
-                            gap: 3, 
-                            justifyContent: "center", 
-                            alignItems: "center" 
-                        }}>
-                            {statusLegend.map((status, i) => (
-                                <Fade in timeout={500 + i * 100} key={status.label}>
-                                    <Box sx={{ display: "flex", alignItems: "center", gap: 1.5 }}>
-                                        <Avatar sx={{ 
-                                            width: 24, 
-                                            height: 24, 
-                                            backgroundColor: status.color, 
-                                            border: `2px solid ${status.border}`,
-                                            borderRadius: "6px"
-                                        }}>
-                                            <status.icon sx={{ fontSize: "0.8rem", color: status.textColor }} />
-                                        </Avatar>
-                                        <Typography sx={{ 
-                                            fontSize: "1rem", 
-                                            color: status.textColor, 
-                                            fontWeight: 600 
-                                        }}>
-                                            {status.label} ({status.count})
-                                        </Typography>
-                                    </Box>
-                                </Fade>
-                            ))}
-                        </Box>
-                    </Paper>
-
-                    {/* Medicine Table */}
-                    <Fade in timeout={600}>
-                        <Paper elevation={12} sx={{ 
-                            borderRadius: "24px",
-                            overflow: "hidden",
-                            background: `linear-gradient(135deg, ${THEME.white} 0%, #fafffe 100%)`,
-                            border: `1px solid rgba(12, 60, 60, 0.08)`
-                        }}>
-                            <Box sx={{ p: 3, borderBottom: `1px solid rgba(12, 60, 60, 0.1)` }}>
-                                <Typography variant="h6" sx={{ 
-                                    color: THEME.primary, 
-                                    fontWeight: 600,
-                                    display: "flex",
-                                    alignItems: "center"
-                                }}>
-                                    <PharmacyIcon sx={{ mr: 1 }} />
-                                    Available Medicines ({filtered.length} items)
-                                </Typography>
-                            </Box>
-                            
-                            <Box sx={{ overflowX: "auto" }}>
-                                <Table sx={{ minWidth: 1100 }}>
-                                    <TableHead sx={{ bgcolor: "rgba(12, 60, 60, 0.04)" }}>
-                                        <TableRow>
-                                            {[
-                                                "Generic Name", "Brand Name", "Form", "Strength", 
-                                                "Stock (units)", "Unit Price (Rs.)", "Batch No.", 
-                                                "MFG Date", "Expiry Date", "Manufacturer", "Category"
-                                            ].map((header) => (
-                                                <TableCell
-                                                    key={header}
-                                                    sx={{
-                                                        fontSize: "1rem",
-                                                        fontWeight: 700,
-                                                        color: THEME.primary,
-                                                        textAlign: "center",
-                                                        py: 2,
-                                                        whiteSpace: 'nowrap',
-                                                        width: header === "Brand Name" ? 150 : 
-                                                               (header === "MFG Date" || header === "Expiry Date") ? 140 : 
-                                                               'auto',
-                                                    }}
-                                                >
-                                                    {header}
-                                                </TableCell>
-                                            ))}
-                                        </TableRow>
-                                    </TableHead>
-
-                                    <TableBody>
-                                        {filtered.length === 0 ? (
-                                            <TableRow>
-                                                <TableCell colSpan={11} align="center" sx={{ py: 6 }}>
-                                                    <Box display="flex" flexDirection="column" alignItems="center">
-                                                        <Avatar sx={{ 
-                                                            bgcolor: `${THEME.gray}15`, 
-                                                            color: THEME.gray,
-                                                            width: 64,
-                                                            height: 64,
-                                                            mb: 2
-                                                        }}>
-                                                            <InventoryIcon fontSize="large" />
-                                                        </Avatar>
-                                                        <Typography variant="h6" color={THEME.gray} fontWeight={600}>
-                                                            No matching medicines found
-                                                        </Typography>
-                                                        <Typography variant="body2" color={THEME.gray} mt={1}>
-                                                            {searchTerm 
-                                                                ? "Try adjusting your search criteria"
-                                                                : "No medicines available in inventory"
-                                                            }
-                                                        </Typography>
-                                                    </Box>
-                                                </TableCell>
-                                            </TableRow>
-                                        ) : (
-                                            filtered.map((med, i) => {
-                                                const rowStyle = getRowColor(med);
-                                                return (
-                                                    <Fade in timeout={300 + i * 50} key={i}>
-                                                        <TableRow sx={tableRowSx(rowStyle)}>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                fontWeight: 600,
-                                                                py: 2 
-                                                            }}>
-                                                                {med.generic}
-                                                            </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                fontWeight: 500,
-                                                                py: 2, 
-                                                                whiteSpace: 'nowrap', 
-                                                                width: 140 
-                                                            }}>
-                                                                {med.name}
-                                                            </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                py: 2 
-                                                            }}>
-                                                                <Chip 
-                                                                    label={med.form}
-                                                                    size="small"
-                                                                    sx={{ 
-                                                                        bgcolor: `${THEME.primary}15`,
-                                                                        color: THEME.primary,
-                                                                        fontWeight: 600
-                                                                    }}
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                fontWeight: 600,
-                                                                py: 2 
-                                                            }}>
-                                                                {med.strength}
-                                                            </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                fontWeight: 700,
-                                                                py: 2 
-                                                            }}>
-                                                                <Chip 
-                                                                    label={`${med.stock} units`}
-                                                                    size="small"
-                                                                    sx={{ 
-                                                                        bgcolor: med.stock < 50 ? `${THEME.warning}15` : `${THEME.success}15`,
-                                                                        color: med.stock < 50 ? THEME.warning : THEME.success,
-                                                                        fontWeight: 700
-                                                                    }}
-                                                                />
-                                                            </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                fontWeight: 600,
-                                                                py: 2 
-                                                            }}>
-                                                                {med.unitPrice !== null && med.unitPrice !== undefined 
-                                                                    ? `Rs. ${parseFloat(med.unitPrice).toFixed(2)}` 
-                                                                    : "-"}
-                                                            </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                py: 2 
-                                                            }}>
-                                                                {med.batch}
-                                                            </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                py: 2, 
-                                                                whiteSpace: 'nowrap', 
-                                                                width: 140 
-                                                            }}>
-                                                                {med.mfg}
-                                                            </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                fontWeight: 700,
-                                                                py: 2, 
-                                                                whiteSpace: 'nowrap', 
-                                                                width: 140 
-                                                            }}>
-                                                                {med.expiry}
-                                                            </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                py: 2 
-                                                            }}>
-                                                                {med.manufacturer}
-                                                            </TableCell>
-                                                            <TableCell sx={{ 
-                                                                fontSize: "1rem", 
-                                                                color: rowStyle.color, 
-                                                                textAlign: "center", 
-                                                                py: 2 
-                                                            }}>
-                                                                <Chip 
-                                                                    label={med.category}
-                                                                    size="small"
-                                                                    sx={{ 
-                                                                        bgcolor: `${THEME.accent}15`,
-                                                                        color: THEME.accent,
-                                                                        fontWeight: 600
-                                                                    }}
-                                                                />
-                                                            </TableCell>
-                                                        </TableRow>
-                                                    </Fade>
-                                                );
-                                            })
-                                        )}
-                                    </TableBody>
-                                </Table>
-                            </Box>
-                        </Paper>
-                    </Fade>
-                </Box>
-            </Fade>
-        </Box>
+      <Box sx={{ padding: 4, backgroundColor: colors.background, minHeight: "100vh" }}>
+        <Typography variant="h5" color={colors.gray}>Loading inventory...</Typography>
+      </Box>
     );
+  }
+
+  // --- 6. Main Render ---
+  return (
+    <Box sx={{ padding: 4, backgroundColor: colors.background, minHeight: "100vh" }}>
+      
+      {/* Header */}
+      <Box display="flex" alignItems="center" marginBottom={4}>
+        <Avatar sx={{ bgcolor: colors.primary, marginRight: 2, width: 56, height: 56 }}>
+          <InventoryIcon fontSize="large" />
+        </Avatar>
+        
+        {/* Refactor Note: Removed linear-gradient styling. Used solid color. */}
+        <Typography variant="h3" sx={{ color: colors.primary, fontWeight: 800 }}>
+          Inventory Management
+        </Typography>
+      </Box>
+
+      {/* Search Section */}
+      {/* Refactor Note: Removed gradient background. */}
+      <Paper 
+        elevation={2} 
+        sx={{ 
+          padding: 4, 
+          marginBottom: 4, 
+          borderRadius: "20px",
+          backgroundColor: colors.white,
+          border: "1px solid rgba(0,0,0,0.05)"
+        }}
+      >
+        <Typography variant="h6" sx={{ marginBottom: 2, fontWeight: 600, color: colors.primary }}>
+          Search Medicine
+        </Typography>
+        
+        <Grid container spacing={3}>
+          {/* Dropdown */}
+          <Grid item xs={12} md={3}>
+            <TextField
+              select
+              fullWidth
+              label="Search By"
+              value={searchMethod}
+              onChange={(e) => {
+                setSearchMethod(e.target.value);
+                setSearchTerm(""); // Reset search text when changing method
+              }}
+              variant="outlined"
+            >
+              {searchOptions.map((option) => (
+                <MenuItem key={option.value} value={option.value}>
+                  {option.label}
+                </MenuItem>
+              ))}
+            </TextField>
+          </Grid>
+
+          {/* Text Input */}
+          <Grid item xs={12} md={9}>
+            <TextField
+              fullWidth
+              label="Type to search..."
+              value={searchTerm}
+              onChange={(e) => setSearchTerm(e.target.value)}
+              variant="outlined"
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: colors.gray }} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchTerm && (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setSearchTerm("")}>
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+          </Grid>
+        </Grid>
+      </Paper>
+
+      {/* Statistics / Filter Cards */}
+      <Grid container spacing={3} marginBottom={4}>
+        {statusCards.map((card) => (
+          <Grid item xs={12} sm={6} md={2.4} key={card.label}>
+            <Card
+              sx={{
+                borderRadius: "20px",
+                cursor: "pointer",
+                border: selectedFilter === card.id ? ("3px solid " + card.color) : "1px solid transparent",
+                backgroundColor: card.bg,
+                boxShadow: "0 2px 8px rgba(0,0,0,0.1)"
+              }}
+              onClick={() => {
+                // Toggle filter: if clicking the same one, turn it off (show all)
+                if (selectedFilter === card.id) setSelectedFilter(null);
+                else setSelectedFilter(card.id);
+              }}
+            >
+              <CardContent sx={{ textAlign: "center", padding: 2 }}>
+                <Avatar 
+                  sx={{ 
+                    bgcolor: colors.white, 
+                    color: card.color, 
+                    width: 40, 
+                    height: 40, 
+                    margin: "0 auto", 
+                    marginBottom: 1 
+                  }}
+                >
+                  <card.icon fontSize="small" />
+                </Avatar>
+                
+                <Typography variant="h4" sx={{ fontWeight: 800, color: card.color }}>
+                  {card.count}
+                </Typography>
+                
+                <Typography variant="body2" sx={{ color: colors.primary, fontWeight: 600 }}>
+                  {card.label}
+                </Typography>
+              </CardContent>
+            </Card>
+          </Grid>
+        ))}
+      </Grid>
+
+      {/* Data Table */}
+      <Paper 
+        elevation={4} 
+        sx={{ 
+          borderRadius: "24px", 
+          overflow: "hidden", 
+          border: "1px solid #eee",
+          backgroundColor: colors.white 
+        }}
+      >
+        <Box sx={{ padding: 3, borderBottom: "1px solid #eee" }}>
+          <Typography variant="h6" sx={{ color: colors.primary, fontWeight: 600, display: "flex", alignItems: "center" }}>
+            <PharmacyIcon sx={{ marginRight: 1 }} />
+            Available Medicines ({filteredMedicines.length})
+          </Typography>
+        </Box>
+        
+        <Box sx={{ overflowX: "auto" }}>
+          <Table sx={{ minWidth: 1100 }}>
+            <TableHead sx={{ backgroundColor: colors.lightGray }}>
+              <TableRow>
+                <TableCell><b>Generic Name</b></TableCell>
+                <TableCell><b>Brand Name</b></TableCell>
+                <TableCell align="center"><b>Form</b></TableCell>
+                <TableCell align="center"><b>Strength</b></TableCell>
+                <TableCell align="center"><b>Stock</b></TableCell>
+                <TableCell align="center"><b>Price (Rs.)</b></TableCell>
+                <TableCell align="center"><b>Expiry Date</b></TableCell>
+                <TableCell align="center"><b>Category</b></TableCell>
+              </TableRow>
+            </TableHead>
+
+            <TableBody>
+              {filteredMedicines.length === 0 ? (
+                <TableRow>
+                  <TableCell colSpan={8} align="center" sx={{ padding: 6 }}>
+                    <Box display="flex" flexDirection="column" alignItems="center">
+                      <Avatar sx={{ bgcolor: colors.lightGray, color: colors.gray, marginBottom: 2 }}>
+                        <InventoryIcon />
+                      </Avatar>
+                      <Typography variant="h6" color={colors.gray}>
+                        No matching medicines found
+                      </Typography>
+                      <Typography variant="body2" color={colors.gray}>
+                        Try adjusting your search.
+                      </Typography>
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ) : (
+                filteredMedicines.map((med, index) => {
+                  const style = getRowStyle(med);
+                  return (
+                    <TableRow 
+                      key={index} 
+                      sx={{ 
+                        backgroundColor: style.bg,
+                        "&:hover": { backgroundColor: style.bg === "transparent" ? "#f5f5f5" : style.bg }
+                      }}
+                    >
+                      <TableCell sx={{ color: style.color, fontWeight: "bold" }}>
+                        {med.generic}
+                      </TableCell>
+                      <TableCell sx={{ color: style.color }}>
+                        {med.name}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip label={med.form} size="small" sx={{ bgcolor: colors.primary + "20", color: colors.primary }} />
+                      </TableCell>
+                      <TableCell align="center">{med.strength}</TableCell>
+                      <TableCell align="center">
+                        <Chip 
+                          label={med.stock + " units"} 
+                          size="small" 
+                          sx={{ 
+                            bgcolor: med.stock < 50 ? colors.warning + "20" : colors.success + "20",
+                            color: med.stock < 50 ? colors.warning : colors.success,
+                            fontWeight: "bold"
+                          }}
+                        />
+                      </TableCell>
+                      <TableCell align="center">
+                        {med.unitPrice ? parseFloat(med.unitPrice).toFixed(2) : "-"}
+                      </TableCell>
+                      <TableCell align="center" sx={{ color: style.color, fontWeight: "bold" }}>
+                        {med.expiry}
+                      </TableCell>
+                      <TableCell align="center">
+                        <Chip label={med.category} size="small" sx={{ bgcolor: colors.accent + "20", color: colors.accent }} />
+                      </TableCell>
+                    </TableRow>
+                  );
+                })
+              )}
+            </TableBody>
+          </Table>
+        </Box>
+      </Paper>
+    </Box>
+  );
 };
 
 export default InventoryPage;

@@ -47,15 +47,5 @@ public class MedicineController {
     }
 
 
-    @PreAuthorize("hasRole('Pharmacist') or hasRole('Doctor')")
-    @GetMapping("/search/by-name-and-manufacturer")
-    public ResponseEntity<MedicineDTO> findByNameAndManufacturer(
-            @RequestParam String name,
-            @RequestParam String manufacturer
-    ) {
-        return medicineService.findByNameAndManufacturer(name, manufacturer)
-                .map(ResponseEntity::ok)
-                .orElse(ResponseEntity.notFound().build());
-    }
 
 }

@@ -1,206 +1,276 @@
 import React, { useEffect, useMemo, useState } from 'react';
 import { useLocation, useNavigate } from 'react-router-dom';
+
+// API Functions
 import { completePrescription, getPrescriptionById } from '../../api/prescription';
+
+// Assets
 import UOPLogo from '../../assets/UOP_logo.jpeg';
 
-// ---------- THEME ----------
-const THEME = {
-  primary: "#0C3C3C",
-  accent:  "#45D27A",
-  gray:    "#6C6B6B",
-  white:   "#ffffff",
-  light:   "#F8F9FA",
+// ---- Colors Configuration ----
+const colors = {
+  primary: "#0C3C3C",    // Dark Teal
+  accent: "#45D27A",     // Bright Green
+  gray: "#6C6B6B",
+  white: "#ffffff",
+  light: "#F8F9FA",
 };
 
-// Stable empty object to avoid new refs in deps
+// Empty object for default state (optimization)
 const EMPTY_RX = Object.freeze({});
 
-// ---------- Coercion helpers ----------
-const to01 = (v) => {
-  if (v === 1 || v === '1' || v === true) return 1;
-  if (v === 0 || v === '0' || v === false) return 0;
+// --- Helpers ---
+
+// Convert various truthy/falsy values to 1 or 0
+const convertToBinary = (value) => {
+  if (value === 1 || value === '1' || value === true) return 1;
+  if (value === 0 || value === '0' || value === false) return 0;
   return null; // unknown
 };
-const markSymbol = (ok) => (ok ? '✓' : '✗');
-const line = { borderTop: '2px solid #0C3C3C' };
 
-// ---------- Normalizers ----------
+// Get symbol for status
+const getStatusSymbol = (isOk) => {
+  if (isOk) {
+    return '✓';
+  } else {
+    return '✗';
+  }
+};
+
+// Simple style object for dividing lines
+const lineStyle = {
+  borderTop: "2px solid " + colors.primary
+};
+
+// --- Data Normalization ---
+// This function standardizes the prescription items into a clean format
 const normalizeItems = (rx) => {
-  console.log("DEBUG: normalizeItems - rx:", rx);
-  console.log("DEBUG: normalizeItems - rx.items:", rx?.items);
-  console.log("DEBUG: normalizeItems - rx.medications:", rx?.medications);
+  // Handle different possible names for the items array
+  let rawItems = [];
+  if (rx && rx.items) {
+    rawItems = rx.items;
+  } else if (rx && rx.medications) {
+    rawItems = rx.medications;
+  }
 
-  const raw = (rx?.items || rx?.medications || []);
-  console.log("DEBUG: normalizeItems - raw items array:", raw);
+  return rawItems.map((item, index) => {
+    // Extract Item Details with fallbacks
+    const medName = item.medicineName || (item.medicine && item.medicine.name) || item.medicine || '';
+    const route = item.routeOfAdministration || item.route || '-';
+    const duration = item.durationDays || item.days || item.duration || '';
+    
+    // Ensure timeOfDay is an array
+    let timeArr = [];
+    if (item.timeOfDay) timeArr = item.timeOfDay;
+    else if (item.timesOfDay) timeArr = item.timesOfDay;
+    else if (item.times) timeArr = item.times;
 
-  return (raw || []).map((it, i) => {
-    console.log(`DEBUG: normalizeItems - processing item ${i}:`, it);
+    const dosage = item.dosage || '';
+    
+    // Nested details
+    const form = item.form || (item.medicineDetails && item.medicineDetails.form) || '';
+    const strength = item.strength || (item.medicineDetails && item.medicineDetails.strength) || '';
 
-    const medName   = it.medicineName || it.medicine?.name || it.medicine || '';
-    const route     = it.routeOfAdministration || it.route || '-';
-    const duration  = it.durationDays || it.days || it.duration || '';
-    const timeArr   = it.timeOfDay || it.timesOfDay || it.times || [];
-    const dosage    = it.dosage ?? '';
-    const form      = it.form ?? it.medicineDetails?.form ?? '';
-    const strength  = it.strength ?? it.medicineDetails?.strength ?? '';
+    // Quantities
+    let reqQty = item.requiredQuantity;
+    if (reqQty == null) reqQty = item.quantity;
+    if (reqQty == null) reqQty = item.units;
+    if (reqQty == null) reqQty = item.requestedQty;
 
-    const requiredQuantity  = it.requiredQuantity ?? it.quantity ?? it.units ?? it.requestedQty ?? null;
-    const dispensedQuantity = it.dispensedQuantity ?? it.dispensedQty ?? null;
+    let dispQty = item.dispensedQuantity;
+    if (dispQty == null) dispQty = item.dispensedQty;
 
-    const statusRaw =
-      it.dispensedStatus ??
-      it.dispensed_status ??
-      it.isDispensed ??
-      it.status ??
-      it.dispensed ??
-      null;
+    // Status
+    let statusRaw = item.dispensedStatus;
+    if (statusRaw == null) statusRaw = item.dispensed_status;
+    if (statusRaw == null) statusRaw = item.isDispensed;
+    if (statusRaw == null) statusRaw = item.status;
+    if (statusRaw == null) statusRaw = item.dispensed;
 
-    const dispensedStatus = to01(statusRaw) ?? 0;
+    const dispensedStatus = convertToBinary(statusRaw) || 0;
 
-    const normalizedItem = {
-      id: it.id ?? it.itemId ?? `idx_${i}`,
+    // Return Clean Object
+    return {
+      id: item.id || item.itemId || ("idx_" + index),
       medicineName: medName,
-      route,
-      duration,
+      route: route,
+      duration: duration,
       timeOfDay: Array.isArray(timeArr) ? timeArr : [],
-      dosage,
-      form,
-      strength,
-      units: it.units ?? it.quantity ?? null,
-
-      requiredQuantity,
-      dispensedQuantity,
-      dispensedStatus,
-      instructions: it.instructions ?? '',
+      dosage: dosage,
+      form: form,
+      strength: strength,
+      units: item.units || item.quantity || null,
+      requiredQuantity: reqQty,
+      dispensedQuantity: dispQty,
+      dispensedStatus: dispensedStatus,
+      instructions: item.instructions || '',
     };
-
-    console.log(`DEBUG: normalizeItems - normalized item ${i}:`, normalizedItem);
-    return normalizedItem;
   });
 };
 
+// Helper to map results by name or ID for quick lookup
 const buildResultsMap = (dispenseResults) => {
   const map = new Map();
+  
   if (Array.isArray(dispenseResults)) {
-    dispenseResults.forEach(r => {
-      const key =
-        (r.medicineName && r.medicineName.toLowerCase().trim()) ||
-        (r.itemId !== undefined && String(r.itemId).toLowerCase().trim()) ||
-        '';
-      if (!key) return;
-      map.set(key, {
-        dispensedQty:  r.dispensedQty ?? r.dispensedQuantity ?? 0,
-        requestedQty:  r.requestedQty ?? r.requiredQuantity ?? null,
-        note:          r.note || ''
-      });
+    dispenseResults.forEach(result => {
+      // Try to find a key (Name or ID)
+      let key = "";
+      if (result.medicineName) {
+        key = result.medicineName.toLowerCase().trim();
+      } else if (result.itemId !== undefined) {
+        key = String(result.itemId).toLowerCase().trim();
+      }
+
+      if (key) {
+        map.set(key, {
+          dispensedQty: result.dispensedQty || result.dispensedQuantity || 0,
+          requestedQty: result.requestedQty || result.requiredQuantity || null,
+          note: result.note || ''
+        });
+      }
     });
   }
   return map;
 };
 
+// Helper to find result for a specific item
 const getResultForItem = (item, resultsMap) => {
   if (!resultsMap || resultsMap.size === 0) return null;
+  
+  // Try finding by Name
   const byName = resultsMap.get((item.medicineName || '').toLowerCase().trim());
   if (byName) return byName;
+  
+  // Try finding by ID
   const byId = resultsMap.get(String(item.id || '').toLowerCase().trim());
   if (byId) return byId;
+  
   return null;
 };
 
-// ---------- Component ----------
+// --- Main Component ---
 const PrescriptionPrint = ({ user }) => {
   const location = useLocation();
   const navigate = useNavigate();
-  const { prescription: passedRx, dispenseResults, fromCompletedTab } = location.state || {};
+  
+  // Get data passed from previous page
+  const stateData = location.state || {};
+  const passedRx = stateData.prescription;
+  const dispenseResults = stateData.dispenseResults;
+  const fromCompletedTab = stateData.fromCompletedTab;
 
+  // --- State ---
   const [notice, setNotice] = useState(null);
   const [rxFresh, setRxFresh] = useState(null);
   const [loading, setLoading] = useState(false);
 
-  // Fetch latest copy for accurate dispensedStatus (hook runs unconditionally)
+  // --- 1. Fetch Fresh Data ---
+  // We fetch the latest version of the prescription to ensure status is up to date
   useEffect(() => {
-    let alive = true;
-    (async () => {
-      if (!passedRx?.id) return; // guard, but still call the hook
-      try {
-        console.log("DEBUG: PrescriptionPrint - Fetching fresh prescription data for ID:", passedRx.id);
-        setLoading(true);
-        const fresh = await getPrescriptionById(passedRx.id);
-        console.log("DEBUG: PrescriptionPrint - Fresh prescription data received:", fresh);
-        if (alive) setRxFresh(fresh);
-      } catch (error) {
-        console.error("DEBUG: PrescriptionPrint - Failed to fetch fresh prescription:", error);
-        /* keep using passedRx */
-      } finally {
-        if (alive) setLoading(false);
+    let isMounted = true;
+
+    const fetchFreshData = async () => {
+      if (passedRx && passedRx.id) {
+        try {
+          setLoading(true);
+          const freshData = await getPrescriptionById(passedRx.id);
+          
+          if (isMounted) {
+            setRxFresh(freshData);
+          }
+        } catch (error) {
+          console.error("Failed to fetch fresh prescription data");
+        } finally {
+          if (isMounted) {
+            setLoading(false);
+          }
+        }
       }
-    })();
-    return () => { alive = false; };
-  }, [passedRx?.id]);
+    };
 
-  // Memoize rx to keep stable reference across renders
-  const rx = useMemo(() => (rxFresh ?? passedRx ?? EMPTY_RX), [rxFresh, passedRx]);
-  console.log("DEBUG: PrescriptionPrint - rx object:", rx);
-  console.log("DEBUG: PrescriptionPrint - rx.id:", rx.id);
-  console.log("DEBUG: PrescriptionPrint - rx.items:", rx.items);
-  console.log("DEBUG: PrescriptionPrint - rx.medications:", rx.medications);
+    fetchFreshData();
 
+    return () => { isMounted = false; };
+  }, [passedRx]);
+
+  // Use the fresh data if available, otherwise use passed data
+  const rx = useMemo(() => {
+    if (rxFresh) return rxFresh;
+    if (passedRx) return passedRx;
+    return EMPTY_RX;
+  }, [rxFresh, passedRx]);
+
+  // Normalize items for display
   const items = useMemo(() => normalizeItems(rx), [rx]);
-  console.log("DEBUG: PrescriptionPrint - normalized items:", items);
-  console.log("DEBUG: PrescriptionPrint - items length:", items.length);
-  if (items.length > 0) {
-    console.log("DEBUG: PrescriptionPrint - first item details:", items[0]);
-  }
 
+  // Prepare results map
   const resultsMap = useMemo(() => buildResultsMap(dispenseResults), [dispenseResults]);
 
+  // Basic Details
   const createdAt = rx.createdAt || rx.prescriptionDate || new Date().toISOString();
   const logoSrc = rx.clinicLogo || UOPLogo;
 
-  const showNotice = (type, text, ms = 2500) => {
-    setNotice({ type, text });
-    if (ms) setTimeout(() => setNotice(null), ms);
+  // --- 2. Handlers ---
+
+  const showNotice = (type, text) => {
+    setNotice({ type: type, text: text });
+    // Hide after 2.5 seconds
+    setTimeout(() => setNotice(null), 2500);
   };
 
-  const onDownload = () => {
+  const handleDownload = () => {
     window.print();
     showNotice('success', 'Prescription is ready in the print dialog.');
   };
 
-  const onComplete = async () => {
+  const handleComplete = async () => {
     try {
       await completePrescription(rx.id);
       showNotice("success", "Prescription marked as completed.");
+      // Navigate back after short delay
       setTimeout(() => navigate("/pharmacist/view-prescriptions"), 900);
     } catch {
       showNotice("error", "Failed to complete prescription. Please try again.");
     }
   };
 
-  const onReturn = () => {
-    const fromTab = location.state?.fromTab || (fromCompletedTab ? "Completed" : "Pending");
+  const handleReturn = () => {
+    let fromTab = "Pending";
+    if (fromCompletedTab) {
+      fromTab = "Completed";
+    } else if (location.state && location.state.fromTab) {
+      fromTab = location.state.fromTab;
+    }
+    
     navigate("/pharmacist/view-prescriptions", { state: { activeTab: fromTab } });
   };
 
-  // Patient & doctor fields (safe fallbacks)
+  // Extract Patient & Doctor info safely
   const patient = rx.patient || {};
   const doctor = rx.doctor || {};
+  
   const patientName = patient.name || rx.patientName || '-';
-  const patientAge = patient.age ?? rx.patientAge;
-  const patientGender = patient.gender || rx.patientGender;
+  
+  let patientAge = rx.patientAge;
+  if (patientAge == null) patientAge = patient.age;
+
+  let patientGender = rx.patientGender;
+  if (patientGender == null) patientGender = patient.gender;
+
   const doctorName = doctor.name || rx.doctorName || '-';
-  const doctorRegNo = doctor.regNo || doctor.registrationNumber || rx.doctorRegNo || '';
+  
+  const noData = !passedRx;
 
-  const noData = !passedRx; // used in render AFTER hooks
-
+  // --- 3. Main Render ---
   return (
-    <div style={{ padding: 24, background: THEME.light }}>
-      {/* Styles */}
+    <div style={{ padding: 24, background: colors.light }}>
+      {/* CSS Styles */}
       <style>{`
         :root {
-          --c-primary: ${THEME.primary};
-          --c-accent: ${THEME.accent};
-          --c-gray: ${THEME.gray};
+          --c-primary: ${colors.primary};
+          --c-accent: ${colors.accent};
+          --c-gray: ${colors.gray};
         }
 
         @media print {
@@ -251,11 +321,12 @@ const PrescriptionPrint = ({ user }) => {
           border: 1px solid rgba(12,60,60,0.08);
         }
 
+        /* Refactor Note: Removed gradient. Replaced with solid color. */
         .top-accent {
           height: 6px;
           width: 100%;
           border-radius: 8px 8px 0 0;
-          background: linear-gradient(90deg, var(--c-primary) 0%, var(--c-accent) 100%);
+          background-color: var(--c-primary);
           margin-bottom: 16px;
         }
 
@@ -263,14 +334,13 @@ const PrescriptionPrint = ({ user }) => {
         .section-gap { margin-top: 22px; }
         .section-gap-lg { margin-top: 32px; }
 
+        /* Refactor Note: Removed gradient text. Replaced with solid color. */
         .header-title {
           color: var(--c-primary);
           letter-spacing: 0.3px;
           font-weight: 800;
-          background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-accent) 100%);
-          -webkit-background-clip: text;
-          -webkit-text-fill-color: transparent;
         }
+        
         .subtle { color: var(--c-gray); }
         .muted { color: #6b7280; font-size: 12px; }
 
@@ -361,7 +431,7 @@ const PrescriptionPrint = ({ user }) => {
       <div className="print-container page">
         <div className="top-accent" />
 
-        {/* If no incoming prescription, show a friendly message (AFTER hooks) */}
+        {/* --- No Data View --- */}
         {noData ? (
           <div style={{ padding: 24 }}>
             <div className="header-title" style={{ fontSize: 20, marginBottom: 12 }}>
@@ -379,8 +449,10 @@ const PrescriptionPrint = ({ user }) => {
           </div>
         ) : (
           <>
-            {/* Header */}
+            {/* --- Header Section --- */}
             <div className="flex items-center gap-5 header-wrap" style={{ display: 'flex', alignItems: 'center', gap: 20 }}>
+              
+              {/* Logo */}
               <div
                 style={{
                   width: 70,
@@ -397,12 +469,13 @@ const PrescriptionPrint = ({ user }) => {
               >
                 <img
                   src={logoSrc}
-                  alt="University of Peradeniya logo"
+                  alt="Logo"
                   style={{ width: '100%', height: '100%', objectFit: 'contain' }}
                   onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = UOPLogo; }}
                 />
               </div>
 
+              {/* Clinic Info */}
               <div style={{ flex: 1, textAlign: 'center' }}>
                 <div className="header-title" style={{ fontSize: 22 }}>
                   University of Peradeniya — Medical Center
@@ -415,48 +488,44 @@ const PrescriptionPrint = ({ user }) => {
                 </div>
               </div>
 
+              {/* Metadata */}
               <div className="text-right" style={{ minWidth: 190, textAlign: 'right' }}>
                 <div className="badge">Prescription</div>
                 <div className="muted" style={{ marginTop: 6 }}>
                   Date: <strong>{new Date(createdAt).toLocaleString()}</strong>
                 </div>
-                {/* {rx.id && (
-                  <div className="muted">
-                    Rx ID: <strong>{rx.id}</strong>
-                  </div>
-                )} */}
               </div>
             </div>
 
-            <div style={{ margin: '14px 0 12px 0', ...line }} />
+            <div style={{ margin: '14px 0 12px 0', ...lineStyle }} />
 
-            {/* Patient & Doctor Info */}
+            {/* --- Patient & Doctor Info --- */}
             <div className="section-gap" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 18 }}>
               <div className="card" style={{ background: '#fcfffe' }}>
-                <div style={{ fontWeight: 800, marginBottom: 8, color: THEME.primary }}>Patient Information</div>
+                <div style={{ fontWeight: 800, marginBottom: 8, color: colors.primary }}>Patient Information</div>
                 <div style={{ marginBottom: 4 }}><strong>Name:</strong> {patientName}</div>
-                <div><strong>Age / Sex:</strong> {(patientAge ?? '-')}{(patientGender ? ` / ${patientGender}` : '')}</div>
+                <div style={{ marginBottom: 4 }}><strong>Age:</strong> {patientAge || '-'}</div>
+                <div><strong>Sex:</strong> {patientGender || '-'}</div>
                 {patient.role && (
                   <div style={{ marginTop: 4 }}><strong>Role:</strong> {patient.role}</div>
                 )}
               </div>
               <div className="card" style={{ background: '#fcfffe' }}>
-                <div style={{ fontWeight: 800, marginBottom: 8, color: THEME.primary }}>Prescribed By</div>
+                <div style={{ fontWeight: 800, marginBottom: 8, color: colors.primary }}>Prescribed By</div>
                 <div style={{ marginBottom: 4 }}><strong>Doctor:</strong> {doctorName}</div>
-                <div style={{ marginBottom: 4 }}><strong>Reg. No:</strong> {doctorRegNo || '-'}</div>
                 {rx.department && (
                   <div><strong>Department:</strong> {rx.department}</div>
                 )}
               </div>
             </div>
 
-            {/* Rx Title */}
+            {/* --- Rx Title --- */}
             <div className="section-gap" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
               <div className="rx">℞</div>
-              <div className="subtle" style={{ fontSize: 16, fontWeight: 700, color: THEME.primary }}>Medications</div>
+              <div className="subtle" style={{ fontSize: 16, fontWeight: 700, color: colors.primary }}>Medications</div>
             </div>
 
-            {/* Medications Table */}
+            {/* --- Medications Table --- */}
             <table className="table zebra section-gap">
               <thead>
                 <tr>
@@ -466,7 +535,6 @@ const PrescriptionPrint = ({ user }) => {
                   <th>Duration</th>
                   <th>Route</th>
                   <th>Instructions</th>
-                  {/* <th>Req. Qty</th> */}
                   <th>Disp. Qty</th>
                   <th>Status</th>
                 </tr>
@@ -474,35 +542,37 @@ const PrescriptionPrint = ({ user }) => {
               <tbody>
                 {items.length === 0 ? (
                   <tr>
-                    <td colSpan={8} style={{ textAlign: 'center', padding: '20px', color: THEME.gray }}>
+                    <td colSpan={8} style={{ textAlign: 'center', padding: '20px', color: colors.gray }}>
                       No prescription items found
                     </td>
                   </tr>
                 ) : (
                   items.map((item, index) => {
-                    console.log(`DEBUG: Rendering item ${index}:`, item);
                     const overlay = getResultForItem(item, resultsMap);
-                    // const requestedQty = (item.requiredQuantity ?? item.units ?? overlay?.requestedQty ?? null);
-                    const dispensedQty  = (item.dispensedQuantity ?? overlay?.dispensedQty ?? 0);
-                    const dispensed = item.dispensedStatus === 1;
+                    let dispQty = 0;
+                    if (item.dispensedQuantity != null) dispQty = item.dispensedQuantity;
+                    else if (overlay && overlay.dispensedQty != null) dispQty = overlay.dispensedQty;
+
+                    const isDispensed = item.dispensedStatus === 1;
 
                     return (
                       <tr key={item.id || index}>
                         <td>
-                          <div style={{ fontWeight: 700, color: THEME.primary }}>{item.medicineName || "-"}</div>
-                          <div style={{ fontSize: 12, color: THEME.gray }}>
-                            {item.form || '-'} {item.strength ? `• ${item.strength}` : ''}
+                          <div style={{ fontWeight: 700, color: colors.primary }}>{item.medicineName || "-"}</div>
+                          <div style={{ fontSize: 12, color: colors.gray }}>
+                            {item.form || '-'} {item.strength ? ("• " + item.strength) : ''}
                           </div>
                         </td>
                         <td>{item.dosage || "-"}</td>
-                        <td>{Array.isArray(item.timeOfDay) && item.timeOfDay.length ? item.timeOfDay.join(", ") : "-"}</td>
-                        <td>{item.duration ? `${item.duration} days` : "-"}</td>
+                        <td>
+                          {(Array.isArray(item.timeOfDay) && item.timeOfDay.length) ? item.timeOfDay.join(", ") : "-"}
+                        </td>
+                        <td>{item.duration ? (item.duration + " days") : "-"}</td>
                         <td>{item.route || "-"}</td>
                         <td>{item.instructions || "-"}</td>
-                        {/* <td>{requestedQty ?? "-"}</td> */}
-                        <td>{dispensedQty ?? "-"}</td>
-                        <td style={{ textAlign: "center", fontWeight: 800, color: dispensed ? '#047857' : '#b91c1c' }}>
-                          {markSymbol(dispensed)}
+                        <td>{dispQty || "-"}</td>
+                        <td style={{ textAlign: "center", fontWeight: 800, color: isDispensed ? '#047857' : '#b91c1c' }}>
+                          {getStatusSymbol(isDispensed)}
                         </td>
                       </tr>
                     );
@@ -511,15 +581,15 @@ const PrescriptionPrint = ({ user }) => {
               </tbody>
             </table>
 
-            {/* General Notes */}
+            {/* --- General Notes --- */}
             {rx.generalNotes && rx.generalNotes.trim() && rx.generalNotes !== "#" && (
               <div className="section-gap">
-                <div style={{ fontWeight: 800, marginBottom: 6, color: THEME.primary }}>General Notes</div>
+                <div style={{ fontWeight: 800, marginBottom: 6, color: colors.primary }}>General Notes</div>
                 <div style={{ whiteSpace: 'pre-wrap', lineHeight: 1.5 }}>{rx.generalNotes}</div>
               </div>
             )}
 
-            {/* Signatures */}
+            {/* --- Signatures --- */}
             <div className="section-gap-lg" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
               <div>
                 <div className="sign-line" />
@@ -531,62 +601,62 @@ const PrescriptionPrint = ({ user }) => {
               </div>
             </div>
 
-            {/* Notice */}
+            {/* --- Notice Message --- */}
             {notice && (
-              <div className={`notice ${notice.type}`}>{notice.text}</div>
+              <div className={"notice " + notice.type}>{notice.text}</div>
             )}
 
-            {/* Bottom buttons */}
+            {/* --- Action Buttons (Hidden when printing) --- */}
             <div className="no-print section-gap-lg btn-row">
-              {/* Role-based button rendering */}
-              {user?.role === 'Pharmacist' ? (
+              {/* Logic for different user roles */}
+              {user && user.role === 'Pharmacist' ? (
                 <>
-                  <button onClick={onDownload} className="btn btn-outline" disabled={loading} aria-label="Print prescription">
+                  <button onClick={handleDownload} className="btn btn-outline" disabled={loading} aria-label="Print prescription">
                     {loading ? 'Loading…' : 'Download / Print'}
                   </button>
 
                   {fromCompletedTab ? (
-                    <button onClick={onReturn} className="btn btn-solid" disabled={loading} aria-label="Return to prescriptions">
+                    <button onClick={handleReturn} className="btn btn-solid" disabled={loading} aria-label="Return to prescriptions">
                       Return to View Prescription
                     </button>
                   ) : (
                     <>
                       {rx.isActive ? (
-                        <button onClick={onComplete} className="btn btn-solid" disabled={loading} aria-label="Complete prescription">
+                        <button onClick={handleComplete} className="btn btn-solid" disabled={loading} aria-label="Complete prescription">
                           Complete Prescription
                         </button>
                       ) : (
-                        <button onClick={onReturn} className="btn btn-solid" disabled={loading} aria-label="Return to prescriptions">
+                        <button onClick={handleReturn} className="btn btn-solid" disabled={loading} aria-label="Return to prescriptions">
                           Return to View Prescription
                         </button>
                       )}
                     </>
                   )}
                 </>
-              ) : (user?.role === 'Student' || user?.role === 'Staff') ? (
+              ) : (user && (user.role === 'Student' || user.role === 'Staff')) ? (
                 <>
                   <button
-                    onClick={() => navigate(`/${user.role.toLowerCase()}/dashboard`)}
+                    onClick={() => navigate("/" + user.role.toLowerCase() + "/dashboard")}
                     className="btn btn-outline"
                     aria-label="Return to dashboard"
                   >
                     Return to Dashboard
                   </button>
 
-                  <button onClick={onDownload} className="btn btn-outline" disabled={loading} aria-label="Print prescription">
+                  <button onClick={handleDownload} className="btn btn-outline" disabled={loading} aria-label="Print prescription">
                     {loading ? 'Loading…' : 'Download / Print'}
                   </button>
                 </>
               ) : (
-                // Fallback for other roles or undefined role
-                <button onClick={onDownload} className="btn btn-outline" disabled={loading} aria-label="Print prescription">
+                // Fallback for other roles
+                <button onClick={handleDownload} className="btn btn-outline" disabled={loading} aria-label="Print prescription">
                   {loading ? 'Loading…' : 'Download / Print'}
                 </button>
               )}
             </div>
 
-            {/* Footer */}
-            <div className="section-gap" style={{ ...line }} />
+            {/* --- Footer --- */}
+            <div className="section-gap" style={{ ...lineStyle }} />
             <div className="muted" style={{ marginTop: 8 }}>
               This prescription is generated by the University of Peradeniya Medical Center system.
             </div>

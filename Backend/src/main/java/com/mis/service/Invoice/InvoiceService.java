@@ -1,10 +1,12 @@
 package com.mis.service.Invoice;
 
+import com.mis.dto.Invoice.InvoiceSummaryDto;
 import com.mis.model.Invoice.Invoice;
 import com.mis.model.Invoice.InvoiceItem;
 import com.mis.model.Medicine.Medicine;
 import com.mis.model.Prescription.Prescription;
 import com.mis.model.Prescription.PrescriptionItem;
+import com.mis.model.Role;
 import com.mis.repository.Invoice.InvoiceRepository;
 import com.mis.repository.Medicine.MedicineRepository;
 import com.mis.repository.Prescription.PrescriptionRepository;
@@ -15,6 +17,7 @@ import org.springframework.stereotype.Service;
 import java.time.LocalDateTime;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Service
 public class InvoiceService {
@@ -91,6 +94,37 @@ public class InvoiceService {
             return invoice;
         } catch (Exception e) {
             logger.error("Error retrieving invoice for prescription {}: {}", prescriptionId, e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    public List<InvoiceSummaryDto> getStaffInvoices() {
+        logger.info("Retrieving all staff invoices");
+        try {
+            List<Invoice> invoices = invoiceRepository.findByPatient_RoleOrderByCreatedAtDesc(Role.Staff);
+            logger.info("Found {} staff invoices", invoices.size());
+            return invoices.stream()
+                    .map(invoice -> new InvoiceSummaryDto(
+                            invoice.getId(),
+                            invoice.getCreatedAt(),
+                            invoice.getPatient().getName()
+                    ))
+                    .collect(Collectors.toList());
+        } catch (Exception e) {
+            logger.error("Error retrieving staff invoices: {}", e.getMessage(), e);
+            throw e;
+        }
+    }
+
+    public Invoice getInvoiceById(Long id) {
+        logger.info("Looking for invoice by ID: {}", id);
+        try {
+            Invoice invoice = invoiceRepository.findById(id)
+                    .orElseThrow(() -> new RuntimeException("Invoice not found with ID: " + id));
+            logger.info("Found invoice with ID: {}", invoice.getId());
+            return invoice;
+        } catch (Exception e) {
+            logger.error("Error retrieving invoice by ID {}: {}", id, e.getMessage(), e);
             throw e;
         }
     }

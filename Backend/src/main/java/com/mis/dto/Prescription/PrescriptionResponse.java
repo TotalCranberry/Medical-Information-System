@@ -18,6 +18,8 @@ public class PrescriptionResponse {
     private String patientId;
     private String patientName;
     private User patient;
+    private Integer patientAge;
+    private String patientGender;
     private String appointmentId;
     private String generalNotes;
     private Date prescriptionDate;

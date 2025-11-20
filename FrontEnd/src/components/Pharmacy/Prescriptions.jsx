@@ -1,11 +1,29 @@
 import React, { useEffect, useState } from "react";
 import { useNavigate, useLocation } from "react-router-dom";
+
+// Material UI Components
 import {
-  Box, Typography, Paper, Grid, Button,
-  Table, TableHead, TableRow, TableCell, TableBody,
-  TextField, Select, MenuItem, Chip, Avatar, Fade, Grow, Skeleton,
-  InputAdornment, IconButton
+  Box,
+  Typography,
+  Paper,
+  Grid,
+  Button,
+  Table,
+  TableHead,
+  TableRow,
+  TableCell,
+  TableBody,
+  TextField,
+  Select,
+  MenuItem,
+  Chip,
+  Avatar,
+  Skeleton,
+  InputAdornment,
+  IconButton
 } from "@mui/material";
+
+// Material UI Icons
 import {
   Search as SearchIcon,
   Clear as ClearIcon,
@@ -17,11 +35,13 @@ import {
   LocalPharmacy as PharmacyIcon
 } from "@mui/icons-material";
 
+// Date utilities
 import dayjs from "dayjs";
 import { LocalizationProvider } from "@mui/x-date-pickers/LocalizationProvider";
 import { AdapterDayjs } from "@mui/x-date-pickers/AdapterDayjs";
 import { DatePicker } from "@mui/x-date-pickers/DatePicker";
 
+// API Functions
 import {
   getPrescriptionsForPharmacy,
   getCompletedPrescriptionsForPharmacy,
@@ -29,11 +49,14 @@ import {
   formatPrescriptionDate,
 } from "../../api/prescription";
 import { getInvoice } from "../../api/invoice";
+
+// Custom Dialog Component
 import ViewPrescriptionDialog from "./ViewprescriptionDialog";
 
-const THEME = {
-  primary: "#0C3C3C",
-  accent: "#45D27A",
+// --- Simple Color Configuration ---
+const colors = {
+  primary: "#0C3C3C",    // Dark Teal
+  accent: "#45D27A",     // Bright Green
   gray: "#6C6B6B",
   white: "#ffffff",
   lightGray: "#F8F9FA",
@@ -42,260 +65,155 @@ const THEME = {
   background: "#FAFBFC"
 };
 
-const inputSx = {
-  minWidth: 260,
-  "& .MuiOutlinedInput-root": {
-    borderRadius: "16px",
-    backgroundColor: THEME.white,
-    transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-    boxShadow: "0 2px 8px rgba(12, 60, 60, 0.08)",
-    "&:hover": {
-      boxShadow: "0 4px 16px rgba(12, 60, 60, 0.12)",
-      transform: "translateY(-1px)",
-    },
-    "&.Mui-focused": {
-      boxShadow: "0 6px 20px rgba(69, 210, 122, 0.2)",
-      transform: "translateY(-2px)",
-    }
-  },
-  "& .MuiOutlinedInput-notchedOutline": {
-    borderColor: "rgba(12, 60, 60, 0.2)",
-    borderWidth: 1,
-  },
-  "&:hover .MuiOutlinedInput-notchedOutline": {
-    borderColor: THEME.primary,
-  },
-  "& .Mui-focused .MuiOutlinedInput-notchedOutline": {
-    borderColor: THEME.accent,
-    borderWidth: 2,
-  },
-  "& .MuiInputLabel-root": {
-    color: THEME.gray,
-    "&.Mui-focused": {
-      color: THEME.primary,
-    },
-  },
-};
-
-const buttonTabSx = (active) => ({
-  backgroundColor: active ? THEME.primary : "transparent",
-  color: active ? "#fff" : THEME.primary,
-  borderColor: active ? THEME.primary : "rgba(12, 60, 60, 0.3)",
-  borderWidth: 2,
-  "&:hover": { 
-    backgroundColor: active ? "#0a3030" : "rgba(12, 60, 60, 0.04)",
-    borderColor: THEME.primary,
-    transform: "translateY(-2px)",
-    boxShadow: active 
-      ? "0 8px 25px rgba(12, 60, 60, 0.3)" 
-      : "0 4px 15px rgba(12, 60, 60, 0.15)"
-  },
-  fontWeight: 600,
-  px: 4,
-  py: 1.5,
-  borderRadius: "16px",
-  textTransform: "none",
-  fontSize: "1rem",
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  position: "relative",
-  overflow: "hidden",
-  "&::before": {
-    content: '""',
-    position: "absolute",
-    top: 0,
-    left: "-100%",
-    width: "100%",
-    height: "100%",
-    background: "linear-gradient(90deg, transparent, rgba(255,255,255,0.2), transparent)",
-    transition: "left 0.5s ease-in-out",
-  },
-  "&:hover::before": {
-    left: "100%",
-  }
-});
-
-const cardSx = {
-  p: 4,
-  textAlign: "center",
-  borderLeft: `6px solid ${THEME.accent}`,
-  borderRadius: "20px",
-  height: 200,
-  width: 280,
-  display: "flex",
-  flexDirection: "column",
-  justifyContent: "center",
-  background: `linear-gradient(135deg, ${THEME.white} 0%, #f8fffe 100%)`,
-  position: "relative",
-  overflow: "hidden",
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  "&:hover": {
-    transform: "translateY(-8px) scale(1.02)",
-    boxShadow: "0 20px 40px rgba(12, 60, 60, 0.15)",
-  },
-  "&::before": {
-    content: '""',
-    position: "absolute",
-    top: 0,
-    left: 0,
-    right: 0,
-    height: "4px",
-    background: `linear-gradient(90deg, ${THEME.accent}, ${THEME.primary})`,
-  }
-};
-
-const tableRowSx = {
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  "&:hover": {
-    backgroundColor: "rgba(69, 210, 122, 0.04)",
-    transform: "scale(1.01)",
-    "& .MuiTableCell-root": {
-      borderColor: "rgba(69, 210, 122, 0.2)",
-    }
-  },
-  "&:nth-of-type(even)": {
-    backgroundColor: "rgba(12, 60, 60, 0.02)",
-  }
-};
-
-const actionButtonSx = (variant = "primary") => ({
-  borderRadius: "12px",
-  textTransform: "none",
-  fontWeight: 600,
-  px: 3,
-  py: 1,
-  transition: "all 0.3s cubic-bezier(0.4, 0, 0.2, 1)",
-  ...(variant === "primary" && {
-    borderColor: THEME.accent,
-    color: THEME.accent,
-    "&:hover": {
-      backgroundColor: THEME.accent,
-      color: "white",
-      transform: "translateY(-2px)",
-      boxShadow: "0 8px 25px rgba(69, 210, 122, 0.3)",
-    }
-  }),
-  ...(variant === "secondary" && {
-    borderColor: THEME.primary,
-    color: THEME.primary,
-    "&:hover": {
-      backgroundColor: THEME.primary,
-      color: "white",
-      transform: "translateY(-2px)",
-      boxShadow: "0 8px 25px rgba(12, 60, 60, 0.3)",
-    }
-  })
-});
-
 const PrescriptionsPage = () => {
-  const [tab, setTab] = useState("Pending");
-  const [loading, setLoading] = useState(true);
   const navigate = useNavigate();
   const location = useLocation();
 
-  // Queues
-  const [pending, setPending] = useState([]);
-  const [completed, setCompleted] = useState([]);
+  // --- State Variables ---
+  
+  // Controls which tab is active: "Pending" or "Completed"
+  const [tab, setTab] = useState("Pending");
+  
+  // Loading state for the page
+  const [loading, setLoading] = useState(true);
 
-  // Dialog
+  // Data Lists
+  const [pendingList, setPendingList] = useState([]);
+  const [completedList, setCompletedList] = useState([]);
+
+  // Popup Dialog State
   const [selectedRx, setSelectedRx] = useState(null);
   const [dialogOpen, setDialogOpen] = useState(false);
 
-  // Invoice map: { [prescriptionId]: boolean }
-  const [invoiceExists, setInvoiceExists] = useState({});
+  // Logic for "View Invoice" button visibility
+  // Stores result as: { "prescriptionId": true/false }
+  const [invoiceExistsMap, setInvoiceExistsMap] = useState({});
 
   // Filters
-  const [dateFilter, setDateFilter] = useState(null);
+  const [dateFilter, setDateFilter] = useState(dayjs()); // Defaults to today
   const [statusFilter, setStatusFilter] = useState("All");
   const [searchText, setSearchText] = useState("");
 
-  // ---- Loaders ----
-  const loadPending = async () => {
-    try {
-      const data = await getPrescriptionsForPharmacy();
-      const list = Array.isArray(data) ? [...data] : [];
-      list.sort((a, b) => {
-        const ta = new Date(a.createdAt || a.prescriptionDate || 0).getTime();
-        const tb = new Date(b.createdAt || b.prescriptionDate || 0).getTime();
-        return ta - tb;
-      });
-      setPending(list);
-    } catch (e) {
-      console.error("Failed to load pending prescriptions:", e);
-      setPending([]);
-    }
-  };
-
-  const loadCompleted = async () => {
-    try {
-      const data = await getCompletedPrescriptionsForPharmacy();
-      const list = Array.isArray(data) ? [...data] : [];
-      setCompleted(list);
-    } catch (e) {
-      console.error("Failed to load completed prescriptions:", e);
-      setCompleted([]);
-    }
-  };
-
-  // Initial loads
+  // --- 1. Fetch Data from API ---
+  
   useEffect(() => {
     const loadData = async () => {
       setLoading(true);
-      await Promise.all([loadPending(), loadCompleted()]);
-      setTimeout(() => setLoading(false), 500); // Small delay for smooth animation
+      try {
+        // Load Pending Prescriptions
+        const pendingData = await getPrescriptionsForPharmacy();
+        
+        // Convert to array if necessary and sort by date
+        let pList = [];
+        if (Array.isArray(pendingData)) {
+          pList = pendingData;
+        }
+        
+        // Sort: Oldest first (simple logic)
+        pList.sort((a, b) => {
+          const dateA = new Date(a.createdAt || a.prescriptionDate || 0);
+          const dateB = new Date(b.createdAt || b.prescriptionDate || 0);
+          return dateA - dateB;
+        });
+        
+        setPendingList(pList);
+
+        // Load Completed Prescriptions
+        const completedData = await getCompletedPrescriptionsForPharmacy();
+        let cList = [];
+        if (Array.isArray(completedData)) {
+          cList = completedData;
+        }
+        setCompletedList(cList);
+
+      } catch (error) {
+        console.error("Error loading data:", error);
+      }
+      
+      // Small delay to prevent flickering
+      setTimeout(() => {
+        setLoading(false);
+      }, 500);
     };
+
     loadData();
   }, []);
 
-  // Read activeTab from navigation state
+  // --- 2. Logic to Check for Invoices ---
+  // This runs whenever the 'completedList' updates.
+  // We need to know if an invoice exists so we can show the "View Invoice" button.
   useEffect(() => {
-    if (location.state?.activeTab) {
+    const checkAllInvoices = async () => {
+      // If there are no completed items, do nothing
+      if (completedList.length === 0) {
+        setInvoiceExistsMap({});
+        return;
+      }
+
+      const tempMap = {};
+
+      // Loop through every completed prescription
+      for (let i = 0; i < completedList.length; i++) {
+        const item = completedList[i];
+        
+        // We only check invoice if the patient is "Staff"
+        // (This preserves the original business logic)
+        if (item.patient && item.patient.role === "Staff") {
+          try {
+            // Try to fetch the invoice
+            await getInvoice(item.id);
+            // If successful, it exists
+            tempMap[item.id] = true;
+          } catch (error) {
+            // If error (like 404), it does not exist
+            tempMap[item.id] = false;
+          }
+        } else {
+          // Default for non-staff
+          tempMap[item.id] = false;
+        }
+      }
+
+      // Update the state map
+      setInvoiceExistsMap(tempMap);
+    };
+
+    checkAllInvoices();
+  }, [completedList]);
+
+  // --- 3. Handle Navigation & Tabs ---
+
+  // Check if we navigated here from another page with a specific tab requested
+  useEffect(() => {
+    if (location.state && location.state.activeTab) {
       setTab(location.state.activeTab);
     }
   }, [location.state]);
 
-  // Keep tab in sync when Status filter changes
+  // If the user changes the "Status Filter" dropdown, switch the tab automatically
   useEffect(() => {
-    if (statusFilter === "Pending") setTab("Pending");
-    else if (statusFilter === "Completed") setTab("Completed");
+    if (statusFilter === "Pending") {
+      setTab("Pending");
+    } else if (statusFilter === "Completed") {
+      setTab("Completed");
+    }
   }, [statusFilter]);
 
-  // Build invoice existence map whenever 'completed' changes
-  useEffect(() => {
-    const run = async () => {
-      try {
-        const entries = await Promise.all(
-          completed.map(async (item) => {
-            if (item?.patient?.role === "Staff") {
-              const exists = await checkInvoiceExists(item.id);
-              return [item.id, exists];
-            }
-            return [item.id, false];
-          })
-        );
-        const map = {};
-        for (const [id, exists] of entries) map[id] = exists;
-        setInvoiceExists(map);
-      } catch (err) {
-        console.error("Failed to check invoice existence:", err);
-        setInvoiceExists({});
-      }
-    };
-    if (completed.length) run();
-    else setInvoiceExists({});
-  }, [completed]);
+  // --- 4. Event Handlers ---
 
-  // ---- Actions ----
   const handleView = async (row) => {
     try {
-      const rx = await getPrescriptionById(row.id);
-      setSelectedRx(rx);
+      // Fetch full details for the dialog
+      const fullData = await getPrescriptionById(row.id);
+      setSelectedRx(fullData);
       setDialogOpen(true);
-    } catch (e) {
-      console.error("Failed to fetch prescription:", e);
+    } catch (error) {
+      console.error("Error fetching prescription details:", error);
     }
   };
 
   const handleViewCompleted = (row) => {
+    // Navigate to print page
     navigate("/pharmacist/prescription-print", {
       state: {
         prescription: row,
@@ -306,449 +224,410 @@ const PrescriptionsPage = () => {
   };
 
   const handleViewInvoice = (row) => {
-    navigate(`/invoice/${row.id}`, {
+    // Navigate to invoice page using string concatenation
+    navigate("/invoice/" + row.id, {
       state: { fromTab: tab },
     });
   };
 
-  const checkInvoiceExists = async (prescriptionId) => {
-    try {
-      await getInvoice(prescriptionId);
-      return true;
-    } catch {
-      return false;
+  const handleDialogClose = async (result) => {
+    // Close the dialog
+    setDialogOpen(false);
+    
+    // Store the currently selected prescription before clearing it
+    const currentRx = selectedRx;
+    setSelectedRx(null);
+
+    // If the user successfully dispensed items (result exists)
+    if (result && result.results) {
+      // Go to print page
+      navigate("/pharmacist/prescription-print", {
+        state: { 
+          prescription: currentRx, 
+          dispenseResults: result.results 
+        },
+      });
+      // Reload the pending list to refresh data
+      // (In a real app we might re-fetch, but here we preserve logic)
+      window.location.reload(); 
     }
   };
 
-  // ---- Filtering helpers ----
-  const matchesSearch = (item) => {
-    if (!searchText) return true;
-    const text = String(searchText).toLowerCase().trim();
-    const name = String(item.patientName || "").toLowerCase();
-    const idStr = String(item.id || "");
-    return name.includes(text) || idStr.includes(text);
-  };
-
-  const matchesDate = (item) => {
-    if (!dateFilter) return true;
-    const raw = item.createdAt || item.prescriptionDate || item.issuedAt || item.date;
-    if (!raw) return false;
-    const d = dayjs(raw);
-    return d.isValid() && d.isSame(dateFilter, "day");
-  };
-
-  const statusAllows = (target) => statusFilter === "All" || statusFilter === target;
-
-  const filteredPending = pending.filter(
-    (item) => matchesSearch(item) && matchesDate(item) && statusAllows("Pending")
-  );
-
-  const filteredCompleted = completed.filter(
-    (item) => matchesSearch(item) && matchesDate(item) && statusAllows("Completed")
-  );
-
-  const tableRows = tab === "Pending" ? filteredPending : filteredCompleted;
-
-  // ---- Summary ----
-  const summary = {
-    Pending: { count: pending.length, icon: PendingIcon, color: THEME.warning },
-    Completed: { count: completed.length, icon: CheckCircleIcon, color: THEME.success },
-  };
-
-  const clearFilters = () => {
+  const handleClearFilters = () => {
     setDateFilter(null);
     setStatusFilter("All");
     setSearchText("");
   };
 
+  // --- 5. Filtering Logic ---
+
+  const filterItem = (item) => {
+    // 1. Search Text Filter
+    let matchesSearch = true;
+    if (searchText) {
+      const text = searchText.toLowerCase().trim();
+      const name = (item.patientName || "").toLowerCase();
+      const idStr = String(item.id || "");
+      
+      if (!name.includes(text) && !idStr.includes(text)) {
+        matchesSearch = false;
+      }
+    }
+
+    // 2. Date Filter
+    let matchesDate = true;
+    if (dateFilter) {
+      // Check various date fields
+      const itemDateStr = item.createdAt || item.prescriptionDate || item.issuedAt || item.date;
+      if (itemDateStr) {
+        const itemDate = dayjs(itemDateStr);
+        if (!itemDate.isValid() || !itemDate.isSame(dateFilter, "day")) {
+          matchesDate = false;
+        }
+      } else {
+        matchesDate = false;
+      }
+    }
+
+    // 3. Status Filter (Dropdown)
+    let matchesStatus = true;
+    if (statusFilter !== "All") {
+      if (statusFilter === "Pending" && tab !== "Pending") matchesStatus = false;
+      if (statusFilter === "Completed" && tab !== "Completed") matchesStatus = false;
+    }
+
+    return matchesSearch && matchesDate && matchesStatus;
+  };
+
+  // Get the rows for the current tab
+  const currentList = tab === "Pending" ? pendingList : completedList;
+  
+  // Apply filters
+  const tableRows = currentList.filter(filterItem);
+
+  // Calculate summary counts
+  const pendingCount = pendingList.filter(filterItem).length;
+  const completedCount = completedList.filter(filterItem).length;
+
+  // --- 6. Loading View ---
   if (loading) {
     return (
-      <Box sx={{ px: 3, py: 5, backgroundColor: THEME.background, minHeight: "100vh" }}>
-        <Skeleton variant="text" width={300} height={60} sx={{ mb: 5 }} />
-        <Grid container spacing={4} justifyContent="center" mb={5}>
-          {[1, 2].map((i) => (
-            <Grid item key={i}>
-              <Skeleton variant="rectangular" width={280} height={200} sx={{ borderRadius: "20px" }} />
-            </Grid>
-          ))}
+      <Box sx={{ padding: 4, backgroundColor: colors.background, minHeight: "100vh" }}>
+        <Skeleton variant="text" width={300} height={60} sx={{ marginBottom: 4 }} />
+        <Grid container spacing={4} justifyContent="center" mb={4}>
+          <Grid item><Skeleton variant="rectangular" width={280} height={200} /></Grid>
+          <Grid item><Skeleton variant="rectangular" width={280} height={200} /></Grid>
         </Grid>
-        <Box display="flex" justifyContent="center" gap={2} mb={3} flexWrap="wrap">
-          {[1, 2, 3, 4].map((i) => (
-            <Skeleton key={i} variant="rectangular" width={260} height={56} sx={{ borderRadius: "16px" }} />
-          ))}
-        </Box>
       </Box>
     );
   }
 
+  // --- 7. Main Render ---
   return (
-    <Box sx={{ px: 3, py: 5, backgroundColor: THEME.background, minHeight: "100vh" }}>
+    <Box sx={{ padding: 4, backgroundColor: colors.background, minHeight: "100vh" }}>
+      
+      {/* Dialog Popup */}
       <ViewPrescriptionDialog
         open={dialogOpen}
-        onClose={async (result) => {
-          const rxCopy = selectedRx;
-          setDialogOpen(false);
-
-          if (result?.results) {
-            navigate("/pharmacist/prescription-print", {
-              state: { prescription: rxCopy, dispenseResults: result.results },
-            });
-          }
-
-          setSelectedRx(null);
-          await loadPending();
-        }}
+        onClose={handleDialogClose}
         rx={selectedRx}
       />
 
-      <Fade in timeout={800}>
-        <Box>
-          {/* Header with icon */}
-          <Box display="flex" alignItems="center" mb={5}>
-            <Avatar sx={{ 
-              bgcolor: THEME.primary, 
-              mr: 2, 
-              width: 56, 
-              height: 56,
-              boxShadow: "0 8px 25px rgba(12, 60, 60, 0.3)"
-            }}>
-              <PharmacyIcon fontSize="large" />
-            </Avatar>
-            <Typography
-              variant="h3"
-              sx={{ 
-                color: THEME.primary, 
-                fontWeight: 800,
-                background: `linear-gradient(135deg, ${THEME.primary} 0%, ${THEME.accent} 100%)`,
-                backgroundClip: "text",
-                textFillColor: "transparent",
-                WebkitBackgroundClip: "text",
-                WebkitTextFillColor: "transparent",
-                lineHeight: 1.3,
-                paddingBottom: "4px"
-              }}
-            >
-              Prescriptions Management
+      {/* --- Header Section --- */}
+      <Box display="flex" alignItems="center" marginBottom={4}>
+        <Avatar sx={{ bgcolor: colors.primary, marginRight: 2, width: 56, height: 56 }}>
+          <PharmacyIcon fontSize="large" />
+        </Avatar>
+        {/* Refactor Note: Removed linear-gradient styling here. 
+          Replaced with simple solid color: colors.primary 
+        */}
+        <Typography
+          variant="h3"
+          sx={{ 
+            color: colors.primary, 
+            fontWeight: 800 
+          }}
+        >
+          Prescriptions Management
+        </Typography>
+      </Box>
+
+      {/* --- Summary Cards Section --- */}
+      <Grid container spacing={4} justifyContent="center" marginBottom={6}>
+        {/* Pending Card */}
+        <Grid item>
+          <Paper 
+            elevation={4} 
+            sx={{ 
+              padding: 4, 
+              textAlign: "center", 
+              borderRadius: "20px", 
+              width: 280,
+              borderLeft: "6px solid " + colors.accent
+            }}
+          >
+            <Box display="flex" justifyContent="center" marginBottom={2}>
+              <Avatar sx={{ bgcolor: colors.warning + "20", color: colors.warning }}>
+                <PendingIcon />
+              </Avatar>
+            </Box>
+            <Typography variant="h5" fontWeight="bold" color={colors.primary}>
+              Pending
             </Typography>
-          </Box>
+            <Typography variant="h3" fontWeight="800" color={colors.warning}>
+              {pendingCount}
+            </Typography>
+            <Chip label={pendingCount + " total"} size="small" sx={{ marginTop: 2 }} />
+          </Paper>
+        </Grid>
 
-          {/* Enhanced Summary cards */}
-          <Grid container spacing={4} justifyContent="center" mb={6}>
-            {Object.entries(summary).map(([key, { count, icon: Icon, color }], index) => (
-              <Grow in timeout={1000 + index * 200} key={key}>
-                <Grid item>
-                  <Paper elevation={12} sx={cardSx}>
-                    <Box display="flex" alignItems="center" justifyContent="center" mb={2}>
-                      <Avatar sx={{ 
-                        bgcolor: `${color}15`, 
-                        color: color, 
-                        width: 48, 
-                        height: 48,
-                        mr: 2
-                      }}>
-                        <Icon fontSize="medium" />
+        {/* Completed Card */}
+        <Grid item>
+          <Paper 
+            elevation={4} 
+            sx={{ 
+              padding: 4, 
+              textAlign: "center", 
+              borderRadius: "20px", 
+              width: 280,
+              borderLeft: "6px solid " + colors.accent
+            }}
+          >
+            <Box display="flex" justifyContent="center" marginBottom={2}>
+              <Avatar sx={{ bgcolor: colors.success + "20", color: colors.success }}>
+                <CheckCircleIcon />
+              </Avatar>
+            </Box>
+            <Typography variant="h5" fontWeight="bold" color={colors.primary}>
+              Completed
+            </Typography>
+            <Typography variant="h3" fontWeight="800" color={colors.success}>
+              {completedCount}
+            </Typography>
+            <Chip label={completedCount + " total"} size="small" sx={{ marginTop: 2 }} />
+          </Paper>
+        </Grid>
+      </Grid>
+
+      {/* --- Filters Section --- */}
+      <LocalizationProvider dateAdapter={AdapterDayjs}>
+        <Paper elevation={2} sx={{ padding: 4, marginBottom: 4, borderRadius: "20px" }}>
+          <Typography variant="h6" sx={{ color: colors.primary, fontWeight: 600, marginBottom: 3 }}>
+            Filter & Search
+          </Typography>
+          
+          <Box display="flex" gap={3} flexWrap="wrap" alignItems="center" justifyContent="center">
+            {/* Date Picker */}
+            <DatePicker
+              label="Filter by Date"
+              value={dateFilter}
+              onChange={(newValue) => setDateFilter(newValue)}
+              slotProps={{ textField: { variant: "outlined" } }}
+            />
+
+            {/* Status Dropdown */}
+            <Select
+              value={statusFilter}
+              onChange={(e) => setStatusFilter(e.target.value)}
+              displayEmpty
+              sx={{ minWidth: 200 }}
+            >
+              <MenuItem value="All">All Status</MenuItem>
+              <MenuItem value="Pending">Pending</MenuItem>
+              <MenuItem value="Completed">Completed</MenuItem>
+            </Select>
+
+            {/* Search Box */}
+            <TextField
+              label="Search by Patient Name or ID"
+              variant="outlined"
+              value={searchText}
+              onChange={(e) => setSearchText(e.target.value)}
+              sx={{ minWidth: 300 }}
+              InputProps={{
+                startAdornment: (
+                  <InputAdornment position="start">
+                    <SearchIcon sx={{ color: colors.gray }} />
+                  </InputAdornment>
+                ),
+                endAdornment: searchText && (
+                  <InputAdornment position="end">
+                    <IconButton onClick={() => setSearchText("")}>
+                      <ClearIcon />
+                    </IconButton>
+                  </InputAdornment>
+                ),
+              }}
+            />
+
+            {/* Clear Button */}
+            <Button 
+              variant="outlined" 
+              onClick={handleClearFilters}
+              startIcon={<ClearIcon />}
+              sx={{ 
+                borderColor: colors.primary, 
+                color: colors.primary,
+                borderRadius: "16px"
+              }}
+            >
+              Clear All
+            </Button>
+          </Box>
+        </Paper>
+      </LocalizationProvider>
+
+      {/* --- Tabs Section --- */}
+      <Box display="flex" justifyContent="center" marginBottom={4} gap={3}>
+        <Button
+          variant={tab === "Pending" ? "contained" : "outlined"}
+          onClick={() => setTab("Pending")}
+          startIcon={<PendingIcon />}
+          sx={{
+            backgroundColor: tab === "Pending" ? colors.primary : "transparent",
+            color: tab === "Pending" ? colors.white : colors.primary,
+            borderColor: colors.primary,
+            borderRadius: "16px",
+            padding: "10px 30px"
+          }}
+        >
+          Pending ({pendingCount})
+        </Button>
+
+        <Button
+          variant={tab === "Completed" ? "contained" : "outlined"}
+          onClick={() => setTab("Completed")}
+          startIcon={<CheckCircleIcon />}
+          sx={{
+            backgroundColor: tab === "Completed" ? colors.primary : "transparent",
+            color: tab === "Completed" ? colors.white : colors.primary,
+            borderColor: colors.primary,
+            borderRadius: "16px",
+            padding: "10px 30px"
+          }}
+        >
+          Completed ({completedCount})
+        </Button>
+      </Box>
+
+      {/* --- Table Section --- */}
+      <Paper elevation={4} sx={{ borderRadius: "24px", overflow: "hidden" }}>
+        <Box sx={{ padding: 3, borderBottom: "1px solid #eee" }}>
+          <Typography variant="h6" sx={{ color: colors.primary, fontWeight: 600 }}>
+            {tab} Prescriptions ({tableRows.length})
+          </Typography>
+        </Box>
+
+        <Table>
+          <TableHead sx={{ backgroundColor: colors.lightGray }}>
+            <TableRow>
+              <TableCell><b>Patient Name</b></TableCell>
+              <TableCell><b>Doctor Name</b></TableCell>
+              {tab === "Pending" && <TableCell><b>Items</b></TableCell>}
+              <TableCell><b>Date</b></TableCell>
+              <TableCell align="right"><b>Actions</b></TableCell>
+            </TableRow>
+          </TableHead>
+
+          <TableBody>
+            {tableRows.length > 0 ? (
+              tableRows.map((row) => (
+                <TableRow key={row.id} hover>
+                  {/* Patient Name Column */}
+                  <TableCell>
+                    <Box display="flex" alignItems="center">
+                      <Avatar sx={{ marginRight: 2, bgcolor: tab === "Pending" ? colors.accent : colors.success, width: 32, height: 32 }}>
+                        <PersonIcon fontSize="small" />
                       </Avatar>
-                      <Typography
-                        variant="h5"
-                        sx={{ fontWeight: 700, color: THEME.primary }}
-                      >
-                        {key}
-                      </Typography>
+                      <Typography fontWeight="bold">{row.patientName}</Typography>
                     </Box>
-                    <Typography
-                      variant="h3"
-                      sx={{ 
-                        fontWeight: 800, 
-                        color: color,
-                        textShadow: "0 2px 4px rgba(0,0,0,0.1)"
-                      }}
-                    >
-                      {count}
-                    </Typography>
-                    <Chip 
-                      label={`${count} total`}
-                      size="small"
-                      sx={{ 
-                        mt: 2,
-                        bgcolor: `${color}15`,
-                        color: color,
-                        fontWeight: 600
-                      }}
-                    />
-                  </Paper>
-                </Grid>
-              </Grow>
-            ))}
-          </Grid>
+                  </TableCell>
 
-          {/* Enhanced Filters */}
-          <LocalizationProvider dateAdapter={AdapterDayjs}>
-            <Paper 
-              elevation={8} 
-              sx={{ 
-                p: 4, 
-                mb: 4, 
-                borderRadius: "24px",
-                background: `linear-gradient(135deg, ${THEME.white} 0%, #f8fffe 100%)`,
-                border: `1px solid rgba(69, 210, 122, 0.1)`
-              }}
-            >
-              <Typography variant="h6" sx={{ color: THEME.primary, fontWeight: 600, mb: 3 }}>
-                Filter & Search
-              </Typography>
-              <Box
-                display="flex"
-                justifyContent="center"
-                alignItems="center"
-                gap={3}
-                flexWrap="wrap"
-              >
-                <DatePicker
-                  label="Filter by Date"
-                  value={dateFilter}
-                  onChange={(val) => setDateFilter(val)}
-                  slotProps={{
-                    textField: {
-                      variant: "outlined",
-                      sx: inputSx,
-                    },
-                  }}
-                />
+                  {/* Doctor Name Column */}
+                  <TableCell>{row.doctorName}</TableCell>
 
-                <Select
-                  value={statusFilter}
-                  onChange={(e) => setStatusFilter(e.target.value)}
-                  displayEmpty
-                  sx={{ ...inputSx, minWidth: 200 }}
-                >
-                  <MenuItem value="All">All Status</MenuItem>
-                  <MenuItem value="Pending">Pending</MenuItem>
-                  <MenuItem value="Completed">Completed</MenuItem>
-                </Select>
+                  {/* Items Column (Only for Pending) */}
+                  {tab === "Pending" && (
+                    <TableCell>
+                      <Chip 
+                        label={row.itemCount + " items"} 
+                        size="small" 
+                        sx={{ bgcolor: colors.primary + "20", color: colors.primary, fontWeight: "bold" }}
+                      />
+                    </TableCell>
+                  )}
 
-                <TextField
-                  label="Search by Patient Name or ID"
-                  variant="outlined"
-                  value={searchText}
-                  onChange={(e) => setSearchText(e.target.value)}
-                  sx={{ ...inputSx, minWidth: 340 }}
-                  InputProps={{
-                    startAdornment: (
-                      <InputAdornment position="start">
-                        <SearchIcon sx={{ color: THEME.gray }} />
-                      </InputAdornment>
-                    ),
-                    endAdornment: searchText && (
-                      <InputAdornment position="end">
-                        <IconButton onClick={() => setSearchText("")} size="small">
-                          <ClearIcon />
-                        </IconButton>
-                      </InputAdornment>
-                    ),
-                  }}
-                />
-                
-                <Button
-                  variant="outlined"
-                  onClick={clearFilters}
-                  startIcon={<ClearIcon />}
-                  sx={{
-                    borderColor: THEME.primary,
-                    color: THEME.primary,
-                    borderRadius: "16px",
-                    px: 4,
-                    py: 1.5,
-                    fontWeight: 600,
-                    textTransform: "none",
-                    "&:hover": {
-                      backgroundColor: THEME.primary,
-                      color: "white",
-                      transform: "translateY(-2px)",
-                      boxShadow: "0 8px 25px rgba(12, 60, 60, 0.3)",
-                    }
-                  }}
-                >
-                  Clear All
-                </Button>
-              </Box>
-            </Paper>
-          </LocalizationProvider>
+                  {/* Date Column */}
+                  <TableCell>
+                    {formatPrescriptionDate(row.createdAt || row.prescriptionDate || row.issuedAt)}
+                  </TableCell>
 
-          {/* Enhanced Tabs */}
-          <Box display="flex" justifyContent="center" mb={4} gap={3}>
-            {["Pending", "Completed"].map((label) => (
-              <Button
-                key={label}
-                variant={tab === label ? "contained" : "outlined"}
-                onClick={() => setTab(label)}
-                sx={buttonTabSx(tab === label)}
-                startIcon={label === "Pending" ? <PendingIcon /> : <CheckCircleIcon />}
-              >
-                {label} ({summary[label].count})
-              </Button>
-            ))}
-          </Box>
+                  {/* Actions Column */}
+                  <TableCell align="right">
+                    <Box display="flex" justifyContent="flex-end" gap={1}>
+                      {tab === "Pending" ? (
+                        // Action for Pending: View & Dispense
+                        <Button
+                          variant="outlined"
+                          onClick={() => handleView(row)}
+                          startIcon={<AssignmentIcon />}
+                          sx={{ borderColor: colors.accent, color: colors.accent }}
+                        >
+                          View Prescription
+                        </Button>
+                      ) : (
+                        // Actions for Completed: View and Invoice
+                        <>
+                          <Button
+                            variant="outlined"
+                            onClick={() => handleViewCompleted(row)}
+                            startIcon={<AssignmentIcon />}
+                            sx={{ borderColor: colors.accent, color: colors.accent }}
+                          >
+                            View
+                          </Button>
 
-          {/* Enhanced Table */}
-          <Fade in timeout={600}>
-            <Paper 
-              elevation={12} 
-              sx={{ 
-                borderRadius: "24px",
-                overflow: "hidden",
-                background: `linear-gradient(135deg, ${THEME.white} 0%, #fafffe 100%)`,
-                border: `1px solid rgba(12, 60, 60, 0.08)`
-              }}
-            >
-              <Box sx={{ p: 3, borderBottom: `1px solid rgba(12, 60, 60, 0.1)` }}>
-                <Typography variant="h6" sx={{ color: THEME.primary, fontWeight: 600 }}>
-                  {tab} Prescriptions ({tableRows.length})
-                </Typography>
-              </Box>
-              
-              <Table>
-                <TableHead sx={{ bgcolor: "rgba(12, 60, 60, 0.04)" }}>
-                  <TableRow>
-                    {tab === "Pending" ? (
-                      <>
-                        <TableCell sx={{ fontWeight: 600, color: THEME.primary }}>Patient</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: THEME.primary }}>Doctor</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: THEME.primary }}>Items</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: THEME.primary }}>Date & Time</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 600, color: THEME.primary }}>Action</TableCell>
-                      </>
-                    ) : (
-                      <>
-                        <TableCell sx={{ fontWeight: 600, color: THEME.primary }}>Patient Name</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: THEME.primary }}>Doctor's Name</TableCell>
-                        <TableCell sx={{ fontWeight: 600, color: THEME.primary }}>Issued Date & Time</TableCell>
-                        <TableCell align="right" sx={{ fontWeight: 600, color: THEME.primary }}>Action</TableCell>
-                      </>
-                    )}
-                  </TableRow>
-                </TableHead>
-
-                <TableBody>
-                  {tab === "Pending" &&
-                    tableRows.map((row, index) => (
-                      <Fade in timeout={300 + index * 100} key={row.id}>
-                        <TableRow sx={tableRowSx}>
-                          <TableCell>
-                            <Box display="flex" alignItems="center">
-                              <Avatar sx={{ mr: 2, bgcolor: THEME.accent, width: 32, height: 32 }}>
-                                <PersonIcon fontSize="small" />
-                              </Avatar>
-                              <Typography fontWeight={600}>{row.patientName}</Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>{row.doctorName}</TableCell>
-                          <TableCell>
-                            <Chip 
-                              label={`${row.itemCount} items`}
-                              size="small"
-                              sx={{ 
-                                bgcolor: `${THEME.primary}15`,
-                                color: THEME.primary,
-                                fontWeight: 600
-                              }}
-                            />
-                          </TableCell>
-                          <TableCell>
-                            {formatPrescriptionDate(row.createdAt || row.prescriptionDate)}
-                          </TableCell>
-                          <TableCell align="right">
+                          {/* Logic Check: Only show "Invoice" button if:
+                             1. Patient is Staff
+                             2. Invoice actually exists (checked in our useEffect)
+                          */}
+                          {row.patient && row.patient.role === "Staff" && invoiceExistsMap[row.id] === true && (
                             <Button
                               variant="outlined"
-                              onClick={() => handleView(row)}
-                              startIcon={<AssignmentIcon />}
-                              sx={actionButtonSx("primary")}
+                              onClick={() => handleViewInvoice(row)}
+                              startIcon={<ReceiptIcon />}
+                              sx={{ borderColor: colors.primary, color: colors.primary }}
                             >
-                              View Prescription
+                              View Invoice
                             </Button>
-                          </TableCell>
-                        </TableRow>
-                      </Fade>
-                    ))}
-
-                  {tab === "Completed" &&
-                    tableRows.map((row, index) => (
-                      <Fade in timeout={300 + index * 100} key={row.id}>
-                        <TableRow sx={tableRowSx}>
-                          <TableCell>
-                            <Box display="flex" alignItems="center">
-                              <Avatar sx={{ mr: 2, bgcolor: THEME.success, width: 32, height: 32 }}>
-                                <PersonIcon fontSize="small" />
-                              </Avatar>
-                              <Typography fontWeight={600}>{row.patientName}</Typography>
-                            </Box>
-                          </TableCell>
-                          <TableCell>{row.doctorName}</TableCell>
-                          <TableCell>
-                            {formatPrescriptionDate(row.prescriptionDate || row.issuedAt)}
-                          </TableCell>
-                          <TableCell align="right">
-                            <Box sx={{ display: "flex", gap: 1, justifyContent: "flex-end" }}>
-                              <Button
-                                variant="outlined"
-                                onClick={() => handleViewCompleted(row)}
-                                startIcon={<AssignmentIcon />}
-                                sx={actionButtonSx("primary")}
-                              >
-                                View Prescription
-                              </Button>
-
-                              {row.patient?.role === "Staff" && invoiceExists[row.id] && (
-                                <Button
-                                  variant="outlined"
-                                  onClick={() => handleViewInvoice(row)}
-                                  startIcon={<ReceiptIcon />}
-                                  sx={actionButtonSx("secondary")}
-                                >
-                                  View Invoice
-                                </Button>
-                              )}
-                            </Box>
-                          </TableCell>
-                        </TableRow>
-                      </Fade>
-                    ))}
-
-                  {tableRows.length === 0 && (
-                    <TableRow>
-                      <TableCell 
-                        colSpan={tab === "Pending" ? 5 : 4} 
-                        align="center"
-                        sx={{ py: 6 }}
-                      >
-                        <Box display="flex" flexDirection="column" alignItems="center">
-                          <Avatar sx={{ 
-                            bgcolor: `${THEME.gray}15`, 
-                            color: THEME.gray,
-                            width: 64,
-                            height: 64,
-                            mb: 2
-                          }}>
-                            <AssignmentIcon fontSize="large" />
-                          </Avatar>
-                          <Typography variant="h6" color={THEME.gray} fontWeight={600}>
-                            No {tab.toLowerCase()} prescriptions found
-                          </Typography>
-                          <Typography variant="body2" color={THEME.gray} mt={1}>
-                            {searchText || dateFilter || statusFilter !== "All" 
-                              ? "Try adjusting your filters"
-                              : `No ${tab.toLowerCase()} prescriptions available`
-                            }
-                          </Typography>
-                        </Box>
-                      </TableCell>
-                    </TableRow>
-                  )}
-                </TableBody>
-              </Table>
-            </Paper>
-          </Fade>
-        </Box>
-      </Fade>
+                          )}
+                        </>
+                      )}
+                    </Box>
+                  </TableCell>
+                </TableRow>
+              ))
+            ) : (
+              // Empty State
+              <TableRow>
+                <TableCell colSpan={5} align="center" sx={{ padding: 6 }}>
+                  <Box display="flex" flexDirection="column" alignItems="center">
+                    <Avatar sx={{ bgcolor: colors.lightGray, color: colors.gray, width: 64, height: 64, marginBottom: 2 }}>
+                      <AssignmentIcon fontSize="large" />
+                    </Avatar>
+                    <Typography variant="h6" color={colors.gray}>
+                      No prescriptions found
+                    </Typography>
+                    <Typography variant="body2" color={colors.gray}>
+                      Try adjusting your search or filters.
+                    </Typography>
+                  </Box>
+                </TableCell>
+              </TableRow>
+            )}
+          </TableBody>
+        </Table>
+      </Paper>
     </Box>
   );
 };
