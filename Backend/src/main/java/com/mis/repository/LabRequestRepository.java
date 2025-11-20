@@ -6,4 +6,5 @@ import java.util.List;
 
 public interface LabRequestRepository extends JpaRepository<LabRequest, String> {
     List<LabRequest> findByStatus(LabRequest.Status status);
+    List<LabRequest> findByPatient(com.mis.model.User patient);
 }

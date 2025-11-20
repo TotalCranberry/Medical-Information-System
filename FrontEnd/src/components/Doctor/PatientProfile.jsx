@@ -37,6 +37,10 @@ import ViewMedicalDialog from './ViewMedicalDialog';
 import { fetchPatientPrescriptions } from '../../api/prescription';
 import ViewPrescriptionDialog from './ViewPrescriptionDialog';
 
+// Import for Lab Requests
+import { getLabRequestsForPatient } from '../../api/labApi';
+import ViewLabRequestDialog from './ViewLabRequestDialog';
+
 const PatientProfile = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
@@ -47,11 +51,13 @@ const PatientProfile = () => {
     location.state?.appointmentId ||
     new URLSearchParams(location.search).get("appointmentId");
   const medicalIssued = location.state?.medicalIssued;
+  const labRequestCreated = location.state?.labRequestCreated;
 
   const [patientData, setPatientData] = useState(patientFromState || null);
   const [vitals, setVitals] = useState([]);
   const [medicals, setMedicals] = useState([]);
   const [prescriptions, setPrescriptions] = useState([]);
+  const [labRequests, setLabRequests] = useState([]);
   const [currentVitals, setCurrentVitals] = useState({
     heightCm: "",
     weightKg: "",
@@ -81,6 +87,10 @@ const PatientProfile = () => {
   // Prescription Dialog State
   const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
   const [selectedPrescriptionId, setSelectedPrescriptionId] = useState(null);
+
+  // Lab Request Dialog State
+  const [labRequestDialogOpen, setLabRequestDialogOpen] = useState(false);
+  const [selectedLabRequestId, setSelectedLabRequestId] = useState(null);
 
   // --- Medical Record State ---
   const [medicalRecord, setMedicalRecord] = useState(null);
@@ -128,6 +138,7 @@ const PatientProfile = () => {
       
       await loadMedicals();
       await loadPrescriptions();
+      await loadLabRequests();
       await fetchMedicalRecordData(); // Fetch the medical form
       
       if (profileData.latestVitals) {
@@ -177,6 +188,7 @@ const PatientProfile = () => {
       
       await loadMedicals();
       await loadPrescriptions();
+      await loadLabRequests();
       await fetchMedicalRecordData(); // Fetch the medical form
       
       if (vitalsData.length > 0) {
@@ -251,6 +263,15 @@ const PatientProfile = () => {
       setPrescriptions(prescriptionsData || []);
     } catch (err) {
       console.error("Error loading prescriptions:", err);
+    }
+  };
+
+  const loadLabRequests = async () => {
+    try {
+      const labRequestsData = await getLabRequestsForPatient(patientId);
+      setLabRequests(labRequestsData || []);
+    } catch (err) {
+      console.error("Error loading lab requests:", err);
     }
   };
 
@@ -359,11 +380,10 @@ const PatientProfile = () => {
   };
 
   const handleRequestLabTest = () => {
-    navigate(`/doctor/request-test`, {
+    navigate(`/doctor/request-lab-test/${patientId}`, {
       state: {
         patient: patientData,
-        patientId,
-        patientName: patientData?.name || "Unknown Patient"
+        appointmentId: currentAppointmentId
       }
     });
   };
@@ -400,6 +420,16 @@ const PatientProfile = () => {
   const handleClosePrescriptionDialog = () => {
     setPrescriptionDialogOpen(false);
     setSelectedPrescriptionId(null);
+  };
+
+  const handleViewLabRequest = (labRequestId) => {
+    setSelectedLabRequestId(labRequestId);
+    setLabRequestDialogOpen(true);
+  };
+
+  const handleCloseLabRequestDialog = () => {
+    setLabRequestDialogOpen(false);
+    setSelectedLabRequestId(null);
   };
 
   const getPatientAge = () => {
@@ -506,6 +536,12 @@ const PatientProfile = () => {
         </Alert>
       )}
 
+      {labRequestCreated && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Laboratory test request has been created successfully!
+        </Alert>
+      )}
+
       <Grid container spacing={3}>
         {/* Patient Information */}
         <Grid item xs={12} md={4}>
@@ -578,10 +614,10 @@ const PatientProfile = () => {
                   startIcon={<ScienceIcon />}
                   onClick={handleRequestLabTest}
                   sx={{
-                    borderColor: "#45d27a",
-                    color: "#45d27a",
+                    borderColor: "#2196F3",
+                    color: "#2196F3",
                     "&:hover": {
-                      backgroundColor: "#45d27a",
+                      backgroundColor: "#2196F3",
                       color: "#fff"
                     }
                   }}
@@ -1135,6 +1171,99 @@ const PatientProfile = () => {
               </Alert>
             )}
           </Paper>
+
+          {/* Lab Requests Section */}
+          <Paper elevation={2} sx={{ p: 3, mt: 3 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Box display="flex" alignItems="center">
+                <ScienceIcon sx={{ fontSize: 30, color: "#2196F3", mr: 1 }} />
+                <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
+                  Laboratory Requests
+                </Typography>
+              </Box>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+
+            {labRequests && labRequests.length > 0 ? (
+              <List>
+                {labRequests.map((labRequest, index) => (
+                  <ListItem
+                    key={labRequest.id}
+                    divider={index < labRequests.length - 1}
+                    sx={{
+                      border: '1px solid #e0e0e0',
+                      borderRadius: 1,
+                      mb: 1,
+                      backgroundColor: '#fafafa'
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            Lab Request
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={labRequest.status}
+                            color={
+                              labRequest.status === 'COMPLETED' ? 'success' :
+                              labRequest.status === 'IN_PROGRESS' ? 'warning' :
+                              labRequest.status === 'PENDING' ? 'default' : 'error'
+                            }
+                            variant={labRequest.status === 'COMPLETED' ? 'filled' : 'outlined'}
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            <strong>Date:</strong> {formatDate(labRequest.orderDate)}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              maxWidth: '100%',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical'
+                            }}
+                          >
+                            <strong>Test Type:</strong> {labRequest.testType}
+                          </Typography>
+                          <Box display="flex" gap={1} mt={2}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<ViewIcon />}
+                              onClick={() => handleViewLabRequest(labRequest.id)}
+                              sx={{
+                                borderColor: "#2196F3",
+                                color: "#2196F3",
+                                "&:hover": {
+                                  backgroundColor: "#2196F3",
+                                  color: "#fff"
+                                }
+                              }}
+                            >
+                              View
+                            </Button>
+                          </Box>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Alert severity="info">
+                No laboratory tests have been requested for this patient yet.
+              </Alert>
+            )}
+          </Paper>
         </Grid>
       </Grid>
 
@@ -1151,6 +1280,13 @@ const PatientProfile = () => {
         open={prescriptionDialogOpen}
         onClose={handleClosePrescriptionDialog}
         prescriptionId={selectedPrescriptionId}
+      />
+
+      {/* Lab Request Dialog */}
+      <ViewLabRequestDialog
+        open={labRequestDialogOpen}
+        onClose={handleCloseLabRequestDialog}
+        labRequestId={selectedLabRequestId}
       />
     </Box>
   );
