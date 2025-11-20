@@ -514,6 +514,31 @@ public class PrescriptionService {
         return prescriptions;
     }
 
+    /**
+     * Get all prescriptions for a specific patient (newest first).
+     * Use this for the doctor to see all prescriptions they've issued to a patient.
+     */
+    @Transactional(readOnly = true)
+    public List<Prescription> getAllPrescriptionsForPatient(String patientId) {
+        System.out.println("DEBUG: Looking for all prescriptions for patientId: " + patientId);
+
+        // First try to find by User entity relationship (most reliable)
+        User patient = userRepository.findById(patientId).orElse(null);
+        if (patient != null) {
+            List<Prescription> prescriptions = prescriptionRepository.findByPatientOrderByPrescriptionDateDesc(patient);
+            System.out.println("DEBUG: Found " + prescriptions.size() + " prescriptions by User entity");
+            if (!prescriptions.isEmpty()) {
+                return prescriptions;
+            }
+        }
+
+        // Fallback: try to find by encrypted patient ID string
+        List<Prescription> prescriptions = prescriptionRepository.findByPatientIdOrderByPrescriptionDateDesc(patientId);
+        System.out.println("DEBUG: Found " + prescriptions.size() + " prescriptions by encrypted patientId");
+
+        return prescriptions;
+    }
+
     // ----------- lightweight DTOs (kept here for convenience) ------------
 
     @Data @Builder @AllArgsConstructor

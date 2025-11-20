@@ -42,6 +42,7 @@ import com.mis.model.Staff;
 import com.mis.model.Student;
 import com.mis.model.User;
 import com.mis.model.Vitals;
+import com.mis.model.Prescription.Prescription;
 import com.mis.repository.AppointmentRepository;
 import com.mis.repository.DiagnosisRepository;
 import com.mis.repository.MedicalRepository;
@@ -50,6 +51,7 @@ import com.mis.repository.StudentRepository;
 import com.mis.repository.UserRepository;
 import com.mis.repository.VitalsRepository;
 import com.mis.service.MedicalFormService;
+import com.mis.service.Prescription.PrescriptionService;
 
 @RestController
 @RequestMapping("/api/doctor")
@@ -63,11 +65,13 @@ public class DoctorController {
     private final StudentRepository studentRepository;
     private final StaffRepository staffRepository;
     private final MedicalFormService medicalFormService;
+    private final PrescriptionService prescriptionService;
 
     public DoctorController(AppointmentRepository appointmentRepository, UserRepository userRepository,
             VitalsRepository vitalsRepository, DiagnosisRepository diagnosisRepository,
             MedicalRepository medicalRepository, StudentRepository studentRepository,
-            StaffRepository staffRepository, MedicalFormService medicalFormService) {
+            StaffRepository staffRepository, MedicalFormService medicalFormService,
+            PrescriptionService prescriptionService) {
         this.appointmentRepository = appointmentRepository;
         this.userRepository = userRepository;
         this.vitalsRepository = vitalsRepository;
@@ -76,6 +80,7 @@ public class DoctorController {
         this.studentRepository = studentRepository;
         this.staffRepository = staffRepository;
         this.medicalFormService = medicalFormService;
+        this.prescriptionService = prescriptionService;
     }
 
     // NEW: Get all patients (Students and Staff) for the doctor's patient search
@@ -432,6 +437,26 @@ public class DoctorController {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                     .body(Map.of("message", "Error issuing medical: " + e.getMessage()));
         }
+    }
+
+    @GetMapping("/patients/{patientId}/prescriptions")
+    public ResponseEntity<List<Prescription>> getPatientPrescriptions(@PathVariable String patientId) {
+        // patientId is the student/staff id
+        User patient = null;
+        Optional<Student> studentOpt = studentRepository.findById(patientId);
+        if (studentOpt.isPresent()) {
+            patient = studentOpt.get().getUser();
+        } else {
+            Optional<Staff> staffOpt = staffRepository.findById(patientId);
+            if (staffOpt.isPresent()) {
+                patient = staffOpt.get().getUser();
+            } else {
+                throw new RuntimeException("Patient not found");
+            }
+        }
+
+        List<Prescription> prescriptions = prescriptionService.getAllPrescriptionsForPatient(patient.getId());
+        return ResponseEntity.ok(prescriptions);
     }
 
     @GetMapping("/patients/{patientId}/medicals")

@@ -33,6 +33,10 @@ import { getMedicalRecord } from '../../api/patient';
 import ViewPatientMedicalRecord from './ViewPatientMedicalRecord';
 import ViewMedicalDialog from './ViewMedicalDialog';
 
+// Import for Prescriptions
+import { fetchPatientPrescriptions } from '../../api/prescription';
+import ViewPrescriptionDialog from './ViewPrescriptionDialog';
+
 const PatientProfile = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
@@ -47,6 +51,7 @@ const PatientProfile = () => {
   const [patientData, setPatientData] = useState(patientFromState || null);
   const [vitals, setVitals] = useState([]);
   const [medicals, setMedicals] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
   const [currentVitals, setCurrentVitals] = useState({
     heightCm: "",
     weightKg: "",
@@ -72,6 +77,10 @@ const PatientProfile = () => {
   // Medical Dialog State
   const [medicalDialogOpen, setMedicalDialogOpen] = useState(false);
   const [selectedMedicalId, setSelectedMedicalId] = useState(null);
+
+  // Prescription Dialog State
+  const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
+  const [selectedPrescriptionId, setSelectedPrescriptionId] = useState(null);
 
   // --- Medical Record State ---
   const [medicalRecord, setMedicalRecord] = useState(null);
@@ -118,6 +127,7 @@ const PatientProfile = () => {
       setRecentDiagnoses(profileData.recentDiagnoses || []);
       
       await loadMedicals();
+      await loadPrescriptions();
       await fetchMedicalRecordData(); // Fetch the medical form
       
       if (profileData.latestVitals) {
@@ -166,6 +176,7 @@ const PatientProfile = () => {
       setRecentDiagnoses(profileData.recentDiagnoses || []);
       
       await loadMedicals();
+      await loadPrescriptions();
       await fetchMedicalRecordData(); // Fetch the medical form
       
       if (vitalsData.length > 0) {
@@ -231,6 +242,15 @@ const PatientProfile = () => {
       }
     } finally {
       setLoadingMedicals(false);
+    }
+  };
+
+  const loadPrescriptions = async () => {
+    try {
+      const prescriptionsData = await fetchPatientPrescriptions(patientId);
+      setPrescriptions(prescriptionsData || []);
+    } catch (err) {
+      console.error("Error loading prescriptions:", err);
     }
   };
 
@@ -374,6 +394,16 @@ const PatientProfile = () => {
   const handleMedicalUpdate = () => {
     // Reload medicals list when a medical is updated (e.g., sent to course unit)
     loadMedicals();
+  };
+
+  const handleViewPrescription = (prescriptionId) => {
+    setSelectedPrescriptionId(prescriptionId);
+    setPrescriptionDialogOpen(true);
+  };
+
+  const handleClosePrescriptionDialog = () => {
+    setPrescriptionDialogOpen(false);
+    setSelectedPrescriptionId(null);
   };
 
   const getPatientAge = () => {
@@ -1020,6 +1050,95 @@ const PatientProfile = () => {
               </Alert>
             ) : null}
           </Paper>
+
+          {/* Issued Prescriptions Section */}
+          <Paper elevation={2} sx={{ p: 3, mt: 3 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Box display="flex" alignItems="center">
+                <MedicationIcon sx={{ fontSize: 30, color: "#45d27a", mr: 1 }} />
+                <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
+                  Issued Prescriptions
+                </Typography>
+              </Box>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+
+            {prescriptions && prescriptions.length > 0 ? (
+              <List>
+                {prescriptions.map((prescription, index) => (
+                  <ListItem
+                    key={prescription.id}
+                    divider={index < prescriptions.length - 1}
+                    sx={{
+                      border: '1px solid #e0e0e0',
+                      borderRadius: 1,
+                      mb: 1,
+                      backgroundColor: '#fafafa'
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            Prescription
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={prescription.isActive ? "Active" : "Completed"}
+                            color={prescription.isActive ? "success" : "default"}
+                            variant={prescription.isActive ? "filled" : "outlined"}
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            <strong>Date:</strong> {formatDate(prescription.createdAt)}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              maxWidth: '100%',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical'
+                            }}
+                          >
+                            <strong>Doctor:</strong> {prescription.doctorName}
+                          </Typography>
+                          <Box display="flex" gap={1} mt={2}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<ViewIcon />}
+                              onClick={() => handleViewPrescription(prescription.id)}
+                              sx={{
+                                borderColor: "#45d27a",
+                                color: "#45d27a",
+                                "&:hover": {
+                                  backgroundColor: "#45d27a",
+                                  color: "#fff"
+                                }
+                              }}
+                            >
+                              View
+                            </Button>
+                          </Box>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Alert severity="info">
+                No prescriptions have been issued for this patient yet.
+              </Alert>
+            )}
+          </Paper>
         </Grid>
       </Grid>
 
@@ -1029,6 +1148,13 @@ const PatientProfile = () => {
         onClose={handleCloseMedicalDialog}
         medicalId={selectedMedicalId}
         onMedicalUpdate={handleMedicalUpdate}
+      />
+
+      {/* Prescription Dialog */}
+      <ViewPrescriptionDialog
+        open={prescriptionDialogOpen}
+        onClose={handleClosePrescriptionDialog}
+        prescriptionId={selectedPrescriptionId}
       />
     </Box>
   );
