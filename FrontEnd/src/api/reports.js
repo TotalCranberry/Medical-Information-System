@@ -15,11 +15,14 @@ export async function fetchPatientMedical(medicalId) {
   return apiFetch(`/patient/view-medical/${medicalId}`, 'GET', null, true);
 }
 
-
 export async function fetchPrescriptions() {
   return apiFetch('/patient/prescriptions', 'GET', null, true);
 }
 
 export async function fetchReports() {
   return apiFetch('/patient/reports', 'GET', null, true);
+}
+
+export async function fetchLabRequests() {
+  return apiFetch('/patient/lab-requests', 'GET', null, true);
 }

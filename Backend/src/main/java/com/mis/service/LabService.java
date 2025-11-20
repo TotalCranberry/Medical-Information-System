@@ -1,24 +1,31 @@
 package com.mis.service;
 
+import java.time.LocalDateTime;
+import java.util.List;
+
+import org.springframework.stereotype.Service;
+import org.springframework.web.multipart.MultipartFile;
+
 import com.mis.model.LabRequest;
 import com.mis.model.LabResult;
 import com.mis.repository.LabRequestRepository;
 import com.mis.repository.LabResultRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.time.LocalDateTime;
-import java.util.List;
 
 @Service
 public class LabService {
 
     private final LabRequestRepository labRequestRepository;
     private final LabResultRepository labResultRepository;
+    private final NotificationService notificationService;
 
-    public LabService(LabRequestRepository labRequestRepository, LabResultRepository labResultRepository) {
+    public LabService(
+            LabRequestRepository labRequestRepository,
+            LabResultRepository labResultRepository,
+            NotificationService notificationService
+    ) {
         this.labRequestRepository = labRequestRepository;
         this.labResultRepository = labResultRepository;
+        this.notificationService = notificationService;
     }
 
     public List<LabRequest> getRequestsByStatus(LabRequest.Status status) {
@@ -35,6 +42,13 @@ public class LabService {
             throw new RuntimeException("Invalid status: " + statusStr);
         }
         request.setStatus(status);
+
+        // Check if status is COMPLETED and send notification
+        if (status == LabRequest.Status.COMPLETED) {
+            String message = "Your lab request for " + request.getTestType() + " has been completed.";
+            
+            notificationService.createNotification(request.getPatient(), message);
+        }
         return labRequestRepository.save(request);
     }
 
