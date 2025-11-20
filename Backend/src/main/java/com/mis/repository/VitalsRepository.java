@@ -14,7 +14,7 @@ public interface VitalsRepository extends JpaRepository<Vitals, String> {
     
     List<Vitals> findByPatientOrderByRecordedAtDesc(User patient);
     
-    @Query("SELECT v FROM Vitals v WHERE v.patient = :patient ORDER BY v.recordedAt DESC")
+    @Query("SELECT v FROM Vitals v WHERE v.patient = :patient ORDER BY v.recordedAt DESC LIMIT 1")
     Optional<Vitals> findLatestVitalsByPatient(@Param("patient") User patient);
     
     List<Vitals> findByPatientAndRecordedByOrderByRecordedAtDesc(User patient, String recordedBy);

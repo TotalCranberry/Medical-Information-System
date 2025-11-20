@@ -204,62 +204,91 @@ public class DoctorController {
     // Patient Profile Endpoints
     @GetMapping("/patients/{patientId}")
     public ResponseEntity<Map<String, Object>> getPatientProfile(@PathVariable String patientId) {
-        User patient = userRepository.findById(patientId)
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
-        
-        // Get patient details based on role
+        // patientId is the student/staff id, not user id
+        User patient = null;
         Object patientDetails = null;
-        if (patient.getRole() == Role.Student) {
-            patientDetails = studentRepository.findById(patientId).orElse(null);
-        } else if (patient.getRole() == Role.Staff) {
-            patientDetails = staffRepository.findById(patientId).orElse(null);
+
+        Optional<Student> studentOpt = studentRepository.findById(patientId);
+        if (studentOpt.isPresent()) {
+            patient = studentOpt.get().getUser();
+            patientDetails = studentOpt.get();
+        } else {
+            Optional<Staff> staffOpt = staffRepository.findById(patientId);
+            if (staffOpt.isPresent()) {
+                patient = staffOpt.get().getUser();
+                patientDetails = staffOpt.get();
+            } else {
+                throw new RuntimeException("Patient not found");
+            }
         }
-        
+
         // Get latest vitals
         Vitals latestVitals = vitalsRepository.findLatestVitalsByPatient(patient).orElse(null);
-        
+
         // Get recent diagnoses
         List<Diagnosis> recentDiagnoses = diagnosisRepository.findByPatientOrderByDiagnosisDateDesc(patient)
                 .stream().limit(10).toList();
-        
+
         // Get recent medicals
         List<Medical> recentMedicals = medicalRepository.findByPatientOrderByMedicalDateDesc(patient)
                 .stream().limit(10).toList();
-        
+
         Map<String, Object> profile = new HashMap<>();
         profile.put("patient", patient);
         profile.put("patientDetails", patientDetails);
         profile.put("latestVitals", latestVitals);
         profile.put("recentDiagnoses", recentDiagnoses);
         profile.put("recentMedicals", recentMedicals);
-        
+
         return ResponseEntity.ok(profile);
     }
 
     @GetMapping("/patients/{patientId}/vitals")
     public ResponseEntity<List<Vitals>> getPatientVitals(@PathVariable String patientId) {
-        User patient = userRepository.findById(patientId)
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
-        
+        // patientId is the student/staff id
+        User patient = null;
+        Optional<Student> studentOpt = studentRepository.findById(patientId);
+        if (studentOpt.isPresent()) {
+            patient = studentOpt.get().getUser();
+        } else {
+            Optional<Staff> staffOpt = staffRepository.findById(patientId);
+            if (staffOpt.isPresent()) {
+                patient = staffOpt.get().getUser();
+            } else {
+                throw new RuntimeException("Patient not found");
+            }
+        }
+
         List<Vitals> vitals = vitalsRepository.findByPatientOrderByRecordedAtDesc(patient);
         return ResponseEntity.ok(vitals);
     }
 
     @PostMapping("/patients/{patientId}/vitals")
-    public ResponseEntity<?> savePatientVitals(Authentication authentication, 
-                                             @PathVariable String patientId, 
-                                             @RequestBody VitalsRequest request) {
+    public ResponseEntity<?> savePatientVitals(Authentication authentication,
+                                              @PathVariable String patientId,
+                                              @RequestBody VitalsRequest request) {
         try {
             String doctorId = authentication.getName();
-            User patient = userRepository.findById(patientId)
-                    .orElseThrow(() -> new RuntimeException("Patient not found"));
-            
+            // patientId is the student/staff id
+            User patient = null;
+            Optional<Student> studentOpt = studentRepository.findById(patientId);
+            if (studentOpt.isPresent()) {
+                patient = studentOpt.get().getUser();
+            } else {
+                Optional<Staff> staffOpt = staffRepository.findById(patientId);
+                if (staffOpt.isPresent()) {
+                    patient = staffOpt.get().getUser();
+                } else {
+                    throw new RuntimeException("Patient not found");
+                }
+            }
+
             Vitals vitals = new Vitals();
             vitals.setId(UUID.randomUUID().toString());
             vitals.setPatient(patient);
             vitals.setRecordedBy(doctorId);
             vitals.setRecordedAt(new Date());
-            
+
             // Set vitals data - handle null values gracefully
             vitals.setHeightCm(request.getHeightCm());
             vitals.setWeightKg(request.getWeightKg());
@@ -270,7 +299,7 @@ public class DoctorController {
             vitals.setRespiratoryRate(request.getRespiratoryRate());
             vitals.setOxygenSaturation(request.getOxygenSaturation());
             vitals.setNotes(request.getNotes());
-            
+
             Vitals savedVitals = vitalsRepository.save(vitals);
             return ResponseEntity.ok(savedVitals);
         } catch (Exception e) {
@@ -281,13 +310,24 @@ public class DoctorController {
 
     @PostMapping("/patients/{patientId}/diagnosis")
     public ResponseEntity<?> saveDiagnosis(Authentication authentication,
-                                         @PathVariable String patientId,
-                                         @RequestBody DiagnosisRequest request) {
+                                          @PathVariable String patientId,
+                                          @RequestBody DiagnosisRequest request) {
         try {
             String doctorId = authentication.getName();
-            User patient = userRepository.findById(patientId)
-                    .orElseThrow(() -> new RuntimeException("Patient not found"));
-            
+            // patientId is the student/staff id
+            User patient = null;
+            Optional<Student> studentOpt = studentRepository.findById(patientId);
+            if (studentOpt.isPresent()) {
+                patient = studentOpt.get().getUser();
+            } else {
+                Optional<Staff> staffOpt = staffRepository.findById(patientId);
+                if (staffOpt.isPresent()) {
+                    patient = staffOpt.get().getUser();
+                } else {
+                    throw new RuntimeException("Patient not found");
+                }
+            }
+
             Diagnosis diagnosis = new Diagnosis();
             diagnosis.setId(UUID.randomUUID().toString());
             diagnosis.setPatient(patient);
@@ -296,13 +336,13 @@ public class DoctorController {
             diagnosis.setDiagnosis(request.getDiagnosis());
             diagnosis.setNotes(request.getNotes());
             diagnosis.setCreatedAt(new Date());
-            
+
             // Link to appointment if provided
             if (request.getAppointmentId() != null && !request.getAppointmentId().trim().isEmpty()) {
                 Appointment appointment = appointmentRepository.findById(request.getAppointmentId()).orElse(null);
                 diagnosis.setAppointment(appointment);
             }
-            
+
             Diagnosis savedDiagnosis = diagnosisRepository.save(diagnosis);
             return ResponseEntity.ok(savedDiagnosis);
         } catch (Exception e) {
@@ -314,16 +354,37 @@ public class DoctorController {
     // Medical Endpoints
     @PostMapping("/patients/{patientId}/medical")
     public ResponseEntity<?> issueMedical(Authentication authentication,
-                                         @PathVariable String patientId,
-                                         @RequestParam("recommendations") String recommendations,
-                                         @RequestParam(value = "additionalNotes", required = false) String additionalNotes,
-                                         @RequestParam(value = "appointmentId", required = false) String appointmentId,
-                                         @RequestParam(value = "doctorSignature", required = false) MultipartFile doctorSignature,
-                                         @RequestParam(value = "doctorSeal", required = false) MultipartFile doctorSeal) {
+                                          @PathVariable String patientId,
+                                          @RequestParam("recommendations") String recommendations,
+                                          @RequestParam(value = "additionalNotes", required = false) String additionalNotes,
+                                          @RequestParam(value = "appointmentId", required = false) String appointmentId,
+                                          @RequestParam(value = "doctorSignature", required = false) MultipartFile doctorSignature,
+                                          @RequestParam(value = "doctorSeal", required = false) MultipartFile doctorSeal) {
         try {
             String doctorId = authentication.getName();
-            User patient = userRepository.findById(patientId)
-                    .orElseThrow(() -> new RuntimeException("Patient not found"));
+            // patientId is the student/staff id
+            User patient = null;
+            Object patientDetails = null;
+            Integer patientAge = null;
+            String patientFaculty = null;
+
+            Optional<Student> studentOpt = studentRepository.findById(patientId);
+            if (studentOpt.isPresent()) {
+                patient = studentOpt.get().getUser();
+                patientDetails = studentOpt.get();
+                patientFaculty = studentOpt.get().getFaculty();
+                patientAge = calculateAge(studentOpt.get().getDateOfBirth());
+            } else {
+                Optional<Staff> staffOpt = staffRepository.findById(patientId);
+                if (staffOpt.isPresent()) {
+                    patient = staffOpt.get().getUser();
+                    patientDetails = staffOpt.get();
+                    patientFaculty = staffOpt.get().getFaculty();
+                    patientAge = calculateAge(staffOpt.get().getDateOfBirth());
+                } else {
+                    throw new RuntimeException("Patient not found");
+                }
+            }
 
             // Validate file sizes (1MB limit)
             if (doctorSignature != null && doctorSignature.getSize() > 1024 * 1024) {
@@ -333,24 +394,6 @@ public class DoctorController {
             if (doctorSeal != null && doctorSeal.getSize() > 1024 * 1024) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "Doctor seal image must be less than 1MB"));
-            }
-
-            // Get patient details based on role
-            Integer patientAge = null;
-            String patientFaculty = null;
-
-            if (patient.getRole() == Role.Student) {
-                Student studentDetails = studentRepository.findById(patientId).orElse(null);
-                if (studentDetails != null) {
-                    patientFaculty = studentDetails.getFaculty();
-                    patientAge = calculateAge(studentDetails.getDateOfBirth());
-                }
-            } else if (patient.getRole() == Role.Staff) {
-                Staff staffDetails = staffRepository.findById(patientId).orElse(null);
-                if (staffDetails != null) {
-                    patientFaculty = staffDetails.getFaculty();
-                    patientAge = calculateAge(staffDetails.getDateOfBirth());
-                }
             }
 
             Medical medical = new Medical();
@@ -393,8 +436,19 @@ public class DoctorController {
 
     @GetMapping("/patients/{patientId}/medicals")
     public ResponseEntity<List<Map<String, Object>>> getPatientMedicals(@PathVariable String patientId) {
-        User patient = userRepository.findById(patientId)
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
+        // patientId is the student/staff id
+        User patient = null;
+        Optional<Student> studentOpt = studentRepository.findById(patientId);
+        if (studentOpt.isPresent()) {
+            patient = studentOpt.get().getUser();
+        } else {
+            Optional<Staff> staffOpt = staffRepository.findById(patientId);
+            if (staffOpt.isPresent()) {
+                patient = staffOpt.get().getUser();
+            } else {
+                throw new RuntimeException("Patient not found");
+            }
+        }
 
         List<Medical> medicals = medicalRepository.findByPatientOrderByMedicalDateDesc(patient);
         List<Map<String, Object>> medicalDTOs = new ArrayList<>();
@@ -492,10 +546,24 @@ public class DoctorController {
     @GetMapping("/patient/{patientId}/medical-record")
     @PreAuthorize("hasRole('Doctor')")
     public ResponseEntity<MedicalRecordResponseDTO> getPatientMedicalRecord(@PathVariable String patientId) {
-        Optional<MedicalRecordResponseDTO> dtoOpt = medicalFormService.getFullMedicalRecordByUserId(patientId);
-        
+        // patientId is the student/staff id, but medicalFormService uses userId
+        User patient = null;
+        Optional<Student> studentOpt = studentRepository.findById(patientId);
+        if (studentOpt.isPresent()) {
+            patient = studentOpt.get().getUser();
+        } else {
+            Optional<Staff> staffOpt = staffRepository.findById(patientId);
+            if (staffOpt.isPresent()) {
+                patient = staffOpt.get().getUser();
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        }
+
+        Optional<MedicalRecordResponseDTO> dtoOpt = medicalFormService.getFullMedicalRecordByUserId(patient.getId());
+
         return dtoOpt.map(ResponseEntity::ok)
-                     .orElseGet(() -> ResponseEntity.notFound().build());
+                      .orElseGet(() -> ResponseEntity.notFound().build());
     }
 
     // Helper method to calculate age from LocalDate
