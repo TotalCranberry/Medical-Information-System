@@ -4,7 +4,10 @@ import com.mis.dto.LabRequestDTO;
 import com.mis.mapper.LabRequestMapper;
 import com.mis.model.LabRequest;
 import com.mis.model.LabResult;
+import com.mis.model.LabResultFile;
 import com.mis.service.LabService;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
@@ -22,12 +25,18 @@ public class LabController {
         this.labService = labService;
     }
 
+    // ----------------------------
+    // GET all requests
+    // ----------------------------
     @GetMapping("/requests")
     public ResponseEntity<List<LabRequestDTO>> getAllRequests() {
         List<LabRequest> requests = labService.getAllRequests();
         return ResponseEntity.ok(LabRequestMapper.toDTOList(requests));
     }
 
+    // ----------------------------
+    // GET requests by status
+    // ----------------------------
     @GetMapping("/requests/status/{status}")
     public ResponseEntity<List<LabRequestDTO>> getRequestsByStatus(@PathVariable String status) {
         List<LabRequest> requests = labService.getRequestsByStatus(LabRequest.Status.valueOf(status.toUpperCase()));
