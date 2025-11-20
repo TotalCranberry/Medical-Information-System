@@ -42,9 +42,17 @@ public class LabController {
         return ResponseEntity.ok(dto);
     }
 
+//    @PostMapping("/requests/{id}/upload")
+//    public ResponseEntity<LabResult> uploadResult(@PathVariable String id, @RequestParam("file") MultipartFile file) {
+//        LabResult result = labService.uploadResult(id, file);
+//        return ResponseEntity.ok(result);
+//    }
+
     @PostMapping("/requests/{id}/upload")
-    public ResponseEntity<LabResult> uploadResult(@PathVariable String id, @RequestParam("file") MultipartFile file) {
-        LabResult result = labService.uploadResult(id, file);
-        return ResponseEntity.ok(result);
+    public ResponseEntity<LabResult> uploadResult( @PathVariable String id,@RequestParam("file") MultipartFile file) {
+
+    LabResult result = labService.uploadResult(id, file);
+    return ResponseEntity.ok(result);
     }
+
 }
