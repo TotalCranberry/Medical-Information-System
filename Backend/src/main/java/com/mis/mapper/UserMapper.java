@@ -32,6 +32,9 @@ public class UserMapper {
             dto.setDateOfBirth(student.getDateOfBirth());
             dto.setAge(student.getAge()); 
             dto.setGender(student.getGender());
+            dto.setHostel(student.getHostel());
+            dto.setRoomNumber(student.getRoomNumber());
+            dto.setPhoneNumber(student.getPhoneNumber());
         } 
         else if (staff != null) {
             dto.setFaculty(staff.getFaculty());

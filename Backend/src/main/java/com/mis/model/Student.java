@@ -27,7 +27,9 @@ public class Student {
     private LocalDate dateOfBirth;
     private String gender;
     private String registrationNumber;
-
+    private String hostel;
+    private String roomNumber;
+    private String phoneNumber;
 
     // Getters and Setters
     public String getId() { return id; }
@@ -42,6 +44,12 @@ public class Student {
     public void setGender(String gender) { this.gender = gender; }
     public String getRegistrationNumber() { return registrationNumber; }
     public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }
+    public String getHostel() { return hostel; }
+    public void setHostel(String hostel) { this.hostel = hostel; }
+    public String getRoomNumber() { return roomNumber; }
+    public void setRoomNumber(String roomNumber) { this.roomNumber = roomNumber; }
+    public String getPhoneNumber() { return phoneNumber; }
+    public void setPhoneNumber(String phoneNumber) { this.phoneNumber = phoneNumber; }
 
     @Transient
     public String extractRegistrationNumberFromEmail() {
@@ -69,4 +77,5 @@ public class Student {
         }
         return Period.between(this.dateOfBirth, LocalDate.now()).getYears();
     }
+
 }

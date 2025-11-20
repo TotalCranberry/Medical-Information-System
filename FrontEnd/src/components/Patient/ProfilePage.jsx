@@ -12,6 +12,9 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
   const [name, setName] = useState("");
   const [dateOfBirth, setDateOfBirth] = useState(null);
   const [gender, setGender] = useState("");
+  const [hostel, setHostel] = useState("");
+  const [roomNumber, setRoomNumber] = useState("");
+  const [phoneNumber, setPhoneNumber] = useState("");
   const [notifications, setNotifications] = useState(true);
   const [currentPassword, setCurrentPassword] = useState("");
   const [newPassword, setNewPassword] = useState("");
@@ -26,6 +29,9 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
         setDateOfBirth(new Date(user.dateOfBirth));
       }
       setGender(user.gender || "");
+      setHostel(user.hostel || "");
+      setRoomNumber(user.roomNumber || "");
+      setPhoneNumber(user.phoneNumber || "");
     }
   }, [user]);
 
@@ -35,6 +41,12 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
 
     try {
       const updateData = { name, gender };
+
+      if (user?.role === "Student") {
+        updateData.hostel = hostel;
+        updateData.roomNumber = roomNumber;
+        updateData.phoneNumber = phoneNumber;
+      }
       
       if ((user?.role === "Student" || user?.role === "Staff") && dateOfBirth && !user?.dateOfBirth) {
         updateData.dateOfBirth = dateOfBirth.toISOString().split('T')[0];
@@ -104,21 +116,50 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
             />
           )}
 
-          {/* FIX: Gender field is no longer disabled and can be changed */}
           <FormControl fullWidth margin="normal">
             <InputLabel>Gender</InputLabel>
             <Select
               value={gender}
               onChange={(e) => setGender(e.target.value)}
               label="Gender"
-              // The "disabled" prop has been removed to allow changes
             >
               <MenuItem value="Male">Male</MenuItem>
               <MenuItem value="Female">Female</MenuItem>
             </Select>
-            {/* The helper text has also been removed */}
           </FormControl>
           
+          {user?.role === "Student" && (
+            <>
+                <TextField
+                    label="Hostel Name"
+                    value={hostel}
+                    onChange={(e) => setHostel(e.target.value)}
+                    fullWidth
+                    margin="normal"
+                    variant="outlined"
+                    helperText="Only if you are a resident student"
+                />
+                <TextField
+                    label="Room Number"
+                    value={roomNumber}
+                    onChange={(e) => setRoomNumber(e.target.value)}
+                    fullWidth
+                    margin="normal"
+                    variant="outlined"
+                    helperText="Only if you are a resident student"
+                />
+                <TextField
+                    label="Phone Number"
+                    value={phoneNumber}
+                    onChange={(e) => setPhoneNumber(e.target.value)}
+                    fullWidth
+                    margin="normal"
+                    variant="outlined"
+                    helperText="Used for urgent communication"
+                />
+            </>
+        )}
+
           <TextField
             label="Email"
             value={user.email || ''}
@@ -127,17 +168,7 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
             variant="outlined"
             disabled
           />
-          <FormControlLabel
-            control={
-              <Switch
-                checked={notifications}
-                onChange={(e) => setNotifications(e.target.checked)}
-                color="secondary"
-              />
-            }
-            label="Receive Email Notifications"
-            sx={{ mt: 2, display: 'block' }}
-          />
+         
           <Button
             type="submit"
             variant="contained"
@@ -155,7 +186,6 @@ const ProfilePage = ({ user, onProfileUpdate }) => {
           <Typography variant="h5" fontWeight={700} color="primary" mb={2}>Change Password</Typography>
           <Divider sx={{ mb: 3 }} />
           <Box component="form" onSubmit={handlePasswordChange}>
-            {/* ... password fields remain the same */}
             <TextField
               label="Current Password"
               type={showCurrentPassword ? "text" : "password"}
