@@ -125,7 +125,7 @@ const normalizeInvoice = (raw) => {
     service: serviceCharge,
     totalAmount: totalAmount,
     clinic: {
-      name: raw.clinicName || "University of Peradeniya — Medical Center" ,
+      name: raw.clinicName || "University of Peradeniya — Medical Center" + " invooice",
       phone: raw.clinicPhone || "—",
       email: raw.clinicEmail || "—",
       address: raw.clinicAddress || "—",
