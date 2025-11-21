@@ -319,3 +319,8 @@ export const completePrescription = (prescriptionId) =>
 // ✅ COMPLETED PRESCRIPTIONS FOR PATIENT — matches backend: GET /api/prescriptions/patient/completed
 export const getCompletedPrescriptionsForPatient = () =>
   apiFetch("/prescriptions/patient/completed", "GET", null, true);
+
+// Fetch prescriptions for a patient (Doctor only)
+export async function fetchPatientPrescriptions(patientId) {
+  return apiFetch(`/doctor/patients/${patientId}/prescriptions`, 'GET', null, true);
+}

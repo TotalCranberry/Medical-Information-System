@@ -9,7 +9,5 @@ import com.mis.model.User;
 
 public interface LabRequestRepository extends JpaRepository<LabRequest, String> {
     List<LabRequest> findByStatus(LabRequest.Status status);
-
-    List<LabRequest> findByPatientOrderByOrderDateDesc(User patient);
-
+    List<LabRequest> findByPatient(com.mis.model.User patient);
 }

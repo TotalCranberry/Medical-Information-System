@@ -28,6 +28,8 @@ public interface PrescriptionRepository extends JpaRepository<Prescription, Stri
 
     List<Prescription> findByPatientIdAndIsActiveOrderByPrescriptionDateDesc(String patientId, Boolean isActive);
 
+    List<Prescription> findByPatientIdOrderByPrescriptionDateDesc(String patientId);
+
     // Alternative query using the User entity relationship
     List<Prescription> findByPatientAndIsActiveOrderByPrescriptionDateDesc(User patient, Boolean isActive);
 }
