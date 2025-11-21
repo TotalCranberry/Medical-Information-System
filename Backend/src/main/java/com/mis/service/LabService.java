@@ -15,11 +15,6 @@ import com.mis.repository.LabResultRepository;
 
 import com.mis.repository.LabResultFileRepository;
 import com.mis.repository.UserRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.time.LocalDateTime;
-import java.util.List;
 import java.util.UUID;
 
 
@@ -36,6 +31,7 @@ public class LabService {
     public LabService(
             LabRequestRepository labRequestRepository,
             LabResultRepository labResultRepository,
+            NotificationService notificationService,
             LabResultFileRepository labResultFileRepository,
             UserRepository userRepository
     ) {
