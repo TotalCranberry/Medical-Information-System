@@ -13,6 +13,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.multipart.MultipartFile;
 
 import java.util.List;
+import java.util.Map;
 
 @RestController
 @RequestMapping("/api/lab")
@@ -28,6 +29,23 @@ public class LabController {
     // ----------------------------
     // GET all requests
     // ----------------------------
+    @PostMapping("/requests")
+    public ResponseEntity<LabRequestDTO> createLabRequest(@RequestBody Map<String, String> request) {
+        String patientId = request.get("patientId");
+        String testType = request.get("testType");
+
+        if (patientId == null || patientId.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (testType == null || testType.isEmpty()) {
+            return ResponseEntity.badRequest().build();
+        }
+
+        LabRequest labRequest = labService.createLabRequest(patientId, testType);
+        LabRequestDTO dto = LabRequestMapper.toDTO(labRequest);
+        return ResponseEntity.ok(dto);
+    }
+
     @GetMapping("/requests")
     public ResponseEntity<List<LabRequestDTO>> getAllRequests() {
         List<LabRequest> requests = labService.getAllRequests();
@@ -41,6 +59,19 @@ public class LabController {
     public ResponseEntity<List<LabRequestDTO>> getRequestsByStatus(@PathVariable String status) {
         List<LabRequest> requests = labService.getRequestsByStatus(LabRequest.Status.valueOf(status.toUpperCase()));
         return ResponseEntity.ok(LabRequestMapper.toDTOList(requests));
+    }
+
+    @GetMapping("/requests/patient/{patientId}")
+    public ResponseEntity<List<LabRequestDTO>> getRequestsByPatient(@PathVariable String patientId) {
+        List<LabRequest> requests = labService.getLabRequestsForPatient(patientId);
+        return ResponseEntity.ok(LabRequestMapper.toDTOList(requests));
+    }
+
+    @GetMapping("/requests/{id}")
+    public ResponseEntity<LabRequestDTO> getRequestById(@PathVariable String id) {
+        LabRequest request = labService.getLabRequestById(id);
+        LabRequestDTO dto = LabRequestMapper.toDTO(request);
+        return ResponseEntity.ok(dto);
     }
 
     @PutMapping("/requests/{id}/status")

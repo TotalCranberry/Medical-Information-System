@@ -1,19 +1,39 @@
-import React, { useMemo } from "react";
+import React, { useState, useEffect } from "react";
 import AnnouncementDisplay from "../AnnouncementDisplay";
+
+// Material UI Components
 import {
+  List,
+  ListItem,
+  ListItemIcon,
+  ListItemText,
+  Divider,
   Box,
   Typography,
+  Grid,
+  Card,
+  CardHeader,
+  CardContent,
+  Avatar,
+  Stack,
   Paper,
-  Table,
-  TableBody,
-  TableCell,
-  TableContainer,
-  TableHead,
-  TableRow,
-  Grid
+  Fade
 } from "@mui/material";
 
-import { 
+// Icons
+import {
+  ErrorOutline,
+  WarningAmber,
+  Inventory,
+  CheckCircleOutline,
+  BarChart as BarChartIcon,
+  PieChart as PieChartIcon,
+  Notifications as NotificationsIcon,
+  Dashboard as DashboardIcon
+} from "@mui/icons-material";
+
+// Charting Library
+import {
   BarChart,
   Bar,
   XAxis,
@@ -21,297 +41,371 @@ import {
   Tooltip,
   CartesianGrid,
   ResponsiveContainer,
-  Cell
+  PieChart,
+  Pie,
+  Cell,
+  Legend
 } from "recharts";
 
-const prescriptions = [
-  { time: "10:30 AM", patient: "John Doe" },
-  { time: "11:00 AM", patient: "Jane Smith" },
-  { time: "11:30 AM", patient: "David Lee" }
-];
+// Date Management
+import dayjs from "dayjs";
+import isBetween from "dayjs/plugin/isBetween";
 
-const inventory = [
-  { medicine: "Paracetamol 500mg", stock: 150 },
-  { medicine: "Amoxicillin 250mg", stock: 80 },
-  { medicine: "Cough Syrup 100ml", stock: 15 }
-];
+// API Functions
+import {
+  getPrescriptionsForPharmacy,
+  getCompletedPrescriptionsForPharmacy
+} from "../../api/prescription";
+import { getAllMedicines } from "../../api/medicine";
 
-const patientData = [
-  { day: "Mon", count: 12 },
-  { day: "Tue", count: 18 },
-  { day: "Wed", count: 10 },
-  { day: "Thu", count: 22 },
-  { day: "Fri", count: 15 },
-  { day: "Sat", count: 8 },
-  { day: "Sun", count: 14 }
-];
+// Enable dayjs plugin
+dayjs.extend(isBetween);
 
-const colors = [
-  "#FF6B6B",
-  "#FFD93D",
-  "#6BCB77",
-  "#4D96FF",
-  "#F08A5D",
-  "#C77DFF",
-  "#3AB4F2"
-];
+// --- Simple Color Configuration ---
+const colors = {
+  primary: "#0C3C3C",    // Dark Teal
+  accent: "#45D27A",     // Bright Green
+  gray: "#6C6B6B",
+  white: "#ffffff",
+  lightGray: "#F8F9FA",
+  warning: "#FF9800",
+  success: "#4CAF50",
+  error: "#F44336"
+};
 
 const PharmacyDashboard = ({ user }) => {
-  // Build a nice display name from whatever fields you have
-  const pharmacistName = useMemo(() => {
-    const direct = (user?.name || user?.fullName || "").trim();
-    const combo = [user?.firstName, user?.lastName].filter(Boolean).join(" ").trim();
-    return direct || combo || user?.username || "Pharmacist";
-  }, [user]);
+  // --- State Variables ---
+  const [weeklyData, setWeeklyData] = useState([]);
+  const [dailyData, setDailyData] = useState([]);
+  const [notifications, setNotifications] = useState([]);
 
+  // --- 1. Determine Name ---
+  let pharmacistName = "Pharmacist";
+  if (user) {
+    if (user.name) pharmacistName = user.name;
+    else if (user.fullName) pharmacistName = user.fullName;
+    else if (user.firstName) pharmacistName = user.firstName + " " + (user.lastName || "");
+  }
+
+  // --- 2. Data Helpers ---
+
+  // Prepare data for Weekly Bar Chart
+  const processWeeklyData = (completedPrescriptions) => {
+    const now = dayjs();
+    const startOfWeek = now.startOf('week');
+    const endOfWeek = now.endOf('week');
+    
+    // Initialize counts
+    const dayCounts = { 'Mon': 0, 'Tue': 0, 'Wed': 0, 'Thu': 0, 'Fri': 0, 'Sat': 0, 'Sun': 0 };
+
+    completedPrescriptions.forEach(prescription => {
+      const completionDate = dayjs(prescription.updatedAt);
+      
+      // Check if date is within this week
+      if (completionDate.isBetween(startOfWeek, endOfWeek, null, '[]')) {
+        const dayName = completionDate.format('ddd'); // e.g. "Mon"
+        if (dayCounts[dayName] !== undefined) {
+          dayCounts[dayName] = dayCounts[dayName] + 1;
+        }
+      }
+    });
+
+    // Convert object to array for Recharts
+    const chartData = Object.entries(dayCounts).map(([day, count]) => ({ day, count }));
+    setWeeklyData(chartData);
+  };
+
+  // Prepare data for Daily Pie Chart
+  const processDailyData = (pendingPrescriptions, completedPrescriptions) => {
+    const today = dayjs().startOf('day');
+
+    // Count Pending Today
+    const pendingToday = pendingPrescriptions.filter(p => {
+      const date = dayjs(p.prescriptionDate || p.createdAt);
+      return date.isSame(today, 'day');
+    }).length;
+
+    // Count Completed Today
+    const completedToday = completedPrescriptions.filter(p => {
+      const date = dayjs(p.updatedAt);
+      return date.isSame(today, 'day');
+    }).length;
+
+    setDailyData([
+      { name: "Pending", value: pendingToday, color: "#FF6B35" },   // Orange
+      { name: "Completed", value: completedToday, color: colors.success } // Green
+    ]);
+  };
+
+  // Prepare Notifications (Low Stock / Expired)
+  const processMedicineData = (medicines) => {
+    const alerts = [];
+    const today = dayjs().startOf('day');
+
+    medicines.forEach(med => {
+      // 1. Check Low Stock
+      const limit = med.lowStockQuantity || 50;
+      if (med.stock != null && med.stock < limit) {
+        alerts.push({
+          type: 'Low Stock',
+          message: med.name + " is low in stock (" + med.stock + " remaining).",
+          icon: <Inventory color="warning" />,
+        });
+      }
+
+      // 2. Check Expiry
+      if (med.expiry) {
+        const expiryDate = dayjs(med.expiry);
+        
+        if (expiryDate.isBefore(today, 'day')) {
+          // Already expired
+          alerts.push({
+            type: 'Expired',
+            message: med.name + " expired on " + expiryDate.format('YYYY-MM-DD') + ".",
+            icon: <ErrorOutline color="error" />,
+          });
+        } else if (expiryDate.diff(today, 'day') <= 30) {
+          // Expiring soon (30 days)
+          const daysLeft = expiryDate.diff(today, 'day');
+          alerts.push({
+            type: 'Nearly Expired',
+            message: med.name + " will expire in " + daysLeft + " day(s).",
+            icon: <WarningAmber sx={{ color: '#ED6C02' }} />,
+          });
+        }
+      }
+    });
+    
+    setNotifications(alerts);
+  };
+
+  // --- 3. Fetch Data Effect ---
+  useEffect(() => {
+    const fetchData = async () => {
+      try {
+        const [pending, completed, meds] = await Promise.all([
+          getPrescriptionsForPharmacy(),
+          getCompletedPrescriptionsForPharmacy(),
+          getAllMedicines()
+        ]);
+        
+        processWeeklyData(completed || []);
+        processDailyData(pending || [], completed || []);
+        processMedicineData(meds || []);
+      } catch (error) {
+        console.error("Error loading dashboard:", error);
+      }
+    };
+    
+    fetchData();
+
+    // Optional: Refresh data every 30 seconds
+    const interval = setInterval(fetchData, 30000);
+    return () => clearInterval(interval);
+  }, []);
+
+  // --- 4. Render ---
   return (
-    <Box
-      sx={{
-        px: { xs: 2, sm: 3, md: 4, lg: 6 },
-        py: { xs: 2, sm: 3, md: 3, lg: 4 },
-        maxWidth: "1400px",
-        mx: "auto"
-      }}
-    >
+    <Box sx={{ paddingBottom: 4, width: '100%' }}>
       <AnnouncementDisplay />
-      <Typography
-        variant="h4"
-        sx={{
-          color: "#0c3c3c",
-          fontWeight: 800,
-          textAlign: "left",
-          mb: { xs: 3, md: 4 },
-          fontSize: { xs: "1.8rem", sm: "2.2rem", md: "2.8rem", lg: "3.2rem" },
-          pl: { xs: 1, md: 2 }
-        }}
-      >
-        {/* ✅ Use the computed name here */}
-        Welcome, {pharmacistName}
-      </Typography>
-
-      <Grid
-        container
-        spacing={{ xs: 2, md: 3, lg: 4 }}
-        justifyContent="flex-start"
-        alignItems="stretch"
-        mb={4}
-      >
-        <Grid item xs={12} md={4}>
-          <Paper
-            elevation={4}
-            sx={{
-              height: 320,
-              p: { xs: 2, sm: 2.5, md: 3 },
-              borderLeft: "6px solid #45d27a",
-              borderRadius: "12px",
-              display: "flex",
-              flexDirection: "column"
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 2,
-                fontWeight: 800,
-                textAlign: "center",
-                fontSize: { xs: "1.1rem", sm: "1.3rem", md: "1.5rem" }
+      
+      
+      <Fade in timeout={800}>
+        <Paper 
+          elevation={12} 
+          sx={{ 
+            padding: 4, 
+            marginTop: 4,
+            borderRadius: "0px", 
+            background: `linear-gradient(135deg, ${colors.white} 0%, #fafffe 100%)`,
+            border: "1px solid rgba(12, 60, 60, 0.08)"
+          }}
+        >
+          
+          {/* Header Section */}
+          <Box display="flex" alignItems="center" marginBottom={4}>
+            <Avatar 
+              sx={{ 
+                bgcolor: colors.primary, 
+                marginRight: 2, 
+                width: 56, 
+                height: 56,
+                boxShadow: "0 8px 25px rgba(12, 60, 60, 0.3)"
               }}
             >
-              Pending Prescriptions
-            </Typography>
-            <TableContainer sx={{ flexGrow: 1 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: { xs: "0.85rem", md: "0.95rem" },
-                        textAlign: "center",
-                        py: 1
-                      }}
-                    >
-                      Time
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: { xs: "0.85rem", md: "0.95rem" },
-                        textAlign: "center",
-                        py: 1
-                      }}
-                    >
-                      Patient Name
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {prescriptions.length === 0 ? (
-                    <TableRow>
-                      <TableCell
-                        colSpan={2}
-                        align="center"
-                        sx={{ fontSize: { xs: "0.9rem", md: "1rem" }, py: 2 }}
-                      >
-                        No pending prescriptions
-                      </TableCell>
-                    </TableRow>
-                  ) : (
-                    prescriptions.map((p, index) => (
-                      <TableRow
-                        key={index}
-                        sx={{ "&:hover": { backgroundColor: "#f5f7fa" } }}
-                      >
-                        <TableCell align="center" sx={{ py: 1.5, fontSize: { xs: "0.85rem", md: "0.9rem" } }}>
-                          {p.time}
-                        </TableCell>
-                        <TableCell align="center" sx={{ py: 1.5, fontSize: { xs: "0.85rem", md: "0.9rem" } }}>
-                          {p.patient}
-                        </TableCell>
-                      </TableRow>
-                    ))
-                  )}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <Paper
-            elevation={4}
-            sx={{
-              height: 320,
-              p: { xs: 2, sm: 2.5, md: 3 },
-              borderLeft: "6px solid #45d27a",
-              borderRadius: "12px",
-              display: "flex",
-              flexDirection: "column"
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 2,
-                fontWeight: 800,
-                textAlign: "center",
-                fontSize: { xs: "1.1rem", sm: "1.3rem", md: "1.5rem" }
-              }}
-            >
-              Inventory Status
-            </Typography>
-            <TableContainer sx={{ flexGrow: 1 }}>
-              <Table size="small">
-                <TableHead>
-                  <TableRow>
-                    <TableCell
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: { xs: "0.85rem", md: "0.95rem" },
-                        textAlign: "center",
-                        py: 1
-                      }}
-                    >
-                      Medicine
-                    </TableCell>
-                    <TableCell
-                      sx={{
-                        fontWeight: 600,
-                        fontSize: { xs: "0.85rem", md: "0.95rem" },
-                        textAlign: "center",
-                        py: 1
-                      }}
-                    >
-                      Stock
-                    </TableCell>
-                  </TableRow>
-                </TableHead>
-                <TableBody>
-                  {inventory.map((item, index) => (
-                    <TableRow
-                      key={index}
-                      sx={{
-                        backgroundColor:
-                          item.stock < 20 ? "#fff3cd" : "transparent"
-                      }}
-                    >
-                      <TableCell
-                        align="center"
-                        sx={{
-                          fontWeight: item.stock < 20 ? 700 : 500,
-                          color: item.stock < 20 ? "red" : "inherit",
-                          py: 1.5,
-                          fontSize: { xs: "0.8rem", md: "0.85rem" }
-                        }}
-                      >
-                        {item.medicine}
-                      </TableCell>
-                      <TableCell
-                        align="center"
-                        sx={{
-                          fontWeight: item.stock < 20 ? 700 : 500,
-                          color: item.stock < 20 ? "red" : "inherit",
-                          py: 1.5,
-                          fontSize: { xs: "0.85rem", md: "0.9rem" }
-                        }}
-                      >
-                        {item.stock}
-                      </TableCell>
-                    </TableRow>
-                  ))}
-                </TableBody>
-              </Table>
-            </TableContainer>
-          </Paper>
-        </Grid>
-
-        <Grid item xs={12} md={4}>
-          <Paper
-            elevation={4}
-            sx={{
-              height: 320,
-              p: { xs: 2, sm: 2.5, md: 3 },
-              borderLeft: "6px solid #45d27a",
-              borderRadius: "12px",
-              display: "flex",
-              flexDirection: "column"
-            }}
-          >
-            <Typography
-              variant="h6"
-              sx={{
-                mb: 2,
-                fontWeight: 800,
-                textAlign: "center",
-                fontSize: { xs: "1.1rem", sm: "1.3rem", md: "1.5rem" }
-              }}
-            >
-              Weekly Patient Count
-            </Typography>
-            <Box sx={{ flexGrow: 1, minHeight: 0 }}>
-              <ResponsiveContainer width="100%" height="100%">
-                <BarChart
-                  data={patientData}
-                  margin={{ top: 10, right: 20, left: 10, bottom: 10 }}
-                >
-                  <CartesianGrid strokeDasharray="3 3" />
-                  <XAxis dataKey="day" tick={{ fontSize: 12 }} />
-                  <YAxis tick={{ fontSize: 12 }} />
-                  <Tooltip />
-                  <Bar dataKey="count" barSize={25}>
-                    {patientData.map((entry, index) => (
-                      <Cell
-                        key={`cell-${index}`}
-                        fill={colors[index % colors.length]}
-                      />
-                    ))}
-                  </Bar>
-                </BarChart>
-              </ResponsiveContainer>
+              <DashboardIcon fontSize="large" />
+            </Avatar>
+            
+            <Box>
+              <Typography
+                variant="h4"
+                sx={{ 
+                  color: colors.primary, 
+                  fontWeight: 800,
+                  lineHeight: 1.2
+                }}
+              >
+                Welcome, {pharmacistName}
+              </Typography>
+              <Typography variant="subtitle1" color="text.secondary">
+                 Here is the pharmacy overview for today.
+              </Typography>
             </Box>
-          </Paper>
-        </Grid>
-      </Grid>
+          </Box>
+
+          {/* Dashboard Grid */}
+          {/* spacing={4} gives nice gaps between the 3 big cards */}
+          <Grid container spacing={4} alignItems="stretch">
+            
+            {/* Card 1: Weekly Activity */}
+            <Grid item xs={12} md={4}>
+              <Card 
+                elevation={4} 
+                sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  borderRadius: "20px",
+                  borderLeft: "6px solid " + colors.primary
+                }}
+              >
+                <CardHeader
+                  avatar={
+                    <Avatar sx={{ bgcolor: colors.primary }}>
+                      <BarChartIcon />
+                    </Avatar>
+                  }
+                  title="Weekly Activity"
+                  subheader="Completed Prescriptions"
+                  titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
+                />
+                <Divider />
+                <CardContent sx={{ flexGrow: 1, minHeight: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <BarChart data={weeklyData} margin={{ top: 20, right: 20, left: -20, bottom: 5 }}>
+                      <defs>
+                        <linearGradient id="barGradient" x1="0" y1="0" x2="0" y2="1">
+                          <stop offset="0%" stopColor="#FFD700" />
+                          <stop offset="50%" stopColor="#FFA500" />
+                          <stop offset="100%" stopColor="#FF8C00" />
+                        </linearGradient>
+                      </defs>
+                      <CartesianGrid strokeDasharray="3 3" stroke="#f0f0f0" />
+                      <XAxis dataKey="day" tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <YAxis tick={{ fontSize: 12 }} axisLine={false} tickLine={false} />
+                      <Tooltip cursor={{ fill: 'transparent' }} />
+                      <Bar dataKey="count" fill="url(#barGradient)" radius={[4, 4, 0, 0]} barSize={30} />
+                    </BarChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Card 2: Daily Status */}
+            <Grid item xs={12} md={4}>
+              <Card 
+                elevation={4} 
+                sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column',
+                  borderRadius: "20px",
+                  borderLeft: "6px solid " + colors.accent
+                }}
+              >
+                <CardHeader
+                  avatar={
+                    <Avatar sx={{ bgcolor: colors.accent }}>
+                      <PieChartIcon />
+                    </Avatar>
+                  }
+                  title="Daily Status"
+                  subheader="Pending vs Completed"
+                  titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
+                />
+                <Divider />
+                <CardContent sx={{ flexGrow: 1, minHeight: 300 }}>
+                  <ResponsiveContainer width="100%" height="100%">
+                    <PieChart>
+                      <Pie
+                        data={dailyData}
+                        cx="50%"
+                        cy="50%"
+                        innerRadius={60}
+                        outerRadius={80}
+                        paddingAngle={5}
+                        dataKey="value"
+                      >
+                        {dailyData.map((entry, index) => (
+                          <Cell key={"cell-" + index} fill={entry.color} />
+                        ))}
+                      </Pie>
+                      <Tooltip />
+                      <Legend verticalAlign="bottom" iconType="circle" />
+                    </PieChart>
+                  </ResponsiveContainer>
+                </CardContent>
+              </Card>
+            </Grid>
+
+            {/* Card 3: Notifications */}
+            <Grid item xs={12} md={4}>
+              <Card 
+                elevation={4} 
+                sx={{ 
+                  height: '100%', 
+                  display: 'flex', 
+                  flexDirection: 'column', 
+                  maxHeight: { md: 500 },
+                  borderRadius: "20px",
+                  borderLeft: "6px solid " + colors.warning
+                }}
+              >
+                <CardHeader
+                  avatar={
+                    <Avatar sx={{ bgcolor: colors.warning }}>
+                      <NotificationsIcon />
+                    </Avatar>
+                  }
+                  title="Notifications"
+                  subheader="Low Stock & Expiry Alerts"
+                  titleTypographyProps={{ variant: 'h6', fontWeight: 600 }}
+                />
+                <Divider />
+                <CardContent sx={{ flexGrow: 1, overflowY: 'auto', p: 0 }}>
+                  {notifications.length > 0 ? (
+                    <List>
+                      {notifications.map((item, index) => (
+                        <React.Fragment key={index}>
+                          <ListItem alignItems="flex-start">
+                            <ListItemIcon sx={{ minWidth: 40, mt: 0.5 }}>
+                              {item.icon}
+                            </ListItemIcon>
+                            <ListItemText
+                              primary={item.type}
+                              secondary={item.message}
+                              primaryTypographyProps={{ variant: 'subtitle2', fontWeight: 700 }}
+                              secondaryTypographyProps={{ variant: 'body2', color: 'text.secondary' }}
+                            />
+                          </ListItem>
+                          {index < notifications.length - 1 && <Divider variant="inset" component="li" />}
+                        </React.Fragment>
+                      ))}
+                    </List>
+                  ) : (
+                    <Box sx={{ height: '100%', display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', p: 3, minHeight: 200 }}>
+                      <CheckCircleOutline sx={{ fontSize: 48, color: 'success.light', mb: 2, opacity: 0.5 }} />
+                      <Typography variant="h6" color="text.secondary">All Clear!</Typography>
+                      <Typography variant="body2" color="text.disabled">No urgent alerts.</Typography>
+                    </Box>
+                  )}
+                </CardContent>
+              </Card>
+            </Grid>
+
+          </Grid>
+        </Paper>
+      </Fade>
     </Box>
   );
 };

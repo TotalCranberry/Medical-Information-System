@@ -5,47 +5,56 @@ import {
   Box, Typography, Paper, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Grid, Alert, Chip, useTheme, Button,
 } from "@mui/material";
-import CalendarTodayIcon from "@mui/icons-material/CalendarToday";
-import AssignmentIcon from "@mui/icons-material/Assignment";
-import DescriptionIcon from "@mui/icons-material/Description";
-import ReceiptLongIcon from "@mui/icons-material/ReceiptLong";
+import PersonIcon from "@mui/icons-material/Person";
+import ApartmentIcon from "@mui/icons-material/Apartment";
+import BadgeIcon from "@mui/icons-material/Badge";
+import CakeIcon from "@mui/icons-material/Cake";
+import WcIcon from "@mui/icons-material/Wc";
+import SchoolIcon from "@mui/icons-material/School";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { getCompletedPrescriptionsForPatient } from "../../api/prescription";
+// Import the new API function
+import { fetchLabRequests } from "../../api/reports";
 
 const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescriptions }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const [completedPrescriptions, setCompletedPrescriptions] = useState([]);
+  // State for lab requests
+  const [labRequests, setLabRequests] = useState([]);
 
-  // Check if DOB is required but not set
   const isDobRequired = user?.role === "Student" || user?.role === "Staff";
   const isDobSet = user?.dateOfBirth !== null && user?.dateOfBirth !== undefined;
   const showDobReminder = isDobRequired && !isDobSet;
-  const showSexReminder = isDobRequired && !user?.sex;
-  const showMedicalFormReminder = user?.role === "Student" && (!user?.medicalRecord || user?.medicalRecord.length === 0);
+  
+  const isGenderSet = user?.gender !== null && user?.gender !== undefined;
+  const showGenderReminder = isDobRequired && !isGenderSet;
+  
+  const isMedicalFormSet = user?.medicalRecordSet === true;
+  const showMedicalFormReminder = user?.role === "Student" && !isMedicalFormSet;
 
-  // Load completed prescriptions
   useEffect(() => {
-    const loadCompletedPrescriptions = async () => {
+    const loadData = async () => {
       try {
-        console.log("DEBUG: Frontend - Loading completed prescriptions");
-        const data = await getCompletedPrescriptionsForPatient();
-        console.log("DEBUG: Frontend - Received prescriptions data:", data);
-        // Sort by date (recent to past)
-        const sorted = data.sort((a, b) => new Date(b.prescriptionDate || b.createdAt) - new Date(a.prescriptionDate || a.createdAt));
-        console.log("DEBUG: Frontend - Sorted prescriptions:", sorted);
-        setCompletedPrescriptions(sorted);
+        // Load Prescriptions
+        const pxData = await getCompletedPrescriptionsForPatient();
+        const sortedPx = pxData.sort((a, b) => new Date(b.prescriptionDate || b.createdAt) - new Date(a.prescriptionDate || a.createdAt));
+        setCompletedPrescriptions(sortedPx);
+
+        // Load Lab Requests
+        const requestsData = await fetchLabRequests();
+        const sortedRequests = requestsData.sort((a, b) => new Date(b.orderDate) - new Date(a.orderDate));
+        setLabRequests(sortedRequests);
+
       } catch (error) {
-        console.error("Failed to load completed prescriptions:", error);
-        setCompletedPrescriptions([]);
+        console.error("Failed to load dashboard data:", error);
       }
     };
 
-    loadCompletedPrescriptions();
+    loadData();
   }, []);
 
   const handleViewPrescription = (prescription) => {
-    // Navigate to prescription print page instead of opening dialog
     navigate('/prescription-print', {
       state: {
         prescription: prescription,
@@ -55,47 +64,15 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
     });
   };
 
-  const statCards = [
-    {
-      label: "Appointments",
-      count: appointments.filter((app) => app.status == "Scheduled").length,
-      icon: CalendarTodayIcon,
-      color: theme.palette.success.main, // green tone
-      chipColor: "primary",
-    },
-    {
-      label: "Medicals / Diagnoses",
-      count: medicals.length + diagnoses.length,
-      icon: AssignmentIcon,
-      color: theme.palette.warning.main, // orange tone
-      chipColor: "warning",
-    },
-    {
-      label: "Reports",
-      count: reports.length,
-      icon: DescriptionIcon,
-      color: theme.palette.info.main, // blue tone
-      chipColor: "info",
-    },
-    {
-      label: "Prescriptions",
-      count: prescriptions.length,
-      icon: ReceiptLongIcon,
-      color: theme.palette.secondary.main, // purple tone
-      chipColor: "secondary",
-    },
-  ];
-
-  const statCardStyle = (color) => ({
-    p: 3,
-    borderLeft: `8px solid ${color}`,
-    height: "100%",
-    display: "flex",
-    flexDirection: "column",
-    justifyContent: "center",
-    alignItems: "center",
-    textAlign: "center",
-  });
+  const getStatusChipColor = (status) => {
+    if (!status) return "default";
+    const s = status.toLowerCase();
+    if (s === "completed") return "success";
+    if (s === "pending") return "warning";
+    if (s === "in_progress") return "info";
+    if (s === "declined") return "error";
+    return "default";
+  };
 
   return (
     <Box>
@@ -106,14 +83,9 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
           Please complete your profile by setting your date of birth in the Profile section.
         </Alert>
       )}
-      {showSexReminder && (
+      {showGenderReminder && (
         <Alert severity="warning" sx={{ mb: 3 }}>
-          Please complete your profile by setting your sex in the Profile section.
-        </Alert>
-      )}
-      {showMedicalFormReminder && (
-        <Alert severity="info" sx={{ mb: 3 }}>
-          Please upload your medical form in the Upload Medical Form section.
+          Please complete your profile by setting your gender in the Profile section.
         </Alert>
       )}
 
@@ -130,44 +102,70 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
         Welcome, {user?.name || "User"}
       </Typography>
 
-
-      <Grid container spacing={4} justifyContent="center" alignItems="stretch" sx={{ mb: { xs: 3, md: 5 } }}>
-        {statCards.map(({ label, count, icon: IconComponent, color }) => (
-          <Grid item xs={12} sm={6} md={4} key={label}>
-            <Paper elevation={3} sx={statCardStyle(color)}>
-              <Typography
-                variant="subtitle1"
-                sx={{ mb: 1, color: "text.secondary", fontSize: 18 }}
-              >
-                {label}
+      {/* --- Patient Details Card (Unchanged) --- */}
+      <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, mb: { xs: 3, md: 5 } }}>
+        <Typography variant="h5" fontWeight={600} mb={3} color="primary.main">
+          Patient Details
+        </Typography>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <PersonIcon color="action" />
+          <Box>
+            <Typography variant="caption" color="text.secondary">Name</Typography>
+            <Typography variant="body1" fontWeight={500}>{user?.name || "Not set"}</Typography>
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <ApartmentIcon color="action" />
+          <Box>
+            <Typography variant="caption" color="text.secondary">Faculty</Typography>
+            <Typography variant="body1" fontWeight={500}>{user?.faculty || "Not set"}</Typography>
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <SchoolIcon color="action" />
+          <Box>
+            <Typography variant="caption" color="text.secondary">Role</Typography>
+            <Typography variant="body1" fontWeight={500}>{user?.role || "Not set"}</Typography>
+          </Box>
+        </Box>
+        {user?.universityId && (
+          <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+            <BadgeIcon color="action" />
+            <Box>
+              <Typography variant="caption" color="text.secondary">
+                {user?.role === "Student" ? "Student ID" : "Staff ID"}
               </Typography>
-              <Box
-                sx={{
-                  display: "flex",
-                  alignItems: "center",
-                  justifyContent: "center",
-                  gap: 1.5,
-                }}
-              >
-                <IconComponent sx={{ fontSize: 40, color }} />
-                <Typography variant="h2" color="primary" fontWeight={800} sx={{ fontSize: 56 }}>
-                  {count}
-                </Typography>
-              </Box>
-            </Paper>
-          </Grid>
-        ))}
-      </Grid>
+              <Typography variant="body1" fontWeight={500}>{user.universityId}</Typography>
+            </Box>
+          </Box>
+        )}
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5, mb: 2 }}>
+          <CakeIcon color="action" />
+          <Box>
+            <Typography variant="caption" color="text.secondary">Date of Birth</Typography>
+            <Typography variant="body1" fontWeight={500}>
+              {user?.dateOfBirth ? new Date(user.dateOfBirth).toLocaleDateString() : "Not set"}
+            </Typography>
+          </Box>
+        </Box>
+        <Box sx={{ display: 'flex', alignItems: 'center', gap: 1.5 }}>
+          <WcIcon color="action" />
+          <Box>
+            <Typography variant="caption" color="text.secondary">Gender</Typography>
+            <Typography variant="body1" fontWeight={500}>{user?.gender || "Not set"}</Typography>
+          </Box>
+        </Box>
+      </Paper>
 
       <Grid container spacing={4} justifyContent="center" alignItems="flex-start">
         {/* Appointments Table */}
-        <Grid item xs={12} lg={4}>
-          <Paper elevation={2} sx={{ p: 3, minHeight: 300 }}>
+        <Grid item xs={12} md={6} lg={3}>
+          <Paper elevation={2} sx={{ p: 3, minHeight: 350 }}>
             <Typography variant="h6" fontWeight={600} mb={2} textAlign="center">
               Upcoming Appointments
             </Typography>
             <TableContainer sx={{ maxHeight: 300 }}>
-              <Table stickyHeader>
+              <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
                     <TableCell>Date</TableCell>
@@ -176,9 +174,9 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {appointments && appointments.filter(app => app.status == "Scheduled").length > 0 ? (
+                  {appointments && appointments.filter(app => app.status === "Scheduled").length > 0 ? (
                     appointments
-                      .filter(app => app.status == "Scheduled")
+                      .filter(app => app.status === "Scheduled")
                       .sort((a, b) => new Date(a.appointmentDateTime) - new Date(b.appointmentDateTime))
                       .slice(0, 4)
                       .map(app => (
@@ -189,13 +187,7 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
                             <Chip
                               label={app.status}
                               size="small"
-                              color={
-                                app.status.toLowerCase() === "scheduled"
-                                  ? "primary"
-                                  : app.status.toLowerCase() === "completed"
-                                  ? "success"
-                                  : "default"
-                              }
+                              color="primary"
                             />
                           </TableCell>
                         </TableRow>
@@ -213,32 +205,40 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
           </Paper>
         </Grid>
 
-        {/* Reports Table */}
-        <Grid item xs={12} lg={4}>
-          <Paper elevation={2} sx={{ p: 3, minHeight: 300 }}>
+        {/* Lab Requests Table (New) */}
+        <Grid item xs={12} md={6} lg={3}>
+          <Paper elevation={2} sx={{ p: 3, minHeight: 350 }}>
             <Typography variant="h6" fontWeight={600} mb={2} textAlign="center">
-              Recent Lab Reports
+              Recent Lab Requests
             </Typography>
             <TableContainer sx={{ maxHeight: 300 }}>
-              <Table stickyHeader>
+              <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
                     <TableCell>Date</TableCell>
                     <TableCell>Test</TableCell>
+                    <TableCell>Status</TableCell>
                   </TableRow>
                 </TableHead>
                 <TableBody>
-                  {reports.length === 0 ? (
+                  {labRequests.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={2} align="center">
-                        No recent reports
+                      <TableCell colSpan={3} align="center">
+                        No lab requests found
                       </TableCell>
                     </TableRow>
                   ) : (
-                    reports.map(rep => (
-                      <TableRow key={rep.id || rep.test} hover>
-                        <TableCell>{rep.date}</TableCell>
-                        <TableCell>{rep.test}</TableCell>
+                    labRequests.slice(0, 5).map(req => (
+                      <TableRow key={req.id} hover>
+                        <TableCell>{new Date(req.orderDate).toLocaleDateString()}</TableCell>
+                        <TableCell>{req.testType}</TableCell>
+                        <TableCell>
+                          <Chip
+                            label={req.status || "Unknown"}
+                            size="small"
+                            color={getStatusChipColor(req.status)}
+                          />
+                        </TableCell>
                       </TableRow>
                     ))
                   )}
@@ -248,14 +248,15 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
           </Paper>
         </Grid>
 
+        
         {/* Prescriptions Table */}
-        <Grid item xs={12} lg={4}>
-          <Paper elevation={2} sx={{ p: 3, minHeight: 300 }}>
+        <Grid item xs={12} md={6} lg={3}>
+          <Paper elevation={2} sx={{ p: 3, minHeight: 350 }}>
             <Typography variant="h6" fontWeight={600} mb={2} textAlign="center">
               Recent Prescriptions
             </Typography>
             <TableContainer sx={{ maxHeight: 300 }}>
-              <Table stickyHeader>
+              <Table stickyHeader size="small">
                 <TableHead>
                   <TableRow>
                     <TableCell>Date</TableCell>
@@ -283,12 +284,7 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
                             variant="outlined"
                             startIcon={<VisibilityIcon />}
                             onClick={() => handleViewPrescription(rx)}
-                            sx={{
-                              minWidth: "auto",
-                              px: 1,
-                              py: 0.5,
-                              fontSize: "0.75rem",
-                            }}
+                            sx={{ minWidth: "auto", padding: 0.5 }}
                           >
                             View
                           </Button>

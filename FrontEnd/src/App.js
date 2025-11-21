@@ -43,7 +43,7 @@ import ReportsTab from "./components/Patient/ReportsTab";
 import ProfilePage from "./components/Patient/ProfilePage";
 import SupportPage from "./components/Patient/SupportPage";
 import FAQPage from './components/Patient/FAQPage';
-import MedicalFormUpload from './components/Patient/MedicalFormUpload';
+import MedicalForm from './components/Patient/MedicalForm';
 
 // Pharmacy pages
 import PharmacyDashboard from "./components/Pharmacy/PharmacyDashboard";
@@ -52,12 +52,14 @@ import Prescriptions from "./components/Pharmacy/Prescriptions";
 import UpdateInventory from "./components/Pharmacy/UpdateInventory";
 import PrescriptionPrint from "./components/Pharmacy/PrescriptionPrint";
 import Invoice from "./components/Pharmacy/Invoice";
+import ViewInvoices from "./components/Pharmacy/ViewInvoices";
 
 // Doctor pages
 import DoctorDashboard from './components/Doctor/DoctorDashboard';
 import PatientsTab from './components/Doctor/PatientsTab';
 import PatientProfile from './components/Doctor/PatientProfile';
 import RequestLabTest from './components/Doctor/RequestLabTest';
+import RequestLabTestForm from './components/Doctor/RequestLabTestForm';
 import PrescriptionsTab from './components/Doctor/PrescriptionsTab';
 import IssueMedical from './components/Doctor/IssueMedical';
 import ViewMedical from './components/Doctor/ViewMedical';
@@ -72,6 +74,7 @@ import UserManagement from './components/Admin/UserManagement';
 import AuditLogPage from './components/Admin/AuditLogs';
 import CreateAnnouncement from './components/Admin/CreateAnnouncement';
 import SupportTicketsPage from './components/Admin/SupportTicketsPage';
+import NotificationBell from './components/NotificationBell';
 
 // --- Doctor mock data & helpers ---
 const mockPatients = [
@@ -138,7 +141,7 @@ const navLinksConfig = {
     { label: "Appointments", path: "/patient/appointments", icon: <CalendarTodayIcon /> },
     { label: "Reports", path: "/patient/reports", icon: <DescriptionIcon /> },
     { label: "Support", path: "/patient/support", icon: <ContactSupportIcon /> },
-    { label: "Upload Medical Form", path: "/patient/upload-medical-form", icon: <DescriptionIcon /> }
+    { label: "Upload Medical Form", path: "/patient/upload-medical-form", icon: <DescriptionIcon />, roles: ['Student'] }
   ],
   doctor: [
     { label: "Dashboard", path: "/doctor/dashboard", icon: <DashboardIcon /> },
@@ -148,6 +151,7 @@ const navLinksConfig = {
   pharmacist: [
     { label: "Dashboard", path: "/pharmacist/dashboard", icon: <DashboardIcon /> },
     { label: "View Prescriptions", path: "/pharmacist/view-prescriptions", icon: <ReceiptLongIcon /> },
+    { label: "View Invoices", path: "/pharmacist/view-invoices", icon: <ReceiptLongIcon /> },
     { label: "Inventory Search", path: "/pharmacist/inventory-search", icon: <InventoryIcon /> },
     { label: "Inventory Update", path: "/pharmacist/inventory-update", icon: <EditNoteIcon /> },
   ],
@@ -188,7 +192,7 @@ const MainLayout = ({ user, onLogout }) => {
     <Box sx={{ width: 250, height: "100%", bgcolor: "#0c3c3c", color: "#fff" }} role="presentation">
       <Box sx={{ display: "flex", alignItems: "center", p: 2, justifyContent: "center", mt: 2 }} />
       <List sx={{ mt: 1 }}>
-        {navLinks.map((link) => (
+        {navLinks.filter(link => !link.roles || link.roles.includes(user.role)).map((link) => (
           <ListItem key={link.path} disablePadding>
             <ListItemButton
               component={Link}
@@ -234,12 +238,13 @@ const MainLayout = ({ user, onLogout }) => {
           </Box>
           <Box sx={{ flexGrow: 1 }} />
           <Box sx={{ display: { xs: 'none', md: 'flex' } }}>
-            {navLinks.map((link) => (
+            {navLinks.filter(link => !link.roles || link.roles.includes(user.role)).map((link) => (
               <Button key={link.label} component={Link} to={link.path} sx={{ color: 'white' }}>
                 {link.label}
               </Button>
             ))}
           </Box>
+          <NotificationBell />
           <IconButton sx={{ ml: 2 }} onClick={handleAvatarClick}>
             <Avatar sx={{ bgcolor: "#45d27a" }}>{user?.name?.charAt(0)}</Avatar>
           </IconButton>
@@ -389,6 +394,9 @@ function App() {
           {/* Profile (common) */}
           <Route path="profile" element={<ProfilePage user={user} onProfileUpdate={handleProfileUpdate} />} />
 
+          {/* Shared Routes */}
+          <Route path="prescription-print" element={<PrescriptionPrint user={user} />} />
+
           {/* Patient Routes */}
           <Route path="patient/dashboard" element={<DashboardTab user={user} appointments={appointments} medicals={medicals} diagnoses={diagnoses} reports={reports} prescriptions={prescriptions} />} />
           <Route path="patient/appointments" element={<AppointmentsTab appointments={appointments} onBookSuccess={handleBookAppointment} onCancel={handleCancelAppointment} />} />
@@ -396,15 +404,16 @@ function App() {
           <Route path="patient/view-medical/:medicalId" element={<ViewMedical />} />
           <Route path="patient/support" element={<SupportPage />} />
           <Route path="patient/faq" element={<FAQPage />} />
-          <Route path="patient/upload-medical-form" element={<MedicalFormUpload onProfileUpdate={fetchAllUserData} />} />
+          <Route path="patient/upload-medical-form" element={<MedicalForm user={user} onProfileUpdate={fetchAllUserData} />} />
 
           {/* Pharmacist Routes */}
           <Route path="pharmacist/dashboard" element={<PharmacyDashboard user={user} />} />
           <Route path="pharmacist/view-prescriptions" element={<Prescriptions />} />
+          <Route path="pharmacist/view-invoices" element={<ViewInvoices />} />
           <Route path="pharmacist/inventory-search" element={<InventoryPage />} />
           <Route path="pharmacist/inventory-update" element={<UpdateInventory />} />
           <Route path="pharmacist/prescription-print" element={<PrescriptionPrint user={user} />} />
-          <Route path="invoice/:prescriptionId" element={<Invoice />} />
+          <Route path="invoice/:id" element={<Invoice />} />
 
           {/* Doctor Routes - UPDATED with Medical Routes */}
           <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />
@@ -413,6 +422,7 @@ function App() {
           <Route path="doctor/issue-medical/:patientId" element={<IssueMedical />} />
           <Route path="doctor/view-medical/:medicalId" element={<ViewMedical />} />
           <Route path="doctor/request-test" element={<RequestLabTest pendingRequests={mockLabRequests} onSubmit={handleLabTestRequest} />} />
+          <Route path="doctor/request-lab-test/:patientId" element={<RequestLabTestForm />} />
           <Route path="doctor/prescriptions" element={<PrescriptionsTab recentPrescriptions={mockPrescriptionHistory} onSubmit={handlePrescriptionSubmit} />} />
           <Route path="doctor/support" element={<SupportPage />} />
 

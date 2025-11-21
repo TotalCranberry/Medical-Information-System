@@ -9,8 +9,6 @@ import java.util.Date;
 import java.util.List;
 import java.util.Map;
 import java.util.UUID;
-import org.apache.pdfbox.pdmodel.PDDocument;
-import org.apache.pdfbox.text.PDFTextStripper;
 
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -21,34 +19,29 @@ import org.springframework.web.bind.annotation.PathVariable;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
-import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
-import org.springframework.web.multipart.MultipartFile;
 
-import com.fasterxml.jackson.databind.JsonNode;
-import com.fasterxml.jackson.databind.ObjectMapper;
 import com.mis.dto.AppointmentRequest;
+import com.mis.dto.MedicalFormRequest;
 import com.mis.model.Appointment;
 import com.mis.model.AppointmentStatus;
 import com.mis.model.Diagnosis;
+import com.mis.model.LabRequest; // Import LabRequest
 import com.mis.model.LabResult;
 import com.mis.model.Medical;
-import com.mis.model.DentalExam;
-import com.mis.model.EyeExam;
-import com.mis.model.MedicalRecord;
-import com.mis.model.PhysicalExam;
 import com.mis.model.Prescription.Prescription;
 import com.mis.model.User;
 import com.mis.repository.AppointmentRepository;
 import com.mis.repository.DiagnosisRepository;
+import com.mis.repository.LabRequestRepository; // Import Repository
 import com.mis.repository.LabResultRepository;
 import com.mis.repository.MedicalRepository;
-import com.mis.repository.MedicalRecordRepository;
 import com.mis.repository.Prescription.PrescriptionRepository;
 import com.mis.repository.UserRepository;
-import com.mis.service.GeminiService;
+import com.mis.service.MedicalFormService;
 
 import jakarta.validation.Valid;
+
 @RestController
 @RequestMapping("/api/patient") 
 public class PatientController {
@@ -59,21 +52,27 @@ public class PatientController {
     private final MedicalRepository medicalRepository;
     private final PrescriptionRepository prescriptionRepository;
     private final LabResultRepository labResultRepository;
-    private final GeminiService geminiService;
-    private final MedicalRecordRepository medicalRecordRepository;
+    private final LabRequestRepository labRequestRepository; // Declare repository
+    private final MedicalFormService medicalFormService;
 
-    public PatientController(AppointmentRepository appointmentRepository, DiagnosisRepository diagnosisRepository, LabResultRepository labResultRepository, MedicalRepository medicalRepository, PrescriptionRepository prescriptionRepository, UserRepository userRepository, GeminiService geminiService, MedicalRecordRepository medicalRecordRepository) {
+    // Update Constructor to include LabRequestRepository
+    public PatientController(AppointmentRepository appointmentRepository, 
+                             DiagnosisRepository diagnosisRepository, 
+                             LabResultRepository labResultRepository, 
+                             LabRequestRepository labRequestRepository, // Inject here
+                             MedicalRepository medicalRepository, 
+                             PrescriptionRepository prescriptionRepository, 
+                             UserRepository userRepository, 
+                             MedicalFormService medicalFormService) {
         this.appointmentRepository = appointmentRepository;
         this.diagnosisRepository = diagnosisRepository;
         this.labResultRepository = labResultRepository;
+        this.labRequestRepository = labRequestRepository; // Assign here
         this.medicalRepository = medicalRepository;
         this.prescriptionRepository = prescriptionRepository;
         this.userRepository = userRepository;
-        this.geminiService = geminiService;
-        this.medicalRecordRepository = medicalRecordRepository;
+        this.medicalFormService = medicalFormService;
     }
-
-    
 
     @GetMapping("/appointments")
     public ResponseEntity<List<?>> getAppointments(Authentication authentication) {
@@ -84,6 +83,8 @@ public class PatientController {
         return ResponseEntity.ok(appointments);
     }
 
+    // ... [Existing Appointment Logic: createAppointment, cancelAppointment] ...
+    
     @PostMapping("/appointments")
     public ResponseEntity<?> createAppointment(Authentication authentication, @Valid @RequestBody AppointmentRequest request) {
         if (appointmentRepository.existsByAppointmentDateTimeAndStatusNot(request.getAppointmentDateTime(), AppointmentStatus.Cancelled)) {
@@ -98,12 +99,10 @@ public class PatientController {
         DayOfWeek day = ldt.getDayOfWeek();
         LocalTime time = ldt.toLocalTime();
 
-        // Check for weekends
         if (day == DayOfWeek.SATURDAY || day == DayOfWeek.SUNDAY) {
             return ResponseEntity.badRequest().body(Map.of("message","Appointments cannot be booked on weekends."));
         }
 
-        // Check for valid clinic hours
         LocalTime morningStart = LocalTime.of(9, 0);
         LocalTime morningEnd = LocalTime.of(12, 0);
         LocalTime afternoonStart = LocalTime.of(13, 30);
@@ -116,7 +115,6 @@ public class PatientController {
             return ResponseEntity.badRequest().body("Invalid appointment time. Please book between 9:00 AM - 12:00 PM or 1:30 PM - 4:00 PM.");
         }
 
-        // If all checks pass, create the appointment 
         String userId = authentication.getName();
         User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
 
@@ -136,26 +134,23 @@ public class PatientController {
     public ResponseEntity<?> cancelAppointment(Authentication authentication, @PathVariable String appointmentId) {
         String userId = authentication.getName();
 
-        // Find the appointment by its ID
         Appointment appointment = appointmentRepository.findById(appointmentId)
                 .orElseThrow(() -> new RuntimeException("Appointment not found"));
 
-        // Security Check: Ensure the user owns this appointment
         if (!appointment.getPatient().getId().equals(userId)) {
             return ResponseEntity.status(HttpStatus.FORBIDDEN).body(Map.of("message","You are not authorized to cancel this appointment."));
         }
 
-        // Business Rule: Only allow cancellation if the appointment is still PENDING
         if (appointment.getStatus() != AppointmentStatus.Scheduled) {
             return ResponseEntity.status(HttpStatus.BAD_REQUEST).body(Map.of("message","This appointment can no longer be cancelled."));
         }
 
-        // Update the status to CANCELLED
         appointment.setStatus(AppointmentStatus.Cancelled);
         appointmentRepository.save(appointment);
 
         return ResponseEntity.ok().body(Map.of("message","Appointment cancelled successfully."));
     }
+
 
     @GetMapping("/prescriptions")
     public ResponseEntity<List<Prescription>> getPrescriptions(Authentication authentication) {
@@ -171,6 +166,16 @@ public class PatientController {
         User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
         List<LabResult> labResults = labResultRepository.findByPatientOrderByCreatedAtDesc(patient); 
         return ResponseEntity.ok(labResults);
+    }
+    
+    // NEW ENDPOINT: Get Lab Requests
+    @GetMapping("/lab-requests")
+    public ResponseEntity<List<LabRequest>> getLabRequests(Authentication authentication) {
+        String userId = authentication.getName();
+        User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
+        // Fetch requests ordered by date (using the method added to repository in previous step)
+        List<LabRequest> requests = labRequestRepository.findByPatientOrderByOrderDateDesc(patient);
+        return ResponseEntity.ok(requests);
     }
 
     @GetMapping("/reports/diagnoses")
@@ -189,82 +194,23 @@ public class PatientController {
         return ResponseEntity.ok(medicals);
     }
 
+    @PostMapping("/submit-medical-form")
+    public ResponseEntity<?> submitMedicalForm(Authentication authentication, @Valid @RequestBody MedicalFormRequest request) {
+        try {
+            String userId = authentication.getName();
+            User user = userRepository.findById(userId)
+                    .orElseThrow(() -> new RuntimeException("User not found"));
+            medicalFormService.saveMedicalForm(user.getEmail(), request);
+            return ResponseEntity.ok(Map.of("message", "Medical form submitted successfully."));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Failed to submit medical form: " + e.getMessage()));
+        }
+    }
+
     @GetMapping("/view-medical/{medicalId}")
     public ResponseEntity<Medical> getMedical(@PathVariable String medicalId) {
         Medical medical = medicalRepository.findById(medicalId)
                 .orElseThrow(() -> new RuntimeException("Medical not found"));
         return ResponseEntity.ok(medical);
     }
-
-    @PostMapping("/upload-medical-form")
-    public ResponseEntity<?> uploadMedicalForm(Authentication authentication, @RequestParam("file") MultipartFile file) {
-        try {
-            String userId = authentication.getName();
-            User user = userRepository.findById(userId)
-                    .orElseThrow(() -> new RuntimeException("User not found"));
-
-            PDDocument document = PDDocument.load(file.getInputStream());
-            PDFTextStripper pdfStripper = new PDFTextStripper();
-            String text = pdfStripper.getText(document);
-            document.close();
-
-            String jsonResponse = geminiService.extractDataFromForm(text);
-
-            ObjectMapper objectMapper = new ObjectMapper();
-            JsonNode rootNode = objectMapper.readTree(jsonResponse);
-
-            MedicalRecord medicalRecord = new MedicalRecord();
-            medicalRecord.setUser(user);
-
-            JsonNode personalInfo = rootNode.path("personalInfo");
-            user.setName(personalInfo.path("name").asText());
-            // Update other user fields as needed, e.g., nic, dateOfBirth, etc.
-            userRepository.save(user);
-
-            JsonNode medicalHistory = rootNode.path("medicalHistory");
-            medicalRecord.setPastHospitalAdmissions(medicalHistory.path("pastHospitalAdmissions").asText());
-            medicalRecord.setChronicIllnesses(medicalHistory.path("chronicIllnesses").asText());
-            medicalRecord.setPhysicalDisabilities(medicalHistory.path("physicalDisabilities").asText());
-            medicalRecord.setAllergies(medicalHistory.path("allergies").asText());
-
-            JsonNode emergencyContact = rootNode.path("emergencyContact");
-            medicalRecord.setEmergencyContactName(emergencyContact.path("name").asText());
-            medicalRecord.setEmergencyContactAddress(emergencyContact.path("address").asText());
-            medicalRecord.setEmergencyContactPhone(emergencyContact.path("phone").asText());
-
-            MedicalRecord savedMedicalRecord = medicalRecordRepository.save(medicalRecord);
-
-            EyeExam eyeExam = new EyeExam();
-            eyeExam.setMedicalRecord(savedMedicalRecord);
-            JsonNode eyeExamNode = rootNode.path("eyeExam");
-            eyeExam.setVisionWithoutGlassesRight(eyeExamNode.path("visionWithoutGlasses").path("right").asText());
-            eyeExam.setVisionWithoutGlassesLeft(eyeExamNode.path("visionWithoutGlasses").path("left").asText());
-            eyeExam.setVisionWithGlassesRight(eyeExamNode.path("visionWithGlasses").path("right").asText());
-            eyeExam.setVisionWithGlassesLeft(eyeExamNode.path("visionWithGlasses").path("left").asText());
-            eyeExam.setColorVision(eyeExamNode.path("colorVision").asText());
-            savedMedicalRecord.setEyeExam(eyeExam);
-
-            DentalExam dentalExam = new DentalExam();
-            dentalExam.setMedicalRecord(savedMedicalRecord);
-            JsonNode dentalExamNode = rootNode.path("dentalExam");
-            dentalExam.setOralHealthCondition(dentalExamNode.path("oralHealthCondition").asText());
-            savedMedicalRecord.setDentalExam(dentalExam);
-
-            PhysicalExam physicalExam = new PhysicalExam();
-            physicalExam.setMedicalRecord(savedMedicalRecord);
-            JsonNode physicalExamNode = rootNode.path("physicalExam");
-            physicalExam.setWeightKg(physicalExamNode.path("weightKg").asText());
-            physicalExam.setHeightCm(physicalExamNode.path("heightCm").asText());
-            physicalExam.setBmi(physicalExamNode.path("bmi").asText());
-            physicalExam.setVaccinationStatus(physicalExamNode.path("vaccinationStatus").asText());
-            savedMedicalRecord.setPhysicalExam(physicalExam);
-
-            medicalRecordRepository.save(savedMedicalRecord);
-
-            return ResponseEntity.ok(rootNode);
-        } catch (Exception e) {
-            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR).body(Map.of("message", "Failed to process medical form: " + e.getMessage()));
-        }
-    }
 }
-

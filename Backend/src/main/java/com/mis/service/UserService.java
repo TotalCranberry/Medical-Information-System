@@ -19,10 +19,12 @@ import com.mis.dto.UserResponse;
 import com.mis.mapper.UserMapper;
 import com.mis.model.AccountStatus;
 import com.mis.model.AuthMethod;
+import com.mis.model.MedicalRecord;
 import com.mis.model.Role;
 import com.mis.model.Staff;
 import com.mis.model.Student;
 import com.mis.model.User;
+import com.mis.repository.MedicalRecordRepository;
 import com.mis.repository.StaffRepository;
 import com.mis.repository.StudentRepository;
 import com.mis.repository.UserRepository;
@@ -32,16 +34,18 @@ public class UserService {
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final StaffRepository staffRepository;
+    private final MedicalRecordRepository medicalRecordRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
-                       StudentRepository studentRepository, StaffRepository staffRepository,
+                       StudentRepository studentRepository, MedicalRecordRepository medicalRecordRepository, StaffRepository staffRepository,
                        AuditService auditService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.studentRepository = studentRepository;
         this.staffRepository = staffRepository;
+        this.medicalRecordRepository = medicalRecordRepository;
         this.auditService = auditService;
     }
 
@@ -53,7 +57,7 @@ public class UserService {
         
         user.setId(UUID.randomUUID().toString());
         user.setPasswordHash(passwordEncoder.encode(rawPassword));
-        if (user.getRole() == Role.Student || user.getRole() == Role.Staff) {
+        if (user.getRole() == Role.Student) {
             user.setStatus(AccountStatus.ACTIVE);
         } else {
             user.setStatus(AccountStatus.PENDING_APPROVAL);
@@ -71,7 +75,7 @@ public class UserService {
         } else if (savedUser.getRole() == Role.Staff) {
             Staff staff = new Staff();
             staff.setUser(savedUser); 
-            staff.setFaculty(faculty);
+            staff.setFaculty("N/A");
             staffRepository.save(staff);
         }
         
@@ -133,11 +137,23 @@ public class UserService {
         }
         
         if (request.getDateOfBirth() != null) {
-            updateRoleSpecificProfile(user, request.getDateOfBirth(), null);
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), null, null, null, null);
         }
 
         if (request.getGender() != null && !request.getGender().isEmpty()) {
-            updateRoleSpecificProfile(user, null, request.getGender());
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), request.getGender(), null, null, null);
+        }
+
+        if (request.getHostel() != null && !request.getHostel().isEmpty()) {
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), request.getGender(), request.getHostel(), null, null);
+        }
+
+        if (request.getRoomNumber() != null && !request.getRoomNumber().isEmpty()) {
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), request.getGender(), request.getHostel(), request.getRoomNumber(), null);
+        }
+
+        if (request.getPhoneNumber() != null && !request.getPhoneNumber().isEmpty()) {
+            updateRoleSpecificProfile(user, request.getDateOfBirth(), request.getGender(), request.getHostel(), request.getRoomNumber(), request.getPhoneNumber());
         }
 
         User savedUser = userRepository.save(user);
@@ -147,7 +163,7 @@ public class UserService {
         return savedUser;
     }
 
-    private void updateRoleSpecificProfile(User user, LocalDate dateOfBirth, String gender) {
+    private void updateRoleSpecificProfile(User user, LocalDate dateOfBirth, String gender, String hostel, String roomNumber, String phoneNumber) {
         if (user.getRole() == Role.Student) {
             Student student = studentRepository.findById(user.getId())
                 .orElseThrow(() -> new RuntimeException("Student profile not found"));
@@ -156,6 +172,15 @@ public class UserService {
             }
             if (gender != null) {
                 student.setGender(gender);
+            }
+            if (hostel != null) {
+                student.setHostel(hostel);
+            }
+            if (roomNumber != null) {
+                student.setRoomNumber(roomNumber);
+            }
+            if (phoneNumber != null) {
+                student.setPhoneNumber(phoneNumber);
             }
             studentRepository.save(student);
         } else if (user.getRole() == Role.Staff) {
@@ -183,9 +208,12 @@ public class UserService {
         } else if (user.getRole() == Role.Staff) {
             staff = staffRepository.findById(user.getId()).orElse(null);
         }
+        // 3. FIND THE MEDICAL RECORD
+        MedicalRecord medicalRecord = medicalRecordRepository.findByUser_Id(userId).orElse(null); 
         
-        return UserMapper.toUserResponse(user, student, staff);
-    }
+        // 4. PASS THE MEDICAL RECORD TO THE MAPPER
+        return UserMapper.toUserResponse(user, student, staff, medicalRecord);
+     }
 
     public Optional<User> authenticate(String email, String rawPassword) {
         Optional<User> userOpt = userRepository.findByEmail(email);
@@ -286,14 +314,11 @@ public class UserService {
         if (principal instanceof UserDetails ud) {
             username = ud.getUsername();
         } else if (principal instanceof String s) {
-            // Sometimes Spring stores just the username string
             username = s;
         } else {
             throw new IllegalStateException("Unsupported principal type: " + principal.getClass());
         }
 
-        // 🔁 PICK ONE that matches your schema:
-        // If you log in with email:
         return userRepository.findByEmail(username)
                 .orElseThrow(() -> new IllegalStateException("Logged-in user not found by email: " + username));
     }

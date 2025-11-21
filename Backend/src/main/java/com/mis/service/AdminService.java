@@ -1,16 +1,18 @@
 package com.mis.service;
 
-import com.mis.model.AccountStatus;
-import com.mis.model.User;
-import com.mis.repository.UserRepository;
+import java.util.List;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import com.mis.model.AccountStatus;
+import com.mis.model.Role;
+import com.mis.model.User;
+import com.mis.repository.UserRepository;
 
 @Service
 public class AdminService {
@@ -28,11 +30,17 @@ public class AdminService {
     }
 
     public List<User> findUsersByStatus(Optional<AccountStatus> status) {
-        if (status.isPresent()) {
-            return userRepository.findByStatus(status.get());
-        } else {
-            return userRepository.findAll();
-        }
+        return findUsersByCriteria(status, Optional.empty(), Optional.empty());
+    }
+
+    public List<User> findUsersByCriteria(Optional<AccountStatus> status, Optional<Role> role, Optional<String> searchTerm) {
+        List<User> allUsers = userRepository.findAll();
+
+        return allUsers.stream()
+                .filter(user -> status.isEmpty() || user.getStatus() == status.get())
+                .filter(user -> role.isEmpty() || user.getRole() == role.get())
+                .filter(user -> searchTerm.isEmpty() || user.getEmail().toLowerCase().contains(searchTerm.get().toLowerCase()))
+                .toList();
     }
 
     @Transactional
@@ -62,6 +70,21 @@ public class AdminService {
         user.setStatus(AccountStatus.DISABLED);
         User savedUser = userRepository.save(user);
         auditService.logAction(savedUser, "USER_DISABLE", "User disabled by admin");
+        return savedUser;
+    }
+
+    @Transactional
+    public User reactivateUser(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
+
+        if (user.getStatus() != AccountStatus.DISABLED) {
+            throw new IllegalStateException("User is not disabled.");
+        }
+
+        user.setStatus(AccountStatus.ACTIVE);
+        User savedUser = userRepository.save(user);
+        auditService.logAction(savedUser, "USER_REACTIVATE", "User reactivated by admin");
         return savedUser;
     }
 

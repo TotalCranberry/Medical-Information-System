@@ -6,6 +6,8 @@ import com.mis.dto.Prescription.ManualDispenseRequest;
 import com.mis.mapper.Prescription.PrescriptionMapper;
 import com.mis.model.Prescription.Prescription;
 import com.mis.model.User;
+import com.mis.repository.StaffRepository;
+import com.mis.repository.StudentRepository;
 import com.mis.repository.UserRepository;
 import com.mis.service.Prescription.PrescriptionService;
 import com.mis.service.Prescription.PrescriptionMigrationService;
@@ -25,6 +27,8 @@ public class PrescriptionController {
     private final PrescriptionService prescriptionService;
     private final PrescriptionMigrationService prescriptionMigrationService;
     private final UserRepository userRepository;
+    private final StudentRepository studentRepository;
+    private final StaffRepository staffRepository;
 
     // POST /api/prescriptions/create   (Doctor only)
     @PostMapping("/create")
@@ -38,7 +42,7 @@ public class PrescriptionController {
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found for " + doctorId));
 
         var saved = prescriptionService.create(doctor.getId(), doctor.getName(), req);
-        return ResponseEntity.ok(PrescriptionMapper.toResponse(saved));
+        return ResponseEntity.ok(PrescriptionMapper.toResponse(saved, studentRepository, staffRepository));
     }
 
     // (You can add: GET by id, doctor/my-prescriptions, etc. later to match your frontend.)
@@ -61,7 +65,7 @@ public class PrescriptionController {
     @PreAuthorize("hasAnyAuthority('ROLE_Doctor', 'ROLE_Pharmacist', 'ROLE_Student', 'ROLE_Staff')")
     public ResponseEntity<PrescriptionResponse> getOne(@PathVariable String id) {
         Prescription prescription = prescriptionService.getByIdOrThrow(id);
-        return ResponseEntity.ok(PrescriptionMapper.toResponse(prescription));
+        return ResponseEntity.ok(PrescriptionMapper.toResponse(prescription, studentRepository, staffRepository));
     }
 
     // 3) Dispense: auto-decrement inventory + mark inactive

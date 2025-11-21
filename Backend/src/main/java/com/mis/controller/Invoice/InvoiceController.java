@@ -2,7 +2,13 @@ package com.mis.controller.Invoice;
 
 import com.mis.dto.Invoice.InvoiceDto;
 import com.mis.dto.Invoice.InvoiceItemDto;
+import com.mis.dto.Invoice.InvoiceSummaryDto;
 import com.mis.model.Invoice.Invoice;
+import com.mis.model.Role;
+import com.mis.model.Staff;
+import com.mis.model.Student;
+import com.mis.repository.StaffRepository;
+import com.mis.repository.StudentRepository;
 import com.mis.service.Invoice.InvoiceService;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -15,9 +21,13 @@ import java.util.stream.Collectors;
 public class InvoiceController {
 
     private final InvoiceService invoiceService;
+    private final StudentRepository studentRepository;
+    private final StaffRepository staffRepository;
 
-    public InvoiceController(InvoiceService invoiceService) {
+    public InvoiceController(InvoiceService invoiceService, StudentRepository studentRepository, StaffRepository staffRepository) {
         this.invoiceService = invoiceService;
+        this.studentRepository = studentRepository;
+        this.staffRepository = staffRepository;
     }
 
     @PostMapping("/generate/{prescriptionId}")
@@ -51,17 +61,32 @@ public class InvoiceController {
         dto.setId(invoice.getId());
         dto.setTotalAmount(invoice.getTotalAmount());
         dto.setCreatedAt(invoice.getCreatedAt());
-        
+
         // Map patient information
         if (invoice.getPatient() != null) {
             dto.setPatientName(invoice.getPatient().getName());
+
+            // Fetch age and gender from Student or Staff
+            if (invoice.getPatient().getRole() == Role.Student) {
+                Student student = studentRepository.findById(invoice.getPatient().getId()).orElse(null);
+                if (student != null) {
+                    dto.setPatientAge(student.getAge());
+                    dto.setPatientGender(student.getGender());
+                }
+            } else if (invoice.getPatient().getRole() == Role.Staff) {
+                Staff staff = staffRepository.findById(invoice.getPatient().getId()).orElse(null);
+                if (staff != null) {
+                    dto.setPatientAge(staff.getAge());
+                    dto.setPatientGender(staff.getGender());
+                }
+            }
         }
-        
+
         // Map prescription ID
         if (invoice.getPrescription() != null) {
             dto.setPrescriptionId(invoice.getPrescription().getId());
         }
-        
+
         // Map invoice items
         if (invoice.getInvoiceItems() != null) {
             List<InvoiceItemDto> itemDtos = invoice.getInvoiceItems().stream()
@@ -69,7 +94,7 @@ public class InvoiceController {
                 .collect(Collectors.toList());
             dto.setInvoiceItems(itemDtos);
         }
-        
+
         return dto;
     }
     
@@ -82,5 +107,21 @@ public class InvoiceController {
         dto.setUnitPrice(item.getUnitPrice());
         dto.setTotalPrice(item.getTotalPrice());
         return dto;
+    }
+
+    @GetMapping("/staff")
+    public ResponseEntity<List<InvoiceSummaryDto>> getStaffInvoices() {
+        List<InvoiceSummaryDto> invoices = invoiceService.getStaffInvoices();
+        return ResponseEntity.ok(invoices);
+    }
+
+    @GetMapping("/{id}")
+    public ResponseEntity<InvoiceDto> getInvoiceById(@PathVariable Long id) {
+        Invoice invoice = invoiceService.getInvoiceById(id);
+        if (invoice != null) {
+            InvoiceDto invoiceDto = convertToDto(invoice);
+            return ResponseEntity.ok(invoiceDto);
+        }
+        return ResponseEntity.notFound().build();
     }
 }

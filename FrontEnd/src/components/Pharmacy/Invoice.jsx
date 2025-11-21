@@ -1,79 +1,131 @@
 import React, { useEffect, useState } from "react";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { getInvoice } from "../../api/invoice";
+
+// API Functions
+import { getInvoice, getInvoiceById } from "../../api/invoice";
+
+// Assets
 import UOPLogo from "../../assets/UOP_logo.jpeg";
 
-// ---- THEME TOKENS (match PrescriptionPrint) ----
-const THEME = {
-  primary: "#0C3C3C",
-  accent:  "#45D27A",
-  gray:    "#6C6B6B",
-  white:   "#ffffff",
-  light:   "#F8F9FA",
+// ---- Colors Configuration ----
+const colors = {
+  primary: "#0C3C3C",    // Dark Teal
+  accent: "#45D27A",     // Bright Green
+  gray: "#6C6B6B",
+  white: "#ffffff",
+  light: "#F8F9FA",
 };
 
-const line = { borderTop: "2px solid #0C3C3C" };
+// Simple style object for dividing lines
+const lineStyle = {
+  borderTop: "2px solid " + colors.primary
+};
 
-const fmtMoney = (v) => {
-  const n = Number(v ?? 0);
+// --- Helper: Format Money ---
+const formatMoney = (value) => {
+  // Convert to number, defaulting to 0 if null/undefined
+  let num = Number(value);
+  if (isNaN(num)) {
+    num = 0;
+  }
+
   try {
+    // Attempt to use the browser's built-in currency formatter
     return new Intl.NumberFormat("en-LK", {
       style: "currency",
       currency: "LKR",
       maximumFractionDigits: 2,
-    }).format(n);
-  } catch {
-    return `Rs. ${n.toFixed(2)}`;
+    }).format(num);
+  } catch (error) {
+    // Fallback if Internationalization fails
+    return "Rs. " + num.toFixed(2);
   }
 };
 
+// --- Helper: Normalize Data ---
+// This function takes raw data from the API (which might vary)
+// and converts it into a consistent structure for our component.
 const normalizeInvoice = (raw) => {
   if (!raw || typeof raw !== "object") return null;
 
   const patient = raw.patient || {};
-  const patientName = raw.patientName || patient.name || patient.fullName || "-";
-  const patientAge = patient.age ?? raw.patientAge;
-  const patientGender = patient.gender || raw.patientGender;
+  
+  // Extract patient details with fallbacks
+  let patientName = "-";
+  if (raw.patientName) patientName = raw.patientName;
+  else if (patient.name) patientName = patient.name;
+  else if (patient.fullName) patientName = patient.fullName;
+
+  const patientAge = raw.patientAge || patient.age || null;
+  const patientGender = raw.patientGender || patient.gender || null;
 
   const createdAt = raw.createdAt || raw.date || raw.issuedAt || new Date().toISOString();
   const id = raw.id || raw.invoiceId || raw.number || "-";
 
-  const items = Array.isArray(raw.invoiceItems)
-    ? raw.invoiceItems
-    : Array.isArray(raw.items)
-    ? raw.items
-    : [];
+  // Extract items list
+  let rawItems = [];
+  if (Array.isArray(raw.invoiceItems)) {
+    rawItems = raw.invoiceItems;
+  } else if (Array.isArray(raw.items)) {
+    rawItems = raw.items;
+  }
 
-  const normItems = items.map((it, i) => {
-    const qty = it.dispenseQuantity ?? it.quantity ?? it.qty ?? 0;
-    const unit = it.unitPrice ?? it.price ?? 0;
-    const total = it.totalPrice ?? it.total ?? qty * unit;
+  // Standardize each item
+  const normalizedItems = rawItems.map((item, index) => {
+    // Quantity Logic
+    let qty = 0;
+    if (item.dispenseQuantity != null) qty = item.dispenseQuantity;
+    else if (item.quantity != null) qty = item.quantity;
+    else if (item.qty != null) qty = item.qty;
+
+    // Price Logic
+    let unitPrice = 0;
+    if (item.unitPrice != null) unitPrice = item.unitPrice;
+    else if (item.price != null) unitPrice = item.price;
+
+    // Total Logic
+    let totalPrice = 0;
+    if (item.totalPrice != null) totalPrice = item.totalPrice;
+    else if (item.total != null) totalPrice = item.total;
+    else totalPrice = qty * unitPrice;
+
     return {
-      id: it.id ?? `row_${i}`,
-      medicineName: it.medicineName || it.name || it.title || "",
-      dosage: it.dosage || it.strength || "-",
+      id: item.id || ("row_" + index),
+      medicineName: item.medicineName || item.name || item.title || "",
+      dosage: item.dosage || item.strength || "-",
       dispenseQuantity: qty,
-      unitPrice: unit,
-      totalPrice: total,
+      unitPrice: unitPrice,
+      totalPrice: totalPrice,
     };
   });
 
-  const subTotal = raw.subTotal ?? raw.subtotal ?? normItems.reduce((s, r) => s + Number(r.totalPrice || 0), 0);
-  const service = raw.serviceCharge ?? raw.serviceFee ?? 0;
-  const totalAmount = raw.totalAmount ?? raw.total ?? subTotal + Number(service);
+  // Calculate totals if missing
+  let subTotal = raw.subTotal || raw.subtotal;
+  if (subTotal == null) {
+    // Sum up all item totals
+    subTotal = normalizedItems.reduce((sum, item) => sum + Number(item.totalPrice || 0), 0);
+  }
 
+  const serviceCharge = raw.serviceCharge || raw.serviceFee || 0;
+  
+  let totalAmount = raw.totalAmount || raw.total;
+  if (totalAmount == null) {
+    totalAmount = subTotal + Number(serviceCharge);
+  }
+
+  // Return clean object
   return {
-    id,
-    createdAt,
-    patientName,
-    patientAge,
-    patientGender,
-    items: normItems,
-    subTotal,
-    service,
-    totalAmount,
+    id: id,
+    createdAt: createdAt,
+    patientName: patientName,
+    patientAge: patientAge,
+    patientGender: patientGender,
+    items: normalizedItems,
+    subTotal: subTotal,
+    service: serviceCharge,
+    totalAmount: totalAmount,
     clinic: {
-      name: raw.clinicName || "University of Peradeniya — Medical Center",
+      name: raw.clinicName || "University of Peradeniya — Medical Center" + " invooice",
       phone: raw.clinicPhone || "—",
       email: raw.clinicEmail || "—",
       address: raw.clinicAddress || "—",
@@ -84,60 +136,98 @@ const normalizeInvoice = (raw) => {
 };
 
 const InvoicePrint = () => {
-  const { prescriptionId } = useParams();
+  // Get ID from URL
+  const params = useParams();
+  const invoiceId = params.id;
+  
   const navigate = useNavigate();
   const location = useLocation();
 
-  const [state, setState] = useState({ loading: true, error: null, invoice: null });
+  // --- State Variables ---
+  const [isLoading, setIsLoading] = useState(true);
+  const [error, setError] = useState(null);
+  const [invoiceData, setInvoiceData] = useState(null);
+  
+  // Notification state
   const [notice, setNotice] = useState(null);
 
-  const showNotice = (type, text, ms = 2500) => {
-    setNotice({ type, text });
-    if (ms) setTimeout(() => setNotice(null), ms);
+  // --- 1. Fetch Data ---
+  useEffect(() => {
+    let isMounted = true;
+
+    const fetchData = async () => {
+      setIsLoading(true);
+      setError(null);
+
+      try {
+        let rawData;
+        
+        // Try fetching by Invoice ID first (Staff Invoice)
+        try {
+          rawData = await getInvoiceById(invoiceId);
+        } catch (err) {
+          // If that fails, try fetching by Prescription ID
+          rawData = await getInvoice(invoiceId);
+        }
+
+        const cleanData = normalizeInvoice(rawData);
+        
+        if (isMounted) {
+          setInvoiceData(cleanData);
+          setIsLoading(false);
+        }
+      } catch (err) {
+        if (isMounted) {
+          setError(err?.message || "Failed to load invoice");
+          setIsLoading(false);
+        }
+      }
+    };
+
+    fetchData();
+
+    // Cleanup function
+    return () => { isMounted = false; };
+  }, [invoiceId]);
+
+  // --- 2. Handlers ---
+
+  const showNotice = (type, text) => {
+    setNotice({ type: type, text: text });
+    // Hide after 2.5 seconds
+    setTimeout(() => setNotice(null), 2500);
   };
 
-  useEffect(() => {
-    let alive = true;
-    (async () => {
-      try {
-        setState((s) => ({ ...s, loading: true, error: null }));
-        const raw = await getInvoice(prescriptionId);
-        const norm = normalizeInvoice(raw);
-        if (alive) setState({ loading: false, error: null, invoice: norm });
-      } catch (e) {
-        if (alive) setState({ loading: false, error: e?.message || "Failed to load invoice", invoice: null });
-      }
-    })();
-    return () => { alive = false; };
-  }, [prescriptionId]);
-
-  const onPrint = () => {
+  const handlePrint = () => {
     window.print();
     showNotice("success", "Invoice is ready in the print dialog.");
   };
 
-  const onBack = () => {
-    // Match how invoices are reached (usually from Completed tab)
+  const handleBack = () => {
+    // Return to the previous tab (default to Completed if not specified)
     const fromTab = location.state?.fromTab || "Completed";
-    navigate("/pharmacist/view-prescriptions", { state: { activeTab: fromTab } });
+    navigate("/pharmacist/view-prescriptions", { 
+      state: { activeTab: fromTab } 
+    });
   };
 
-  const invoice = state.invoice;
+  // --- 3. Render Loading/Error ---
 
-  if (state.loading) {
+  if (isLoading) {
     return (
-      <div className="p-6" style={{ color: THEME.primary }}>
+      <div className="p-6" style={{ color: colors.primary, padding: "24px" }}>
+        {/* Refactor Note: Replaced gradient animation with solid color animation */}
         <style>{`
           .bar {
             height: 6px; width: 100%;
-            background: linear-gradient(90deg, ${THEME.primary}, ${THEME.accent});
+            background-color: ${colors.primary};
             border-radius: 4px; margin-bottom: 12px;
             animation: pulse 1.2s ease-in-out infinite;
           }
           @keyframes pulse {
-            0% { opacity: .65; }
+            0% { opacity: .4; }
             50% { opacity: 1; }
-            100% { opacity: .65; }
+            100% { opacity: .4; }
           }
         `}</style>
         <div className="bar" />
@@ -146,17 +236,23 @@ const InvoicePrint = () => {
     );
   }
 
-  if (state.error) {
+  if (error) {
     return (
-      <div className="p-6">
+      <div style={{ padding: "24px" }}>
         <div style={{ background: "#ffefef", border: "1px solid #ffcccc", borderRadius: 12, padding: 16, color: "#8a1c1c" }}>
-          {state.error}
+          {error}
         </div>
-        <div className="mt-4" style={{ marginTop: 16 }}>
+        <div style={{ marginTop: 16 }}>
           <button
-            onClick={onBack}
-            className="px-4 py-2 rounded-lg"
-            style={{ border: `1px solid ${THEME.primary}`, color: THEME.primary, background: "#fff" }}
+            onClick={handleBack}
+            style={{ 
+              padding: "8px 16px", 
+              borderRadius: "8px",
+              border: "1px solid " + colors.primary, 
+              color: colors.primary, 
+              background: "#fff",
+              cursor: "pointer"
+            }}
           >
             Go Back
           </button>
@@ -165,19 +261,22 @@ const InvoicePrint = () => {
     );
   }
 
-  if (!invoice) return <div className="p-6">No invoice data</div>;
+  if (!invoiceData) return <div style={{ padding: "24px" }}>No invoice data found.</div>;
 
-  const hasItems = Array.isArray(invoice.items) && invoice.items.length > 0;
+  // Check if items exist
+  const hasItems = Array.isArray(invoiceData.items) && invoiceData.items.length > 0;
 
+  // --- 4. Main Render ---
   return (
-    <div className="p-6" style={{ background: THEME.light }}>
+    <div style={{ padding: "24px", background: colors.light, minHeight: "100vh" }}>
       <style>{`
         :root {
-          --c-primary: ${THEME.primary};
-          --c-accent: ${THEME.accent};
-          --c-gray: ${THEME.gray};
+          --c-primary: ${colors.primary};
+          --c-accent: ${colors.accent};
+          --c-gray: ${colors.gray};
         }
 
+        /* Print Settings */
         @media print {
           body * { visibility: hidden; }
           .print-container, .print-container * { visibility: visible; }
@@ -194,6 +293,7 @@ const InvoicePrint = () => {
         }
         @page { size: A4; margin: 12mm; }
 
+        /* Container Styles */
         .print-container {
           max-width: 980px; margin: 0 auto; background: white;
           box-shadow: 0 18px 40px rgba(12,60,60,0.12);
@@ -201,10 +301,11 @@ const InvoicePrint = () => {
           border: 1px solid rgba(12,60,60,0.08);
         }
 
+        /* Refactor Note: Removed gradient. Now using solid primary color */
         .top-accent {
           height: 6px; width: 100%;
           border-radius: 8px 8px 0 0;
-          background: linear-gradient(90deg, var(--c-primary), var(--c-accent));
+          background-color: var(--c-primary);
           margin-bottom: 16px;
         }
 
@@ -212,12 +313,15 @@ const InvoicePrint = () => {
         .section-gap { margin-top: 22px; }
         .section-gap-lg { margin-top: 32px; }
 
+        /* Refactor Note: Removed gradient text logic. Now solid color. */
         .header-title {
-          color: var(--c-primary); letter-spacing: .3px; font-weight: 800;
-          background: linear-gradient(135deg, var(--c-primary) 0%, var(--c-accent) 100%);
-          -webkit-background-clip: text; -webkit-text-fill-color: transparent;
+          color: var(--c-primary);
+          letter-spacing: .3px; 
+          font-weight: 800;
+          font-size: 22px;
         }
-        .subtle { color: var(--c-gray); }
+        
+        .subtle { color: var(--c-gray); font-size: 13px; margin-top: 4px; }
         .muted { color: #6b7280; font-size: 12px; }
 
         .badge {
@@ -233,6 +337,7 @@ const InvoicePrint = () => {
           background: #fcfffe;
         }
 
+        /* Table Styles */
         .table { width: 100%; border-collapse: collapse; }
         .table th, .table td {
           border: 1px solid #e5e7eb; padding: 12px 14px; vertical-align: top;
@@ -243,6 +348,7 @@ const InvoicePrint = () => {
         }
         .zebra tbody tr:nth-child(even) td { background: rgba(12,60,60,0.02); }
 
+        /* Totals Section */
         .totals { width: 100%; max-width: 420px; margin-left: auto; }
         .totals-row { display: flex; justify-content: space-between; padding: 10px 0; }
         .totals-row.bold {
@@ -251,23 +357,23 @@ const InvoicePrint = () => {
 
         .sign-line { border-top: 1px solid var(--c-primary); height: 26px; margin-top: 36px; }
 
+        /* Notifications */
         .notice { margin-top: 18px; padding: 12px 14px; border-radius: 10px; font-size: 14px; }
         .notice.success { background: #d1fae5; color: #065f46; border: 1px solid #a7f3d0; }
-        .notice.error   { background: #fee2e2; color: #991b1b; border: 1px solid #fecaca; }
 
-        .btn { padding: 12px 16px; border-radius: 12px; cursor: pointer; font-weight: 700; }
+        /* Buttons */
+        .btn { padding: 12px 16px; border-radius: 12px; cursor: pointer; font-weight: 700; font-size: 14px; }
         .btn-outline {
           border: 1px solid var(--c-primary); background: white; color: var(--c-primary); transition: all .25s ease;
         }
         .btn-outline:hover {
-          background: var(--c-primary); color: white; transform: translateY(-1px);
-          box-shadow: 0 10px 28px rgba(12,60,60,0.25);
+          background: rgba(12,60,60,0.05);
         }
         .btn-solid {
           border: 1px solid var(--c-primary); background: var(--c-primary); color: white; transition: all .25s ease;
         }
         .btn-solid:hover {
-          transform: translateY(-1px); box-shadow: 0 10px 28px rgba(12,60,60,0.25); background: #0a2e2e;
+          background: #0a2e2e;
         }
         .btn-row { display: flex; justify-content: flex-end; gap: 16px; flex-wrap: wrap; }
       `}</style>
@@ -275,73 +381,74 @@ const InvoicePrint = () => {
       <div className="print-container page">
         <div className="top-accent" />
 
-        {/* Header — mirrored from PrescriptionPrint */}
+        {/* --- Header Section --- */}
         <div className="flex items-center gap-5 header-wrap" style={{ display: "flex", alignItems: "center", gap: 20 }}>
+          
+          {/* Logo */}
           <div
             style={{
               width: 70,
               height: 70,
-              border: "1px solid var(--c-primary)",
+              border: "1px solid " + colors.primary,
               borderRadius: "50%",
               display: "flex",
               alignItems: "center",
               justifyContent: "center",
               overflow: "hidden",
-              background: "#fff",
-              boxShadow: "0 8px 20px rgba(12,60,60,0.15)"
+              background: "#fff"
             }}
           >
             <img
-              src={invoice.clinic.logo}
-              alt="University of Peradeniya logo"
+              src={invoiceData.clinic.logo}
+              alt="Logo"
               style={{ width: "100%", height: "100%", objectFit: "contain" }}
               onError={(e) => { e.currentTarget.onerror = null; e.currentTarget.src = UOPLogo; }}
             />
           </div>
 
+          {/* Clinic Info */}
           <div style={{ flex: 1, textAlign: "center" }}>
-            <div className="header-title" style={{ fontSize: 22 }}>
-              {invoice.clinic.name}
+            <div className="header-title">
+              {invoiceData.clinic.name}
             </div>
-            <div className="subtle" style={{ fontSize: 13, marginTop: 4 }}>
-              Peradeniya, Sri Lanka • Tel: {invoice.clinic.phone} • Email: {invoice.clinic.email}
+            <div className="subtle">
+              Peradeniya, Sri Lanka • Tel: {invoiceData.clinic.phone} • Email: {invoiceData.clinic.email}
             </div>
             <div className="muted" style={{ marginTop: 2 }}>
-              {invoice.clinic.address}
+              {invoiceData.clinic.address}
             </div>
           </div>
 
+          {/* Invoice Metadata */}
           <div className="text-right" style={{ minWidth: 190, textAlign: "right" }}>
             <div className="badge">Invoice</div>
             <div className="muted" style={{ marginTop: 6 }}>
-              Date: <strong>{new Date(invoice.createdAt).toLocaleString()}</strong>
+              Date: <strong>{new Date(invoiceData.createdAt).toLocaleString()}</strong>
             </div>
             <div className="muted">
-              No: <strong>{invoice.id}</strong>
+              No: <strong>{invoiceData.id}</strong>
             </div>
-            {invoice.cashier && (
+            {invoiceData.cashier && (
               <div className="muted">
-                Issued by: <strong>{invoice.cashier}</strong>
+                Issued by: <strong>{invoiceData.cashier}</strong>
               </div>
             )}
           </div>
         </div>
 
-        <div style={{ margin: "14px 0 12px 0", ...line }} />
+        <div style={{ margin: "14px 0 12px 0", ...lineStyle }} />
 
-        {/* Billed To — same card style */}
-        <div className="section-gap" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 18 }}>
-          <div className="card" style={{ background: "#fcfffe" }}>
-            <div style={{ fontWeight: 800, marginBottom: 8, color: THEME.primary }}>Billed To</div>
-            <div style={{ marginBottom: 4 }}><strong>Name:</strong> {invoice.patientName}</div>
-            <div>
-              <strong>Age / Sex:</strong> {(invoice.patientAge ?? "-")}
-              {invoice.patientGender ? ` / ${invoice.patientGender}` : ""}
-            </div>
+        {/* --- Billed To Section --- */}
+        <div className="section-gap">
+          <div className="card">
+            <div style={{ fontWeight: 800, marginBottom: 8, color: colors.primary }}>Billed To</div>
+            <div style={{ marginBottom: 4 }}><strong>Name:</strong> {invoiceData.patientName}</div>
+            <div style={{ marginBottom: 4 }}><strong>Age:</strong> {invoiceData.patientAge || "-"}</div>
+            <div><strong>Sex:</strong> {invoiceData.patientGender || "-"}</div>
           </div>
         </div>
 
-        {/* Items table — zebra + right-aligned numbers */}
+        {/* --- Items Table --- */}
         <table className="table zebra section-gap">
           <thead>
             <tr>
@@ -354,17 +461,17 @@ const InvoicePrint = () => {
           </thead>
           <tbody>
             {hasItems ? (
-              invoice.items.map((it) => (
-                <tr key={it.id}>
+              invoiceData.items.map((item) => (
+                <tr key={item.id}>
                   <td>
-                    <div style={{ fontWeight: 700, color: THEME.primary }}>
-                      {it.medicineName || "-"}
+                    <div style={{ fontWeight: 700, color: colors.primary }}>
+                      {item.medicineName || "-"}
                     </div>
                   </td>
-                  <td>{it.dosage || "-"}</td>
-                  <td style={{ textAlign: "right" }}>{it.dispenseQuantity ?? 0}</td>
-                  <td style={{ textAlign: "right" }}>{fmtMoney(it.unitPrice)}</td>
-                  <td style={{ textAlign: "right" }}>{fmtMoney(it.totalPrice)}</td>
+                  <td>{item.dosage || "-"}</td>
+                  <td style={{ textAlign: "right" }}>{item.dispenseQuantity || 0}</td>
+                  <td style={{ textAlign: "right" }}>{formatMoney(item.unitPrice)}</td>
+                  <td style={{ textAlign: "right" }}>{formatMoney(item.totalPrice)}</td>
                 </tr>
               ))
             ) : (
@@ -377,27 +484,27 @@ const InvoicePrint = () => {
           </tbody>
         </table>
 
-        {/* Totals — matches card & typography */}
+        {/* --- Totals Section --- */}
         <div className="section-gap">
           <div className="totals card">
             <div className="totals-row">
               <span>Subtotal</span>
-              <span>{fmtMoney(invoice.subTotal)}</span>
+              <span>{formatMoney(invoiceData.subTotal)}</span>
             </div>
-            {invoice.service ? (
+            {invoiceData.service > 0 && (
               <div className="totals-row">
                 <span>Service Charge</span>
-                <span>{fmtMoney(invoice.service)}</span>
+                <span>{formatMoney(invoiceData.service)}</span>
               </div>
-            ) : null}
+            )}
             <div className="totals-row bold">
               <span>Total Amount</span>
-              <span>{fmtMoney(invoice.totalAmount)}</span>
+              <span>{formatMoney(invoiceData.totalAmount)}</span>
             </div>
           </div>
         </div>
 
-        {/* Signature — same style */}
+        {/* --- Footer / Signature --- */}
         <div className="section-gap-lg" style={{ display: "grid", gridTemplateColumns: "1fr", gap: 28 }}>
           <div>
             <div className="sign-line" />
@@ -405,17 +512,21 @@ const InvoicePrint = () => {
           </div>
         </div>
 
-        {/* Notice — shared style */}
-        {notice && (<div className={`notice ${notice.type}`}>{notice.text}</div>)}
+        {/* Notifications */}
+        {notice && (
+          <div className={"notice " + notice.type}>
+            {notice.text}
+          </div>
+        )}
 
-        {/* Actions — same buttons */}
+        {/* --- Actions Buttons (Hidden when printing) --- */}
         <div className="no-print section-gap-lg btn-row">
-          <button onClick={onPrint} className="btn btn-outline">Download / Print</button>
-          <button onClick={onBack} className="btn btn-solid">Return to View Prescription</button>
+          <button onClick={handlePrint} className="btn btn-outline">Download / Print</button>
+          <button onClick={handleBack} className="btn btn-solid">Return to View Prescription</button>
         </div>
 
-        {/* Footer — same vibe */}
-        <div className="section-gap" style={{ ...line }} />
+        {/* Footer Note */}
+        <div className="section-gap" style={{ ...lineStyle }} />
         <div className="muted" style={{ marginTop: 8 }}>
           This invoice was generated by the University of Peradeniya Medical Center system.
         </div>

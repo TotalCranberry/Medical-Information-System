@@ -32,13 +32,13 @@ public class MedicineService {
 
         Medicine entity;
         if (existing.isPresent()) {
-            // Update stock, mfg, expiry,unitPrice
+            // Update stock, mfg, expiry, unitPrice, lowStockQuantity
             entity = existing.get();
             entity.setStock(dto.getStock());
             entity.setMfg(dto.getMfg());
             entity.setExpiry(dto.getExpiry());
-            entity.setUnit(dto.getUnit());
             entity.setUnitPrice(dto.getUnitPrice());
+            entity.setLowStockQuantity(dto.getLowStockQuantity());
             entity.setLastUpdate(dto.getLastUpdate());
         } else {
             // Add new medicine
@@ -57,7 +57,6 @@ public class MedicineService {
             case "name" -> results = medicineRepository.findByNameContainingIgnoreCase(value);
             case "generic" -> results = medicineRepository.findByGenericContainingIgnoreCase(value);
             case "manufacturer" -> results = medicineRepository.findByManufacturerContainingIgnoreCase(value);
-            case "batch" -> results = medicineRepository.findByBatchContainingIgnoreCase(value);
             case "category" -> results = medicineRepository.findByCategoryContainingIgnoreCase(value);
             default -> throw new IllegalArgumentException("Invalid search filter");
         }
@@ -70,9 +69,4 @@ public class MedicineService {
         medicineRepository.deleteById(id);
     }
 
-    // ✅ New: Find by Brand Name + Manufacturer
-    public Optional<MedicineDTO> findByNameAndManufacturer(String name, String manufacturer) {
-        return medicineRepository.findByNameAndManufacturer(name, manufacturer)
-                .map(MedicineMapper::toDto);
-    }
 }

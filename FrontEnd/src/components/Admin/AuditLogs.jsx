@@ -11,10 +11,15 @@ import {
   TableRow,
   CircularProgress,
   Alert,
-  Snackbar
+  Snackbar,
+  TextField,
+  Button
 } from '@mui/material';
 import { History } from '@mui/icons-material';
 import { fetchAuditLogs } from '../../api/admin';
+import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
+import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
+import { DatePicker } from '@mui/x-date-pickers/DatePicker'; 
 
 export default function AuditLogPage() {
     const [auditLogs, setAuditLogs] = useState([]);
@@ -24,6 +29,10 @@ export default function AuditLogPage() {
     const [snackbarOpen, setSnackbarOpen] = useState(false);
     const [snackbarMessage, setSnackbarMessage] = useState('');
     const [snackbarSeverity, setSnackbarSeverity] = useState('success');
+    
+    const [searchTerm, setSearchTerm] = useState('');
+    const [startDate, setStartDate] = useState(null);
+    const [endDate, setEndDate] = useState(null);
 
     const showSnackbar = (message, severity = 'success') => {
         setSnackbarMessage(message);
@@ -35,23 +44,38 @@ export default function AuditLogPage() {
         setSnackbarOpen(false);
     };
 
-    useEffect(() => {
-        const loadAuditLogs = async () => {
-            try {
-                setLoading(true);
-                setError('');
-                const data = await fetchAuditLogs();
-                setAuditLogs(data);
-            } catch (err) {
-                setError('Failed to fetch audit logs. Please try again.');
-                showSnackbar('Failed to fetch audit logs. Please try again.', 'error');
-            } finally {
-                setLoading(false);
-            }
-        };
+    const loadAuditLogs = async () => {
+        try {
+            setLoading(true);
+            setError('');
+            
+            const data = await fetchAuditLogs(searchTerm, startDate, endDate);
+            setAuditLogs(data);
+        } catch (err) {
+            console.error(err);
+            setError('Failed to fetch audit logs. Please try again.');
+            showSnackbar('Failed to fetch audit logs. Please try again.', 'error');
+        } finally {
+            setLoading(false);
+        }
+    };
 
+    useEffect(() => {
         loadAuditLogs();
-    }, []);
+    }, []); 
+
+    const handleSearch = () => {
+        loadAuditLogs();
+    };
+
+    const clearFilters = () => {
+        setSearchTerm('');
+        setStartDate(null);
+        setEndDate(null);
+        setTimeout(() => {
+             fetchAuditLogs('', null, null).then(setAuditLogs).catch(console.error);
+        }, 0);
+    };
 
     const formatTimestamp = (timestamp) => {
         return new Date(timestamp).toLocaleString();
@@ -63,21 +87,56 @@ export default function AuditLogPage() {
                 <Typography variant="h4" gutterBottom sx={{ fontWeight: 'bold', color: 'primary.main' }}>
                     System Audit Log
                 </Typography>
-                <Typography color="text.secondary">
-                    Track critical user actions and system events for compliance and security monitoring.
-                </Typography>
             </Box>
 
             <Paper elevation={2} sx={{ p: 3 }}>
+                {/* Search and Filter Bar */}
+                <Box sx={{ display: 'flex', gap: 2, mb: 3, flexWrap: 'wrap', alignItems: 'center' }}>
+                    <TextField
+                        label="Search by User Email"
+                        variant="outlined"
+                        size="small"
+                        value={searchTerm}
+                        onChange={(e) => setSearchTerm(e.target.value)}
+                        sx={{ minWidth: 250 }}
+                    />
+                    
+                    <LocalizationProvider dateAdapter={AdapterDateFns}>
+                        <DatePicker
+                            label="Start Date"
+                            inputFormat="dd/MM/yyyy"
+                            value={startDate}
+                            onChange={(newValue) => setStartDate(newValue)}
+                            slotProps={{ textField: { size: 'small' } }}
+                        />
+                        <DatePicker
+                            label="End Date"
+                            inputFormat="dd/MM/yyyy"
+                            value={endDate}
+                            onChange={(newValue) => setEndDate(newValue)}
+                            slotProps={{ textField: { size: 'small' } }}
+                        />
+                    </LocalizationProvider>
+                    
+                    <Button 
+                        variant="contained" 
+                        onClick={handleSearch}
+                        sx={{ height: 40 }}
+                    >
+                        Search
+                    </Button>
+                    <Button 
+                        variant="outlined" 
+                        onClick={clearFilters}
+                        sx={{ height: 40 }}
+                    >
+                        Clear Filters
+                    </Button>
+                </Box>
+
                 {error && (
                     <Alert severity="error" sx={{ mb: 2 }}>
                         {error}
-                    </Alert>
-                )}
-
-                {success && (
-                    <Alert severity="success" sx={{ mb: 2 }}>
-                        {success}
                     </Alert>
                 )}
 
@@ -92,7 +151,7 @@ export default function AuditLogPage() {
                             No Audit Logs Found
                         </Typography>
                         <Typography color="text.secondary">
-                            There are no audit logs to display at this time.
+                            Try adjusting your search filters to see more results.
                         </Typography>
                     </Box>
                 ) : (

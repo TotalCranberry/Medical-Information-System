@@ -46,12 +46,14 @@ const PatientsTab = () => {
   const handleSearch = () => {
     let filtered = allPatients;
 
-    // Filter by search term (name)
     if (searchTerm.trim()) {
+      const term = searchTerm.toLowerCase();
       filtered = filtered.filter(patient =>
-        patient.name.toLowerCase().includes(searchTerm.toLowerCase())
+        (patient.name && patient.name.toLowerCase().includes(term)) ||
+        (patient.registrationNumber && patient.registrationNumber.toLowerCase().includes(term))
       );
     }
+    // -----------------------------------------------------------
 
     // Filter by faculty
     if (facultyFilter.trim()) {
@@ -150,7 +152,7 @@ const PatientsTab = () => {
           <Grid item xs={12} md={8}>
             <TextField
               fullWidth
-              placeholder="Search by patient name"
+              placeholder="Search by name or registration number"
               value={searchTerm}
               onChange={(e) => setSearchTerm(e.target.value)}
               onKeyPress={handleKeyPress}

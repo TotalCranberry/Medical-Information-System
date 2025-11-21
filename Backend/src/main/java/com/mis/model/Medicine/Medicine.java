@@ -21,15 +21,16 @@ public class Medicine {
     private String name;
     private String form;
     private String strength;
-    private String unit;
     private int stock;
-    private String batch;
     private String mfg;
     private String expiry;
     private String manufacturer;
     private String category;
     private Float unitPrice;
     private LocalDate lastUpdate;
+
+    @Column(name = "low_stock_quantity")
+    private Integer lowStockQuantity;
 
 }
 

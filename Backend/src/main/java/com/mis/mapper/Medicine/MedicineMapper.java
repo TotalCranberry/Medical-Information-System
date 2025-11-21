@@ -14,15 +14,14 @@ public class MedicineMapper {
                 .name(med.getName())
                 .form(med.getForm())
                 .strength(med.getStrength())
-                .unit(med.getUnit())
                 .stock(med.getStock())
-                .batch(med.getBatch())
                 .mfg(med.getMfg())
                 .expiry(med.getExpiry())
                 .manufacturer(med.getManufacturer())
                 .category(med.getCategory())
                 .unitPrice(med.getUnitPrice())
                 .lastUpdate(med.getLastUpdate())
+                .lowStockQuantity(med.getLowStockQuantity())
                 .build();
     }
 
@@ -35,15 +34,14 @@ public class MedicineMapper {
                 .name(dto.getName())
                 .form(dto.getForm())
                 .strength(dto.getStrength())
-                .unit(dto.getUnit())
                 .stock(dto.getStock())
-                .batch(dto.getBatch())
                 .mfg(dto.getMfg())
                 .expiry(dto.getExpiry())
                 .manufacturer(dto.getManufacturer())
                 .category(dto.getCategory())
                 .unitPrice(dto.getUnitPrice())
                 .lastUpdate(dto.getLastUpdate())
+                .lowStockQuantity(dto.getLowStockQuantity())
                 .build();
     }
 }
