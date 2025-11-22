@@ -36,6 +36,7 @@ import com.mis.dto.VitalsRequest;
 import com.mis.model.Appointment;
 import com.mis.model.AppointmentStatus;
 import com.mis.model.Diagnosis;
+import com.mis.model.Doctor;
 import com.mis.model.Medical;
 import com.mis.model.Role;
 import com.mis.model.Staff;
@@ -45,6 +46,7 @@ import com.mis.model.Vitals;
 import com.mis.model.Prescription.Prescription;
 import com.mis.repository.AppointmentRepository;
 import com.mis.repository.DiagnosisRepository;
+import com.mis.repository.DoctorRepository;
 import com.mis.repository.MedicalRepository;
 import com.mis.repository.StaffRepository;
 import com.mis.repository.StudentRepository;
@@ -52,6 +54,7 @@ import com.mis.repository.UserRepository;
 import com.mis.repository.VitalsRepository;
 import com.mis.service.MedicalFormService;
 import com.mis.service.Prescription.PrescriptionService;
+import com.mis.service.UserService;
 
 @RestController
 @RequestMapping("/api/doctor")
@@ -62,25 +65,29 @@ public class DoctorController {
     private final VitalsRepository vitalsRepository;
     private final DiagnosisRepository diagnosisRepository;
     private final MedicalRepository medicalRepository;
+    private final DoctorRepository doctorRepository;
     private final StudentRepository studentRepository;
     private final StaffRepository staffRepository;
     private final MedicalFormService medicalFormService;
     private final PrescriptionService prescriptionService;
+    private final UserService userService;
 
     public DoctorController(AppointmentRepository appointmentRepository, UserRepository userRepository,
             VitalsRepository vitalsRepository, DiagnosisRepository diagnosisRepository,
-            MedicalRepository medicalRepository, StudentRepository studentRepository,
+            MedicalRepository medicalRepository, DoctorRepository doctorRepository, StudentRepository studentRepository,
             StaffRepository staffRepository, MedicalFormService medicalFormService,
-            PrescriptionService prescriptionService) {
+            PrescriptionService prescriptionService, UserService userService) {
         this.appointmentRepository = appointmentRepository;
         this.userRepository = userRepository;
         this.vitalsRepository = vitalsRepository;
         this.diagnosisRepository = diagnosisRepository;
         this.medicalRepository = medicalRepository;
+        this.doctorRepository = doctorRepository;
         this.studentRepository = studentRepository;
         this.staffRepository = staffRepository;
         this.medicalFormService = medicalFormService;
         this.prescriptionService = prescriptionService;
+        this.userService = userService;
     }
 
     // NEW: Get all patients (Students and Staff) for the doctor's patient search
@@ -356,17 +363,106 @@ public class DoctorController {
         }
     }
 
+    // Doctor Signature and Seal Upload
+    @PostMapping("/upload-signature-seal")
+    public ResponseEntity<?> uploadSignatureAndSeal(Authentication authentication,
+                                                   @RequestParam(value = "doctorSignature", required = false) MultipartFile doctorSignature,
+                                                   @RequestParam(value = "doctorSeal", required = false) MultipartFile doctorSeal) {
+        try {
+            String doctorId = authentication.getName();
+
+            // Ensure Doctor entity exists
+            userService.ensureDoctorEntityExists(doctorId);
+
+            // Get the doctor
+            Doctor doctor = doctorRepository.findById(doctorId)
+                    .orElseThrow(() -> new RuntimeException("Doctor not found"));
+
+            // Validate file sizes (1MB limit)
+            if (doctorSignature != null && doctorSignature.getSize() > 1024 * 1024) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor signature image must be less than 1MB"));
+            }
+            if (doctorSeal != null && doctorSeal.getSize() > 1024 * 1024) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor seal image must be less than 1MB"));
+            }
+
+            // Handle file uploads
+            if (doctorSignature != null && !doctorSignature.isEmpty()) {
+                doctor.setDoctorSignature(doctorSignature.getBytes());
+                doctor.setDoctorSignatureContentType(doctorSignature.getContentType());
+            }
+            if (doctorSeal != null && !doctorSeal.isEmpty()) {
+                doctor.setDoctorSeal(doctorSeal.getBytes());
+                doctor.setDoctorSealContentType(doctorSeal.getContentType());
+            }
+
+            Doctor savedDoctor = doctorRepository.save(doctor);
+            return ResponseEntity.ok(Map.of("message", "Signature and seal uploaded successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Error uploading signature and seal: " + e.getMessage()));
+        }
+    }
+
+    // Get Doctor's Signature and Seal
+    @GetMapping("/signature-seal")
+    public ResponseEntity<Map<String, Object>> getSignatureAndSeal(Authentication authentication) {
+        try {
+            String doctorId = authentication.getName();
+
+            // Ensure Doctor entity exists
+            userService.ensureDoctorEntityExists(doctorId);
+
+            Doctor doctor = doctorRepository.findById(doctorId)
+                    .orElseThrow(() -> new RuntimeException("Doctor not found"));
+
+            Map<String, Object> response = new HashMap<>();
+
+            // Convert signature to base64
+            if (doctor.getDoctorSignature() != null && doctor.getDoctorSignature().length > 0) {
+                String base64Signature = Base64.getEncoder().encodeToString(doctor.getDoctorSignature());
+                String mimeType = doctor.getDoctorSignatureContentType() != null ? doctor.getDoctorSignatureContentType() : "image/png";
+                response.put("doctorSignature", "data:" + mimeType + ";base64," + base64Signature);
+            }
+
+            // Convert seal to base64
+            if (doctor.getDoctorSeal() != null && doctor.getDoctorSeal().length > 0) {
+                String base64Seal = Base64.getEncoder().encodeToString(doctor.getDoctorSeal());
+                String mimeType = doctor.getDoctorSealContentType() != null ? doctor.getDoctorSealContentType() : "image/png";
+                response.put("doctorSeal", "data:" + mimeType + ";base64," + base64Seal);
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Error retrieving signature and seal: " + e.getMessage()));
+        }
+    }
+
     // Medical Endpoints
     @PostMapping("/patients/{patientId}/medical")
     public ResponseEntity<?> issueMedical(Authentication authentication,
-                                          @PathVariable String patientId,
-                                          @RequestParam("recommendations") String recommendations,
-                                          @RequestParam(value = "additionalNotes", required = false) String additionalNotes,
-                                          @RequestParam(value = "appointmentId", required = false) String appointmentId,
-                                          @RequestParam(value = "doctorSignature", required = false) MultipartFile doctorSignature,
-                                          @RequestParam(value = "doctorSeal", required = false) MultipartFile doctorSeal) {
+                                           @PathVariable String patientId,
+                                           @RequestParam("recommendations") String recommendations,
+                                           @RequestParam(value = "additionalNotes", required = false) String additionalNotes,
+                                           @RequestParam(value = "appointmentId", required = false) String appointmentId,
+                                           @RequestParam(value = "doctorSignature", required = false) MultipartFile doctorSignature,
+                                           @RequestParam(value = "doctorSeal", required = false) MultipartFile doctorSeal,
+                                           @RequestParam("password") String password) {
         try {
             String doctorId = authentication.getName();
+
+            // Verify password
+            User doctorUser = userRepository.findById(doctorId)
+                    .orElseThrow(() -> new RuntimeException("Doctor not found"));
+            Optional<User> authenticatedUser = userService.authenticate(doctorUser.getEmail(), password);
+            if (authenticatedUser.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Invalid password"));
+            }
+
             // patientId is the student/staff id
             User patient = null;
             Object patientDetails = null;
@@ -415,7 +511,7 @@ public class DoctorController {
             medical.setMedicalDate(new Date());
             medical.setCreatedAt(new Date());
 
-            // Handle file uploads
+            // Handle file uploads - save uploaded images to this medical record
             if (doctorSignature != null && !doctorSignature.isEmpty()) {
                 medical.setDoctorSignature(doctorSignature.getBytes());
                 medical.setDoctorSignatureContentType(doctorSignature.getContentType());

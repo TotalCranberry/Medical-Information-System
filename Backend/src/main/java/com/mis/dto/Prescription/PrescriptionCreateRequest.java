@@ -10,4 +10,5 @@ public class PrescriptionCreateRequest {
     private String appointmentId;   // optional link
     private String generalNotes;    // text notes
     private List<PrescriptionItemRequest> medications;
+    private String password;        // for authentication
 }

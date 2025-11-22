@@ -4,11 +4,12 @@ import {
   Alert, Snackbar, Grid, IconButton, Checkbox, FormControlLabel, Switch,
   Select, MenuItem, FormControl, InputLabel, Chip,
   Dialog, DialogTitle, DialogContent, DialogActions,
-  Table, TableBody, TableCell, TableContainer, TableHead, TableRow
+  Table, TableBody, TableCell, TableContainer, TableHead, TableRow,
+  CircularProgress
 } from "@mui/material";
 
 // Only keeping necessary icons
-import { Add as AddIcon, Remove as RemoveIcon, Search as SearchIcon, ArrowBack as ArrowBackIcon } from "@mui/icons-material";
+import { Add as AddIcon, Remove as RemoveIcon, Search as SearchIcon, ArrowBack as ArrowBackIcon, EditNote as EditNoteIcon, Security as SecurityIcon, Image as ImageIcon } from "@mui/icons-material";
 
 import { useNavigate, useLocation } from "react-router-dom";
 
@@ -19,6 +20,7 @@ import {
   validatePrescriptionForm
 } from "../../api/prescription";
 import { getAllMedicines } from "../../api/medicine";
+import { getDoctorSignatureSeal } from "../../api/doctor";
 
 // --- Simple Color Configuration ---
 const colors = {
@@ -109,6 +111,12 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
   const [alertSeverity, setAlertSeverity] = useState("success");
   const [isSubmitting, setIsSubmitting] = useState(false);
 
+  // Doctor Signature/Seal State
+  const [doctorSignature, setDoctorSignature] = useState(null);
+  const [doctorSeal, setDoctorSeal] = useState(null);
+  const [password, setPassword] = useState("");
+  const [signatureSealLoading, setSignatureSealLoading] = useState(true);
+
   // Medicine Browser Modal State
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [modalTargetIndex, setModalTargetIndex] = useState(null);
@@ -144,6 +152,27 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
       }
     };
     fetchMedicines();
+  }, []);
+
+  // --- 1b. Load Doctor Signature and Seal ---
+  useEffect(() => {
+    const fetchSignatureSeal = async () => {
+      try {
+        setSignatureSealLoading(true);
+        const response = await getDoctorSignatureSeal();
+        if (response.doctorSignature) {
+          setDoctorSignature(response.doctorSignature);
+        }
+        if (response.doctorSeal) {
+          setDoctorSeal(response.doctorSeal);
+        }
+      } catch (error) {
+        console.error("Failed to fetch signature and seal:", error);
+      } finally {
+        setSignatureSealLoading(false);
+      }
+    };
+    fetchSignatureSeal();
   }, []);
 
   // --- 2. Helper Functions ---
@@ -284,15 +313,24 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
       return;
     }
 
+    if (!password.trim()) {
+      showAlertMessage("Password is required for authentication.", "error");
+      return;
+    }
+
+    if (!doctorSignature || !doctorSeal) {
+      showAlertMessage("Doctor signature and seal must be uploaded first. Please upload them in your profile.", "error");
+      return;
+    }
+
     setIsSubmitting(true);
 
     try {
       // 2. Format Data
       const submissionData = formatPrescriptionForSubmission(formData);
-      console.log("Submitting:", submissionData);
 
-      // 3. Send to API
-      const response = await createPrescription(submissionData);
+      // 3. Send to API with password
+      const response = await createPrescription(submissionData, password.trim());
 
       if (response && response.id) {
         showAlertMessage("Prescription created successfully!");
@@ -305,6 +343,7 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
           medications: [createNewMedicationRow()],
           notes: ""
         });
+        setPassword("");
 
         // Redirect after delay
         setTimeout(() => {
@@ -320,7 +359,7 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
       }
     } catch (error) {
       console.error("Error submitting prescription:", error);
-      showAlertMessage("Error submitting prescription. Please try again.", "error");
+      showAlertMessage(error.message || "Error submitting prescription. Please try again.", "error");
     } finally {
       setIsSubmitting(false);
     }
@@ -674,6 +713,127 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
           />
         </Box>
 
+        {/* Doctor Authentication Section */}
+        <Box sx={{ mb: 3 }}>
+          <Typography variant="body2" sx={{ mb: 2, color: colors.primary, fontWeight: 500 }}>
+            Doctor Authentication
+          </Typography>
+
+          {signatureSealLoading ? (
+            <Box sx={{ display: 'flex', justifyContent: 'center', p: 3 }}>
+              <CircularProgress size={40} sx={{ color: colors.accent }} />
+            </Box>
+          ) : (
+            <>
+              {/* Signature and Seal Display */}
+              <Grid container spacing={3} sx={{ mb: 3 }}>
+                <Grid item xs={12} md={6}>
+                  <Paper elevation={1} sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 1, color: colors.primary, fontWeight: 500 }}>
+                      Your Signature
+                    </Typography>
+                    <Box sx={{
+                      height: '100px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#f9f9f9',
+                      borderRadius: 1
+                    }}>
+                      {doctorSignature ? (
+                        <img
+                          src={doctorSignature}
+                          alt="Doctor Signature"
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain'
+                          }}
+                        />
+                      ) : (
+                        <Box sx={{ textAlign: 'center' }}>
+                          <ImageIcon sx={{ fontSize: 32, color: '#ccc', mb: 1 }} />
+                          <Typography variant="caption" color="text.secondary">
+                            No signature uploaded
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Paper>
+                </Grid>
+                <Grid item xs={12} md={6}>
+                  <Paper elevation={1} sx={{ p: 2, border: '1px solid #e0e0e0', borderRadius: 2 }}>
+                    <Typography variant="body2" sx={{ mb: 1, color: colors.primary, fontWeight: 500 }}>
+                      Your Seal
+                    </Typography>
+                    <Box sx={{
+                      height: '100px',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      backgroundColor: '#f9f9f9',
+                      borderRadius: 1
+                    }}>
+                      {doctorSeal ? (
+                        <img
+                          src={doctorSeal}
+                          alt="Doctor Seal"
+                          style={{
+                            maxWidth: '100%',
+                            maxHeight: '100%',
+                            objectFit: 'contain'
+                          }}
+                        />
+                      ) : (
+                        <Box sx={{ textAlign: 'center' }}>
+                          <ImageIcon sx={{ fontSize: 32, color: '#ccc', mb: 1 }} />
+                          <Typography variant="caption" color="text.secondary">
+                            No seal uploaded
+                          </Typography>
+                        </Box>
+                      )}
+                    </Box>
+                  </Paper>
+                </Grid>
+              </Grid>
+
+              {/* Upload Button */}
+              {(!doctorSignature || !doctorSeal) && (
+                <Box sx={{ mb: 3, textAlign: 'center' }}>
+                  <Button
+                    variant="outlined"
+                    startIcon={<EditNoteIcon />}
+                    onClick={() => navigate('/doctor/signature-seal')}
+                    sx={{
+                      borderColor: colors.accent,
+                      color: colors.accent,
+                      '&:hover': { borderColor: '#3bc169', backgroundColor: colors.accent + '11' }
+                    }}
+                  >
+                    Upload Signature & Seal
+                  </Button>
+                </Box>
+              )}
+
+              {/* Password Input */}
+              <TextField
+                fullWidth
+                type="password"
+                label="Enter your password to authenticate"
+                value={password}
+                onChange={(e) => setPassword(e.target.value)}
+                required
+                sx={{
+                  '& .MuiOutlinedInput-root': { backgroundColor: colors.lightGray }
+                }}
+                InputProps={{
+                  startAdornment: <SecurityIcon sx={{ color: '#666', mr: 1 }} />,
+                }}
+              />
+            </>
+          )}
+        </Box>
+
         {/* Form Actions */}
         <Box sx={{ display: 'flex', gap: 2, justifyContent: 'flex-end' }}>
           <Button
@@ -690,7 +850,7 @@ const PrescriptionsTab = ({ recentPrescriptions = [] }) => {
           <Button
             variant="contained"
             onClick={handleSubmit}
-            disabled={isSubmitting}
+            disabled={isSubmitting || !doctorSignature || !doctorSeal || !password.trim()}
             sx={{
               backgroundColor: colors.accent,
               color: "#fff",

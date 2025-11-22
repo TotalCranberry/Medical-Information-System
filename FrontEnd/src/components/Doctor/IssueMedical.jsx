@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Box, Typography, Grid, Button, TextField, Alert,
   CircularProgress, Divider, Card, CardContent, Container
@@ -22,11 +22,11 @@ const IssueMedical = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-  
+
   // Get patient data from navigation state
   const patientFromState = location.state?.patient;
   const currentAppointmentId = location.state?.appointmentId;
-  
+
   const [patientData] = useState(patientFromState || null);
   const [recommendations, setRecommendations] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
@@ -34,6 +34,7 @@ const IssueMedical = () => {
   const [doctorSeal, setDoctorSeal] = useState(null);
   const [signaturePreview, setSignaturePreview] = useState(null);
   const [sealPreview, setSealPreview] = useState(null);
+  const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
@@ -89,6 +90,16 @@ const IssueMedical = () => {
       return;
     }
 
+    if (!password.trim()) {
+      setError("Password is required for authentication");
+      return;
+    }
+
+    if (!doctorSignature || !doctorSeal) {
+      setError("Both doctor signature and seal images are required");
+      return;
+    }
+
     setLoading(true);
     setError(null);
 
@@ -107,6 +118,7 @@ const IssueMedical = () => {
       if (doctorSeal) {
         formData.append('doctorSeal', doctorSeal);
       }
+      formData.append('password', password.trim());
 
       await issueMedical(patientId, formData);
       setSuccess(true);
@@ -118,6 +130,7 @@ const IssueMedical = () => {
       setDoctorSeal(null);
       setSignaturePreview(null);
       setSealPreview(null);
+      setPassword('');
 
       // Redirect back to patient profile after a short delay
       setTimeout(() => {
@@ -350,19 +363,19 @@ const IssueMedical = () => {
           <Grid item xs={12}>
             <Card elevation={3} sx={{ borderRadius: 3 }}>
               <CardContent sx={{ p: 4 }}>
-                <Box display="flex" alignItems="center" mb={2}>
+                <Box display="flex" alignItems="center" mb={3}>
                   <SecurityIcon sx={{ fontSize: 28, color: "#45d27a", mr: 1.5 }} />
                   <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
                     Doctor Authentication
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-                  Upload your signature and seal to authenticate this medical certificate. Both images must be less than 1MB each and will be permanently attached to this document.
+                  Upload your signature and seal to authenticate this medical certificate. Both images must be less than 1MB each and will be permanently attached to this document. Your password is also required for verification.
                 </Typography>
 
                 <Grid container spacing={4}>
                   {/* Doctor Signature Upload */}
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} md={4}>
                     <Card sx={{
                       height: '100%',
                       border: doctorSignature ? '2px solid #45d27a' : '2px dashed #ddd',
@@ -451,7 +464,7 @@ const IssueMedical = () => {
                   </Grid>
 
                   {/* Doctor Seal Upload */}
-                  <Grid item xs={12} md={6}>
+                  <Grid item xs={12} md={4}>
                     <Card sx={{
                       height: '100%',
                       border: doctorSeal ? '2px solid #45d27a' : '2px dashed #ddd',
@@ -538,6 +551,46 @@ const IssueMedical = () => {
                       </CardContent>
                     </Card>
                   </Grid>
+
+                  {/* Password Input */}
+                  <Grid item xs={12} md={4}>
+                    <Card sx={{
+                      height: '100%',
+                      border: '2px solid #ddd',
+                      borderRadius: 2
+                    }}>
+                      <CardContent sx={{ p: 3, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                        <Typography variant="h6" sx={{ mb: 2, color: "#0c3c3c", fontWeight: 600 }}>
+                          Confirm Identity
+                        </Typography>
+                        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                          <TextField
+                            fullWidth
+                            type="password"
+                            label="Enter Password"
+                            value={password}
+                            onChange={(e) => setPassword(e.target.value)}
+                            error={!password.trim() && error && error.includes("Password")}
+                            helperText={!password.trim() && error && error.includes("Password") ? "Password is required" : ""}
+                            sx={{
+                              '& .MuiOutlinedInput-root': {
+                                backgroundColor: '#fafafa',
+                                '&:hover': {
+                                  backgroundColor: '#f5f5f5'
+                                },
+                                '&.Mui-focused': {
+                                  backgroundColor: '#fff'
+                                }
+                              }
+                            }}
+                          />
+                          <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                            Your login password is required to issue medical certificates
+                          </Typography>
+                        </Box>
+                      </CardContent>
+                    </Card>
+                  </Grid>
                 </Grid>
               </CardContent>
             </Card>
@@ -549,7 +602,7 @@ const IssueMedical = () => {
               <Button
                 onClick={handleSubmitMedical}
                 variant="contained"
-                disabled={loading || !recommendations.trim() || !doctorSignature || !doctorSeal}
+                disabled={loading || !recommendations.trim() || !doctorSignature || !doctorSeal || !password.trim()}
                 sx={{
                   backgroundColor: "#45d27a",
                   "&:hover": { backgroundColor: "#3ab86a" },
