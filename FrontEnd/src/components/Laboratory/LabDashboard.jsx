@@ -16,10 +16,20 @@ import {
   TableRow,
   TextField,
   InputAdornment,
-  Stack
+  Stack,
+  IconButton,
+  Tooltip
 } from "@mui/material";
-import { Assignment, PlayArrow, CheckCircle, Cancel, Refresh, Search } from "@mui/icons-material";
-import { getLabRequests } from '../../api/labApi';
+import { 
+  Assignment, 
+  PlayArrow, 
+  CheckCircle, 
+  Cancel, 
+  Refresh, 
+  Search,
+  Download 
+} from "@mui/icons-material";
+import { getLabRequests, downloadLabReport } from '../../api/labApi';
 
 const LabDashboard = () => {
   const [filter, setFilter] = useState("PENDING");
@@ -28,25 +38,34 @@ const LabDashboard = () => {
   const [filteredRequests, setFilteredRequests] = useState([]);
   const [searchName, setSearchName] = useState("");
   const [searchTestType, setSearchTestType] = useState("");
+  const [downloadingId, setDownloadingId] = useState(null);
 
   const loadStats = async () => {
-    const pending = await getLabRequests("PENDING");
-    const inProgress = await getLabRequests("IN_PROGRESS");
-    const completed = await getLabRequests("COMPLETED");
-    const declined = await getLabRequests("DECLINED");
+    try {
+      const pending = await getLabRequests("PENDING");
+      const inProgress = await getLabRequests("IN_PROGRESS");
+      const completed = await getLabRequests("COMPLETED");
+      const declined = await getLabRequests("DECLINED");
 
-    setStats({
-      PENDING: pending.length,
-      IN_PROGRESS: inProgress.length,
-      COMPLETED: completed.length,
-      DECLINED: declined.length
-    });
+      setStats({
+        PENDING: pending.length,
+        IN_PROGRESS: inProgress.length,
+        COMPLETED: completed.length,
+        DECLINED: declined.length
+      });
+    } catch (error) {
+      console.error("Error loading stats:", error);
+    }
   };
 
   const loadRequests = async () => {
-    const data = await getLabRequests(filter);
-    setRequests(data);
-    setFilteredRequests(data);
+    try {
+      const data = await getLabRequests(filter);
+      setRequests(data);
+      setFilteredRequests(data);
+    } catch (error) {
+      console.error("Error loading requests:", error);
+    }
   };
 
   useEffect(() => {
@@ -94,6 +113,31 @@ const LabDashboard = () => {
     setSearchTestType("");
   };
 
+  // ----------------------------
+  // NEW: Handle Download
+  // ----------------------------
+  const handleDownload = async (requestId, patientName, testType) => {
+    try {
+      setDownloadingId(requestId);
+      
+      // Create a clean filename
+      const cleanPatientName = (patientName || "Patient").replace(/\s+/g, '_');
+      const cleanTestType = (testType || "Test").replace(/\s+/g, '_');
+      const fileName = `${cleanPatientName}_${cleanTestType}_Report.pdf`;
+      
+      console.log("Attempting to download:", fileName); // Debug
+      
+      await downloadLabReport(requestId, fileName);
+      
+      console.log("Download successful!"); // Debug
+    } catch (error) {
+      console.error('Download failed:', error);
+      alert(`Failed to download report: ${error.message}`);
+    } finally {
+      setDownloadingId(null);
+    }
+  };
+
   return (
     <Box sx={{ maxWidth: 1200, mx: "auto", mt: 4, px: 2 }}>
       <Box sx={{ display: "flex", justifyContent: "space-between", mb: 3 }}>
@@ -107,7 +151,15 @@ const LabDashboard = () => {
           <Grid item xs={6} sm={3} key={btn.key}>
             <Card 
               onClick={() => setFilter(btn.key)} 
-              sx={{ cursor: "pointer", border: filter === btn.key ? "2px solid #1976d2" : "1px solid #ccc" }}
+              sx={{ 
+                cursor: "pointer", 
+                border: filter === btn.key ? "2px solid #1976d2" : "1px solid #ccc",
+                transition: "all 0.3s ease",
+                "&:hover": {
+                  transform: "translateY(-2px)",
+                  boxShadow: 3
+                }
+              }}
             >
               <CardContent sx={{ textAlign: "center" }}>
                 {btn.icon}
@@ -167,22 +219,65 @@ const LabDashboard = () => {
                 <TableCell>Test Type</TableCell>
                 <TableCell>Order Date</TableCell>
                 <TableCell>Status</TableCell>
+                {filter === "COMPLETED" && <TableCell align="center">Actions</TableCell>}
               </TableRow>
             </TableHead>
             <TableBody>
               {filteredRequests.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={4} align="center">
+                  <TableCell colSpan={filter === "COMPLETED" ? 5 : 4} align="center">
                     {requests.length === 0 ? "No requests found" : "No matching requests found"}
                   </TableCell>
                 </TableRow>
               ) : (
                 filteredRequests.map(r => (
-                  <TableRow key={r.id}>
+                  <TableRow 
+                    key={r.id}
+                    sx={{ 
+                      '&:hover': { 
+                        backgroundColor: 'action.hover' 
+                      } 
+                    }}
+                  >
                     <TableCell>{r.patientName}</TableCell>
                     <TableCell>{r.testType}</TableCell>
                     <TableCell>{new Date(r.orderDate).toLocaleDateString()}</TableCell>
-                    <TableCell>{r.status}</TableCell>
+                    <TableCell>
+                      <Typography
+                        sx={{
+                          color: filter === "COMPLETED" ? "success.main" : "text.primary",
+                          fontWeight: filter === "COMPLETED" ? "bold" : "normal"
+                        }}
+                      >
+                        {r.status}
+                      </Typography>
+                    </TableCell>
+                    {filter === "COMPLETED" && (
+                      <TableCell align="center">
+                        <Tooltip title="Download Lab Report">
+                          <span>
+                            <IconButton
+                              color="primary"
+                              onClick={() => handleDownload(r.id, r.patientName, r.testType)}
+                              disabled={downloadingId === r.id}
+                              size="small"
+                            >
+                              <Download />
+                            </IconButton>
+                          </span>
+                        </Tooltip>
+                        <Button
+                          variant="contained"
+                          size="small"
+                          startIcon={<Download />}
+                          onClick={() => handleDownload(r.id, r.patientName, r.testType)}
+                          disabled={downloadingId === r.id}
+                          sx={{ ml: 1 }}
+                        >
+                          {downloadingId === r.id ? "Downloading..." : "Download"}
+                        </Button>
+                      </TableCell>
+                    )}
                   </TableRow>
                 ))
               )}
@@ -195,6 +290,7 @@ const LabDashboard = () => {
 };
 
 export default LabDashboard;
+
 // "use client";
 // import React, { useState, useEffect } from "react";
 // import { Box, Typography, Grid, Card, CardContent, Paper, Button, Table, TableBody, TableCell, TableContainer, TableHead, TableRow } from "@mui/material";
