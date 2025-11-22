@@ -1,5 +1,7 @@
 import apiFetch from "./api";
 
+const API_BASE = process.env.REACT_APP_API_BASE_URL;
+
 // Get all lab requests, optionally by status
 export const getLabRequests = async (status) => {
   try {
@@ -102,6 +104,57 @@ export const uploadLabResult = async (id, file) => {
     return data;
   } catch (error) {
     console.error("Error uploading lab result:", error);
+    throw error;
+  }
+};
+
+// ----------------------------
+// NEW: Download lab result PDF
+// ----------------------------
+export const downloadLabReport = async (requestId, fileName) => {
+  try {
+    if (!requestId) throw new Error("Lab request ID is missing");
+
+    console.log("Downloading lab report for request:", requestId); // Debug
+
+    const token = localStorage.getItem('jwtToken');
+    
+    const response = await fetch(`${API_BASE}/lab/requests/${requestId}/download`, {
+      method: 'GET',
+      headers: {
+        'Authorization': `Bearer ${token}`
+      }
+    });
+
+    if (!response.ok) {
+      if (response.status === 404) {
+        throw new Error('Lab report not found');
+      }
+      if (response.status === 401) {
+        throw new Error('Unauthorized - please login again');
+      }
+      throw new Error('Failed to download report');
+    }
+
+    // Convert response to blob
+    const blob = await response.blob();
+    
+    // Create download link
+    const url = window.URL.createObjectURL(blob);
+    const link = document.createElement('a');
+    link.href = url;
+    link.download = fileName || 'lab-report.pdf';
+    document.body.appendChild(link);
+    link.click();
+    
+    // Cleanup
+    link.remove();
+    window.URL.revokeObjectURL(url);
+    
+    console.log("Successfully downloaded lab report:", fileName); // Debug
+    return true;
+  } catch (error) {
+    console.error('Error downloading lab report:', error);
     throw error;
   }
 };
