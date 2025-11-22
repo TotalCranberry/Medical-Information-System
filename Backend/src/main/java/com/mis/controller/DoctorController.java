@@ -448,6 +448,8 @@ public class DoctorController {
                                            @RequestParam("recommendations") String recommendations,
                                            @RequestParam(value = "additionalNotes", required = false) String additionalNotes,
                                            @RequestParam(value = "appointmentId", required = false) String appointmentId,
+                                           @RequestParam(value = "doctorSignature", required = false) MultipartFile doctorSignature,
+                                           @RequestParam(value = "doctorSeal", required = false) MultipartFile doctorSeal,
                                            @RequestParam("password") String password) {
         try {
             String doctorId = authentication.getName();
@@ -459,16 +461,6 @@ public class DoctorController {
             if (authenticatedUser.isEmpty()) {
                 return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
                         .body(Map.of("message", "Invalid password"));
-            }
-
-            // Ensure Doctor entity exists and get doctor's stored signature and seal
-            userService.ensureDoctorEntityExists(doctorId);
-            Doctor doctor = doctorRepository.findById(doctorId)
-                    .orElseThrow(() -> new RuntimeException("Doctor profile not found"));
-
-            if (doctor.getDoctorSignature() == null || doctor.getDoctorSeal() == null) {
-                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
-                        .body(Map.of("message", "Doctor signature and seal must be uploaded first. Please upload them in your profile."));
             }
 
             // patientId is the student/staff id
@@ -495,6 +487,16 @@ public class DoctorController {
                 }
             }
 
+            // Validate file sizes (1MB limit)
+            if (doctorSignature != null && doctorSignature.getSize() > 1024 * 1024) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor signature image must be less than 1MB"));
+            }
+            if (doctorSeal != null && doctorSeal.getSize() > 1024 * 1024) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor seal image must be less than 1MB"));
+            }
+
             Medical medical = new Medical();
             medical.setId(UUID.randomUUID().toString());
             medical.setPatient(patient);
@@ -509,11 +511,15 @@ public class DoctorController {
             medical.setMedicalDate(new Date());
             medical.setCreatedAt(new Date());
 
-            // Use stored signature and seal
-            medical.setDoctorSignature(doctor.getDoctorSignature());
-            medical.setDoctorSignatureContentType(doctor.getDoctorSignatureContentType());
-            medical.setDoctorSeal(doctor.getDoctorSeal());
-            medical.setDoctorSealContentType(doctor.getDoctorSealContentType());
+            // Handle file uploads - save uploaded images to this medical record
+            if (doctorSignature != null && !doctorSignature.isEmpty()) {
+                medical.setDoctorSignature(doctorSignature.getBytes());
+                medical.setDoctorSignatureContentType(doctorSignature.getContentType());
+            }
+            if (doctorSeal != null && !doctorSeal.isEmpty()) {
+                medical.setDoctorSeal(doctorSeal.getBytes());
+                medical.setDoctorSealContentType(doctorSeal.getContentType());
+            }
 
             // Link to appointment if provided
             if (appointmentId != null && !appointmentId.trim().isEmpty()) {

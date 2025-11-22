@@ -34,6 +34,7 @@ import {
   Email as EmailIcon,
   School as FacultyIcon,
   CalendarToday as DateIcon,
+  Image as ImageIcon,
   InfoOutlined as InfoIcon,
 } from "@mui/icons-material";
 
@@ -479,8 +480,99 @@ export default function ViewPrescriptionDialog({ open, onClose, prescriptionId }
                 </Fade>
               )}
 
+              {/* Doctor Authentication */}
+              {(prescription.doctorSignature || prescription.doctorSeal) && (
+                <Fade in timeout={700}>
+                  <Card sx={{ ...modernCardSx, mb: 3 }}>
+                    <CardContent>
+                      <Stack direction="row" alignItems="center" spacing={1.5} sx={{ mb: 3 }}>
+                        <Box sx={{
+                          width: 32,
+                          height: 32,
+                          borderRadius: THEME.borderRadius.small,
+                          background: THEME.gradients.accent,
+                          display: "flex",
+                          alignItems: "center",
+                          justifyContent: "center",
+                        }}>
+                          <ImageIcon fontSize="small" sx={{ color: "#fff" }} />
+                        </Box>
+                        <Typography variant="h6" sx={{ fontWeight: 700, color: THEME.primary }}>
+                          Doctor Authentication
+                        </Typography>
+                      </Stack>
+
+                      <Grid container spacing={3}>
+                        {prescription.doctorSignature && (
+                          <Grid item xs={12} md={6}>
+                            <Box textAlign="center">
+                              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: THEME.primary }}>
+                                Doctor Signature
+                              </Typography>
+                              <Paper elevation={1} sx={{
+                                p: 3,
+                                bgcolor: "#f9f9f9",
+                                borderRadius: THEME.borderRadius.medium,
+                                border: "1px solid rgba(12, 60, 60, 0.1)",
+                              }}>
+                                <img
+                                  src={prescription.doctorSignature}
+                                  alt="Doctor Signature"
+                                  style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '200px',
+                                    objectFit: 'contain',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px'
+                                  }}
+                                  onError={(e) => {
+                                    console.error("Signature image failed to load:", prescription.doctorSignature);
+                                    e.target.style.display = 'none';
+                                  }}
+                                />
+                              </Paper>
+                            </Box>
+                          </Grid>
+                        )}
+                        {prescription.doctorSeal && (
+                          <Grid item xs={12} md={6}>
+                            <Box textAlign="center">
+                              <Typography variant="subtitle1" sx={{ fontWeight: 600, mb: 2, color: THEME.primary }}>
+                                Doctor Seal
+                              </Typography>
+                              <Paper elevation={1} sx={{
+                                p: 3,
+                                bgcolor: "#f9f9f9",
+                                borderRadius: THEME.borderRadius.medium,
+                                border: "1px solid rgba(12, 60, 60, 0.1)",
+                              }}>
+                                <img
+                                  src={prescription.doctorSeal}
+                                  alt="Doctor Seal"
+                                  style={{
+                                    maxWidth: '100%',
+                                    maxHeight: '200px',
+                                    objectFit: 'contain',
+                                    border: '1px solid #ddd',
+                                    borderRadius: '4px'
+                                  }}
+                                  onError={(e) => {
+                                    console.error("Seal image failed to load:", prescription.doctorSeal);
+                                    e.target.style.display = 'none';
+                                  }}
+                                />
+                              </Paper>
+                            </Box>
+                          </Grid>
+                        )}
+                      </Grid>
+                    </CardContent>
+                  </Card>
+                </Fade>
+              )}
+
               {/* Prescription Details */}
-              <Fade in timeout={700}>
+              <Fade in timeout={800}>
                 <Card sx={{ ...lightCardSx, mb: 3 }}>
                   <CardContent>
                     <Typography variant="h6" sx={{ fontWeight: 700, color: THEME.primary, mb: 2 }}>
@@ -510,7 +602,7 @@ export default function ViewPrescriptionDialog({ open, onClose, prescriptionId }
               </Fade>
 
               {/* Status Information */}
-              <Fade in timeout={800}>
+              <Fade in timeout={900}>
                 <Card sx={{ ...lightCardSx, borderLeft: `4px solid ${THEME.accent}` }}>
                   <CardContent>
                     <Stack direction="row" spacing={1.5} alignItems="center">

@@ -46,7 +46,9 @@ public class PrescriptionService {
      * The controller should pass the authenticated doctor's id/name.
      */
     @Transactional
-    public Prescription create(String doctorId, String doctorName, PrescriptionCreateRequest req) {
+    public Prescription create(String doctorId, String doctorName, PrescriptionCreateRequest req,
+                              byte[] doctorSignature, String doctorSignatureContentType,
+                              byte[] doctorSeal, String doctorSealContentType) {
         validateCreateRequest(req);
 
         // Ensure patient exists (also gives us the FK entity)
@@ -109,6 +111,13 @@ public class PrescriptionService {
         }
 
         p.setItems(items); // CascadeType.ALL will persist children
+
+        // Set signature and seal
+        p.setDoctorSignature(doctorSignature);
+        p.setDoctorSignatureContentType(doctorSignatureContentType);
+        p.setDoctorSeal(doctorSeal);
+        p.setDoctorSealContentType(doctorSealContentType);
+
         return prescriptionRepository.save(p);
     }
 

@@ -4,13 +4,19 @@ import com.mis.dto.Prescription.PrescriptionCreateRequest;
 import com.mis.dto.Prescription.PrescriptionResponse;
 import com.mis.dto.Prescription.ManualDispenseRequest;
 import com.mis.mapper.Prescription.PrescriptionMapper;
+import com.mis.model.Doctor;
 import com.mis.model.Prescription.Prescription;
 import com.mis.model.User;
+import com.mis.repository.DoctorRepository;
+import com.mis.repository.Prescription.PrescriptionRepository;
 import com.mis.repository.StaffRepository;
 import com.mis.repository.StudentRepository;
 import com.mis.repository.UserRepository;
 import com.mis.service.Prescription.PrescriptionService;
 import com.mis.service.Prescription.PrescriptionMigrationService;
+import com.mis.service.UserService;
+
+import java.util.Optional;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.ResponseEntity;
 import org.springframework.security.access.prepost.PreAuthorize;
@@ -26,22 +32,45 @@ public class PrescriptionController {
 
     private final PrescriptionService prescriptionService;
     private final PrescriptionMigrationService prescriptionMigrationService;
+    private final PrescriptionRepository prescriptionRepository;
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final StaffRepository staffRepository;
+    private final DoctorRepository doctorRepository;
+    private final UserService userService;
 
     // POST /api/prescriptions/create   (Doctor only)
     @PostMapping("/create")
     @PreAuthorize("hasRole('Doctor')")
     public ResponseEntity<PrescriptionResponse> create(Authentication auth,
-                                                        @RequestBody PrescriptionCreateRequest req) {
+                                                         @RequestBody PrescriptionCreateRequest req) {
+
+        String password = req.getPassword();
 
         // Resolve current doctor from auth principal (userId from JWT token)
         String doctorId = auth.getName();
-        User doctor = userRepository.findById(doctorId)
+        User doctorUser = userRepository.findById(doctorId)
                 .orElseThrow(() -> new IllegalArgumentException("Doctor not found for " + doctorId));
 
-        var saved = prescriptionService.create(doctor.getId(), doctor.getName(), req);
+        // Verify password
+        Optional<User> authenticatedUser = userService.authenticate(doctorUser.getEmail(), password);
+        if (authenticatedUser.isEmpty()) {
+            throw new IllegalArgumentException("Invalid password");
+        }
+
+        // Ensure Doctor entity exists and get doctor's stored signature and seal
+        userService.ensureDoctorEntityExists(doctorId);
+        Doctor doctor = doctorRepository.findById(doctorId)
+                .orElseThrow(() -> new IllegalArgumentException("Doctor profile not found for user: " + doctorId));
+
+        if (doctor.getDoctorSignature() == null || doctor.getDoctorSeal() == null) {
+            throw new IllegalArgumentException("Doctor signature and seal must be uploaded first. Please upload them in your profile.");
+        }
+
+        Prescription saved = prescriptionService.create(doctorUser.getId(), doctorUser.getName(), req,
+                doctor.getDoctorSignature(), doctor.getDoctorSignatureContentType(),
+                doctor.getDoctorSeal(), doctor.getDoctorSealContentType());
+
         return ResponseEntity.ok(PrescriptionMapper.toResponse(saved, studentRepository, staffRepository));
     }
 

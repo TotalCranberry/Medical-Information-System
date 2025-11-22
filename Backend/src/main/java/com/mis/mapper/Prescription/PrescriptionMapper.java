@@ -10,6 +10,7 @@ import com.mis.model.Student;
 import com.mis.repository.StaffRepository;
 import com.mis.repository.StudentRepository;
 
+import java.util.Base64;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -43,6 +44,22 @@ public class PrescriptionMapper {
             }
         }
 
+        // Convert signature and seal to base64
+        String doctorSignature = null;
+        String doctorSeal = null;
+
+        if (p.getDoctorSignature() != null && p.getDoctorSignature().length > 0) {
+            String base64Signature = Base64.getEncoder().encodeToString(p.getDoctorSignature());
+            String mimeType = p.getDoctorSignatureContentType() != null ? p.getDoctorSignatureContentType() : "image/png";
+            doctorSignature = "data:" + mimeType + ";base64," + base64Signature;
+        }
+
+        if (p.getDoctorSeal() != null && p.getDoctorSeal().length > 0) {
+            String base64Seal = Base64.getEncoder().encodeToString(p.getDoctorSeal());
+            String mimeType = p.getDoctorSealContentType() != null ? p.getDoctorSealContentType() : "image/png";
+            doctorSeal = "data:" + mimeType + ";base64," + base64Seal;
+        }
+
         return PrescriptionResponse.builder()
                 .id(p.getId())
                 .doctorId(p.getDoctorId())
@@ -61,6 +78,8 @@ public class PrescriptionMapper {
                         : p.getItems().stream()
                             .map(PrescriptionMapper::toItemDto)
                             .collect(Collectors.toList()))
+                .doctorSignature(doctorSignature)
+                .doctorSeal(doctorSeal)
                 .build();
     }
 
