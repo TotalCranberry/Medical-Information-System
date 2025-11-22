@@ -11,12 +11,14 @@ import {
   Email as EmailIcon,
   School as FacultyIcon,
   CalendarToday as DateIcon,
-  CloudUpload as UploadIcon,
   Image as ImageIcon,
-  Security as SecurityIcon
+  Security as SecurityIcon,
+  VpnKey as PasswordIcon,
+  EditNote as EditNoteIcon
 } from "@mui/icons-material";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
 import { issueMedical } from "../../api/appointments";
+import { getDoctorSignatureSeal } from "../../api/doctor";
 
 const IssueMedical = () => {
   const { patientId } = useParams();
@@ -30,13 +32,30 @@ const IssueMedical = () => {
   const [patientData] = useState(patientFromState || null);
   const [recommendations, setRecommendations] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
-  const [doctorSignature, setDoctorSignature] = useState(null);
-  const [doctorSeal, setDoctorSeal] = useState(null);
-  const [signaturePreview, setSignaturePreview] = useState(null);
-  const [sealPreview, setSealPreview] = useState(null);
+  const [password, setPassword] = useState('');
+  const [storedSignature, setStoredSignature] = useState(null);
+  const [storedSeal, setStoredSeal] = useState(null);
   const [loading, setLoading] = useState(false);
+  const [fetchingSignature, setFetchingSignature] = useState(true);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
+
+  useEffect(() => {
+    fetchStoredSignatureSeal();
+  }, []);
+
+  const fetchStoredSignatureSeal = async () => {
+    try {
+      setFetchingSignature(true);
+      const response = await getDoctorSignatureSeal();
+      setStoredSignature(response.doctorSignature || null);
+      setStoredSeal(response.doctorSeal || null);
+    } catch (err) {
+      console.error("Error fetching signature and seal:", err);
+    } finally {
+      setFetchingSignature(false);
+    }
+  };
 
   const getPatientAge = () => {
     const details = patientData?.patientDetails || patientData;
@@ -53,39 +72,19 @@ const IssueMedical = () => {
     return details?.age || 'N/A';
   };
 
-  const handleSignatureChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      if (file.size > 1024 * 1024) { // 1MB limit
-        alert("Doctor signature image must be less than 1MB. Please select a smaller file.");
-        event.target.value = ''; // Clear the file input
-        return;
-      }
-      setDoctorSignature(file);
-      const reader = new FileReader();
-      reader.onload = (e) => setSignaturePreview(e.target.result);
-      reader.readAsDataURL(file);
-    }
-  };
-
-  const handleSealChange = (event) => {
-    const file = event.target.files[0];
-    if (file) {
-      if (file.size > 1024 * 1024) { // 1MB limit
-        alert("Doctor seal image must be less than 1MB. Please select a smaller file.");
-        event.target.value = ''; // Clear the file input
-        return;
-      }
-      setDoctorSeal(file);
-      const reader = new FileReader();
-      reader.onload = (e) => setSealPreview(e.target.result);
-      reader.readAsDataURL(file);
-    }
-  };
-
   const handleSubmitMedical = async () => {
     if (!recommendations.trim()) {
       setError("Recommendations field is required");
+      return;
+    }
+
+    if (!password.trim()) {
+      setError("Password is required for authentication");
+      return;
+    }
+
+    if (!storedSignature || !storedSeal) {
+      setError("You must upload your signature and seal first. Please go to your profile settings.");
       return;
     }
 
@@ -101,12 +100,7 @@ const IssueMedical = () => {
       if (currentAppointmentId) {
         formData.append('appointmentId', currentAppointmentId);
       }
-      if (doctorSignature) {
-        formData.append('doctorSignature', doctorSignature);
-      }
-      if (doctorSeal) {
-        formData.append('doctorSeal', doctorSeal);
-      }
+      formData.append('password', password.trim());
 
       await issueMedical(patientId, formData);
       setSuccess(true);
@@ -114,10 +108,7 @@ const IssueMedical = () => {
       // Clear form
       setRecommendations('');
       setAdditionalNotes('');
-      setDoctorSignature(null);
-      setDoctorSeal(null);
-      setSignaturePreview(null);
-      setSealPreview(null);
+      setPassword('');
 
       // Redirect back to patient profile after a short delay
       setTimeout(() => {
@@ -357,188 +348,179 @@ const IssueMedical = () => {
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-                  Upload your signature and seal to authenticate this medical certificate. Both images must be less than 1MB each and will be permanently attached to this document.
+                  Your stored signature and seal will be automatically attached to this medical certificate. Please enter your password to confirm your identity.
                 </Typography>
 
-                <Grid container spacing={4}>
-                  {/* Doctor Signature Upload */}
-                  <Grid item xs={12} md={6}>
-                    <Card sx={{
-                      height: '100%',
-                      border: doctorSignature ? '2px solid #45d27a' : '2px dashed #ddd',
-                      backgroundColor: doctorSignature ? 'rgba(69, 210, 122, 0.05)' : 'transparent',
-                      borderRadius: 2
-                    }}>
-                      <CardContent sx={{ p: 3, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: "#0c3c3c", fontWeight: 600 }}>
-                          Doctor Signature
-                        </Typography>
-                        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          {!signaturePreview ? (
-                            <Button
-                              variant="outlined"
-                              component="label"
-                              startIcon={<UploadIcon />}
-                              sx={{
-                                height: '140px',
-                                border: '2px dashed #45d27a',
-                                borderRadius: 2,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                textTransform: 'none',
-                                color: '#45d27a',
-                                '&:hover': {
-                                  borderColor: '#3ab86a',
-                                  backgroundColor: 'rgba(69, 210, 122, 0.1)'
-                                }
-                              }}
-                            >
-                              <ImageIcon sx={{ fontSize: 48, mb: 1 }} />
-                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                Click to Upload Signature
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                PNG, JPG, JPEG • Max 1MB
-                              </Typography>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                hidden
-                                onChange={handleSignatureChange}
-                              />
-                            </Button>
-                          ) : (
-                            <Box>
+                {fetchingSignature ? (
+                  <Box display="flex" justifyContent="center" py={4}>
+                    <CircularProgress size={40} sx={{ color: "#45d27a" }} />
+                  </Box>
+                ) : (
+                  <Grid container spacing={4}>
+                    {/* Doctor Signature Display */}
+                    <Grid item xs={12} md={4}>
+                      <Card sx={{
+                        height: '100%',
+                        border: storedSignature ? '2px solid #45d27a' : '2px solid #ddd',
+                        backgroundColor: storedSignature ? 'rgba(69, 210, 122, 0.05)' : '#f5f5f5',
+                        borderRadius: 2
+                      }}>
+                        <CardContent sx={{ p: 3, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="h6" sx={{ mb: 2, color: "#0c3c3c", fontWeight: 600 }}>
+                            Your Signature
+                          </Typography>
+                          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            {storedSignature ? (
                               <Box sx={{
                                 border: '2px solid #45d27a',
                                 borderRadius: 2,
                                 p: 2,
-                                mb: 2,
                                 backgroundColor: '#f9f9f9'
                               }}>
                                 <img
-                                  src={signaturePreview}
-                                  alt="Signature Preview"
+                                  src={storedSignature}
+                                  alt="Stored Signature"
                                   style={{
                                     maxWidth: '100%',
-                                    maxHeight: '140px',
+                                    maxHeight: '120px',
                                     objectFit: 'contain',
                                     borderRadius: '4px'
                                   }}
                                 />
                               </Box>
-                              <Button
-                                variant="outlined"
-                                component="label"
-                                size="small"
-                                sx={{ color: '#45d27a', borderColor: '#45d27a' }}
-                              >
-                                Change Signature
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  hidden
-                                  onChange={handleSignatureChange}
-                                />
-                              </Button>
-                            </Box>
-                          )}
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
+                            ) : (
+                              <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                                <ImageIcon sx={{ fontSize: 48, mb: 1, color: '#ccc' }} />
+                                <Typography variant="body2">
+                                  No signature uploaded
+                                </Typography>
+                                <Button
+                                  variant="outlined"
+                                  startIcon={<EditNoteIcon />}
+                                  onClick={() => navigate('/doctor/signature-seal')}
+                                  sx={{
+                                    mt: 1,
+                                    color: '#45d27a',
+                                    borderColor: '#45d27a',
+                                    '&:hover': {
+                                      borderColor: '#3ab86a',
+                                      backgroundColor: 'rgba(69, 210, 122, 0.1)'
+                                    }
+                                  }}
+                                >
+                                  Upload Signature & Seal
+                                </Button>
+                              </Box>
+                            )}
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
 
-                  {/* Doctor Seal Upload */}
-                  <Grid item xs={12} md={6}>
-                    <Card sx={{
-                      height: '100%',
-                      border: doctorSeal ? '2px solid #45d27a' : '2px dashed #ddd',
-                      backgroundColor: doctorSeal ? 'rgba(69, 210, 122, 0.05)' : 'transparent',
-                      borderRadius: 2
-                    }}>
-                      <CardContent sx={{ p: 3, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: "#0c3c3c", fontWeight: 600 }}>
-                          Doctor Seal
-                        </Typography>
-                        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          {!sealPreview ? (
-                            <Button
-                              variant="outlined"
-                              component="label"
-                              startIcon={<UploadIcon />}
-                              sx={{
-                                height: '140px',
-                                border: '2px dashed #45d27a',
-                                borderRadius: 2,
-                                display: 'flex',
-                                flexDirection: 'column',
-                                alignItems: 'center',
-                                justifyContent: 'center',
-                                textTransform: 'none',
-                                color: '#45d27a',
-                                '&:hover': {
-                                  borderColor: '#3ab86a',
-                                  backgroundColor: 'rgba(69, 210, 122, 0.1)'
-                                }
-                              }}
-                            >
-                              <ImageIcon sx={{ fontSize: 48, mb: 1 }} />
-                              <Typography variant="body2" sx={{ fontWeight: 500 }}>
-                                Click to Upload Seal
-                              </Typography>
-                              <Typography variant="caption" color="text.secondary">
-                                PNG, JPG, JPEG • Max 1MB
-                              </Typography>
-                              <input
-                                type="file"
-                                accept="image/*"
-                                hidden
-                                onChange={handleSealChange}
-                              />
-                            </Button>
-                          ) : (
-                            <Box>
+                    {/* Doctor Seal Display */}
+                    <Grid item xs={12} md={4}>
+                      <Card sx={{
+                        height: '100%',
+                        border: storedSeal ? '2px solid #45d27a' : '2px solid #ddd',
+                        backgroundColor: storedSeal ? 'rgba(69, 210, 122, 0.05)' : '#f5f5f5',
+                        borderRadius: 2
+                      }}>
+                        <CardContent sx={{ p: 3, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="h6" sx={{ mb: 2, color: "#0c3c3c", fontWeight: 600 }}>
+                            Your Seal
+                          </Typography>
+                          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            {storedSeal ? (
                               <Box sx={{
                                 border: '2px solid #45d27a',
                                 borderRadius: 2,
                                 p: 2,
-                                mb: 2,
                                 backgroundColor: '#f9f9f9'
                               }}>
                                 <img
-                                  src={sealPreview}
-                                  alt="Seal Preview"
+                                  src={storedSeal}
+                                  alt="Stored Seal"
                                   style={{
                                     maxWidth: '100%',
-                                    maxHeight: '140px',
+                                    maxHeight: '120px',
                                     objectFit: 'contain',
                                     borderRadius: '4px'
                                   }}
                                 />
                               </Box>
-                              <Button
-                                variant="outlined"
-                                component="label"
-                                size="small"
-                                sx={{ color: '#45d27a', borderColor: '#45d27a' }}
-                              >
-                                Change Seal
-                                <input
-                                  type="file"
-                                  accept="image/*"
-                                  hidden
-                                  onChange={handleSealChange}
-                                />
-                              </Button>
-                            </Box>
-                          )}
-                        </Box>
-                      </CardContent>
-                    </Card>
+                            ) : (
+                              <Box sx={{ textAlign: 'center', color: 'text.secondary' }}>
+                                <ImageIcon sx={{ fontSize: 48, mb: 1, color: '#ccc' }} />
+                                <Typography variant="body2">
+                                  No seal uploaded
+                                </Typography>
+                                <Button
+                                  variant="outlined"
+                                  startIcon={<EditNoteIcon />}
+                                  onClick={() => navigate('/doctor/signature-seal')}
+                                  sx={{
+                                    mt: 1,
+                                    color: '#45d27a',
+                                    borderColor: '#45d27a',
+                                    '&:hover': {
+                                      borderColor: '#3ab86a',
+                                      backgroundColor: 'rgba(69, 210, 122, 0.1)'
+                                    }
+                                  }}
+                                >
+                                  Upload Signature & Seal
+                                </Button>
+                              </Box>
+                            )}
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
+
+                    {/* Password Input */}
+                    <Grid item xs={12} md={4}>
+                      <Card sx={{
+                        height: '100%',
+                        border: '2px solid #ddd',
+                        borderRadius: 2
+                      }}>
+                        <CardContent sx={{ p: 3, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column' }}>
+                          <Typography variant="h6" sx={{ mb: 2, color: "#0c3c3c", fontWeight: 600 }}>
+                            Confirm Identity
+                          </Typography>
+                          <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
+                            <TextField
+                              fullWidth
+                              type="password"
+                              label="Enter Password"
+                              value={password}
+                              onChange={(e) => setPassword(e.target.value)}
+                              error={!password.trim() && error && error.includes("Password")}
+                              helperText={!password.trim() && error && error.includes("Password") ? "Password is required" : ""}
+                              sx={{
+                                '& .MuiOutlinedInput-root': {
+                                  backgroundColor: '#fafafa',
+                                  '&:hover': {
+                                    backgroundColor: '#f5f5f5'
+                                  },
+                                  '&.Mui-focused': {
+                                    backgroundColor: '#fff'
+                                  }
+                                }
+                              }}
+                              InputProps={{
+                                startAdornment: <PasswordIcon sx={{ color: 'action.active', mr: 1 }} />
+                              }}
+                            />
+                            <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
+                              Your login password is required to issue medical certificates
+                            </Typography>
+                          </Box>
+                        </CardContent>
+                      </Card>
+                    </Grid>
                   </Grid>
-                </Grid>
+                )}
               </CardContent>
             </Card>
           </Grid>
@@ -549,7 +531,7 @@ const IssueMedical = () => {
               <Button
                 onClick={handleSubmitMedical}
                 variant="contained"
-                disabled={loading || !recommendations.trim() || !doctorSignature || !doctorSeal}
+                disabled={loading || !recommendations.trim() || !password.trim() || !storedSignature || !storedSeal}
                 sx={{
                   backgroundColor: "#45d27a",
                   "&:hover": { backgroundColor: "#3ab86a" },
