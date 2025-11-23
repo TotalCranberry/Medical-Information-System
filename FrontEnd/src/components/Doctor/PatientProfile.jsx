@@ -201,21 +201,23 @@ const PatientProfile = () => {
           setRecordStatus('not_found');
           return;
       }
+      
+      // With the backend change to return 204 (No Content) instead of 404 (Not Found),
+      // recordData will be null if no record exists, but it won't throw an error.
       const recordData = await getMedicalRecord(patientId);
-      setMedicalRecord(recordData);
-      setRecordStatus('found');
-    } catch (recordError) {
-      // If 404, it just means the patient hasn't uploaded one yet.
-      if (recordError.message && (recordError.message.includes('404') || recordError.message.includes('Not Found'))) {
+      
+      if (recordData) {
+        setMedicalRecord(recordData);
+        setRecordStatus('found');
+      } else {
         setMedicalRecord(null);
         setRecordStatus('not_found');
-      } else {
-        // Any other error (500, network, etc.) is a real problem.
-        console.error("Failed to fetch medical record:", recordError);
-        setRecordStatus('error');
-        // Append this error to the main error state so the user sees it
-        setError(prev => prev ? `${prev} | Medical Record Error: ${recordError.message}` : `Medical Record Error: ${recordError.message}`);
       }
+    } catch (recordError) {
+      // Fallback for any other errors (e.g. server error, network issue)
+      console.error("Failed to fetch medical record:", recordError);
+      setRecordStatus('error');
+      setError(prev => prev ? `${prev} | Medical Record Error: ${recordError.message}` : `Medical Record Error: ${recordError.message}`);
     }
   };
 
@@ -578,7 +580,7 @@ const PatientProfile = () => {
 
           {recordStatus === 'not_found' && (
             <Alert severity="info" sx={{ mb: 3 }}>
-              This patient has not submitted a medical form.
+              Patient has not uploaded the medical information form.
             </Alert>
           )}
 

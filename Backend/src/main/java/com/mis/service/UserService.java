@@ -220,11 +220,22 @@ public class UserService {
         if (userOpt.isPresent()) {
             User user = userOpt.get();
             if (passwordEncoder.matches(rawPassword, user.getPasswordHash())) {
+                if (user.getStatus() == AccountStatus.PENDING_APPROVAL) {
+                    auditService.logAction(user, "FAILED_LOGIN_ATTEMPT", "Login attempt for pending approval account");
+                    throw new IllegalStateException("Your account is pending approval by an administrator.");
+                }
+                if (user.getStatus() == AccountStatus.DISABLED) {
+                    auditService.logAction(user, "FAILED_LOGIN_ATTEMPT", "Login attempt for disabled account");
+                    throw new IllegalStateException("Your account has been disabled.");
+                }
                 user.setLastLogin(LocalDateTime.now());
                 userRepository.save(user);
                 // Log the USER_LOGIN event
                 auditService.logAction(user, "USER_LOGIN", "User logged in successfully");
                 return Optional.of(user);
+            } else {
+                auditService.logAction(user, "FAILED_LOGIN_ATTEMPT", "Incorrect password attempt");
+                throw new IllegalStateException("Incorrect email or password.");
             }
         }
         return Optional.empty();

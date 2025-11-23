@@ -492,10 +492,23 @@ public class DoctorController {
     @GetMapping("/patient/{patientId}/medical-record")
     @PreAuthorize("hasRole('Doctor')")
     public ResponseEntity<MedicalRecordResponseDTO> getPatientMedicalRecord(@PathVariable String patientId) {
-        Optional<MedicalRecordResponseDTO> dtoOpt = medicalFormService.getFullMedicalRecordByUserId(patientId);
+        User patient = null;
         
+        Optional<Student> studentOpt = studentRepository.findById(patientId);
+        if (studentOpt.isPresent()) {
+            patient = studentOpt.get().getUser();
+        } else {
+            Optional<Staff> staffOpt = staffRepository.findById(patientId);
+            if (staffOpt.isPresent()) {
+                patient = staffOpt.get().getUser();
+            } else {
+                return ResponseEntity.notFound().build();
+            }
+        }
+        Optional<MedicalRecordResponseDTO> dtoOpt = medicalFormService.getFullMedicalRecordByUserId(patient.getId());
+
         return dtoOpt.map(ResponseEntity::ok)
-                     .orElseGet(() -> ResponseEntity.notFound().build());
+                     .orElseGet(() -> ResponseEntity.noContent().build());  
     }
 
     // Helper method to calculate age from LocalDate
