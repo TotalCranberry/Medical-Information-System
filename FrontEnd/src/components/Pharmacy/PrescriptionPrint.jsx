@@ -589,15 +589,47 @@ const PrescriptionPrint = ({ user }) => {
               </div>
             )}
 
-            {/* --- Signatures --- */}
-            <div className="section-gap-lg" style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 28 }}>
-              <div>
-                <div className="sign-line" />
-                <div className="muted" style={{ marginTop: 6 }}>Doctor's Signature</div>
+            {/* --- Doctor's Signature and Seal --- */}
+            <div className="section-gap-lg" style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 20 }}>
+              <div style={{ flex: 1 }}>
+                <div className="muted" style={{ marginBottom: 8 }}>Doctor's Signature</div>
+                {rx.doctorSignature ? (
+                  <img
+                    src={rx.doctorSignature}
+                    alt="Doctor's Signature"
+                    style={{
+                      maxWidth: '200px',
+                      maxHeight: '60px',
+                      objectFit: 'contain',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '4px',
+                      padding: '4px',
+                      background: 'white'
+                    }}
+                  />
+                ) : (
+                  <div className="sign-line" />
+                )}
               </div>
-              <div>
-                <div className="sign-line" />
-                <div className="muted" style={{ marginTop: 6 }}>Pharmacist's Signature</div>
+              <div style={{ flex: 1, textAlign: 'right' }}>
+                <div className="muted" style={{ marginBottom: 8 }}>Doctor's Seal</div>
+                {rx.doctorSeal ? (
+                  <img
+                    src={rx.doctorSeal}
+                    alt="Doctor's Seal"
+                    style={{
+                      maxWidth: '120px',
+                      maxHeight: '120px',
+                      objectFit: 'contain',
+                      border: '1px solid #e5e7eb',
+                      borderRadius: '4px',
+                      padding: '4px',
+                      background: 'white'
+                    }}
+                  />
+                ) : (
+                  <div style={{ width: '120px', height: '60px', border: '1px dashed #e5e7eb', borderRadius: '4px', display: 'inline-block' }} />
+                )}
               </div>
             </div>
 
