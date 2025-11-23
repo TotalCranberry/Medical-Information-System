@@ -36,7 +36,8 @@ import {
   CheckCircle as CheckCircleIcon,
   InfoOutlined as InfoIcon,
 } from "@mui/icons-material";
-import { fetchMedical as fetchDoctorMedical, sendMedicalToCourseUnit } from "../../api/appointments";
+import { fetchMedical as fetchDoctorMedical } from "../../api/appointments";
+import SendToCourseUnitDialog from './SendToCourseUnitDialog';
 
 // ---------------- ENHANCED THEME TOKENS ----------------
 const THEME = {
@@ -156,6 +157,7 @@ export default function ViewMedicalDialog({ open, onClose, medicalId, onMedicalU
   const [signatureImage, setSignatureImage] = useState(null);
   const [sealImage, setSealImage] = useState(null);
   const [snack, setSnack] = useState({ open: false, severity: "success", msg: "" });
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
 
   // ---------- Load medical data ----------
   useEffect(() => {
@@ -195,29 +197,12 @@ export default function ViewMedicalDialog({ open, onClose, medicalId, onMedicalU
     }
   };
 
-  const handleSendToCourseUnit = async () => {
-    try {
-      setSending(true);
-      await sendMedicalToCourseUnit(medicalId);
-      setSnack({
-        open: true,
-        severity: "success",
-        msg: "Medical certificate sent to course unit successfully!",
-      });
-      // Reload medical data to update status
-      await loadMedical();
-      // Notify parent component
-      onMedicalUpdate?.();
-    } catch (err) {
-      setSnack({
-        open: true,
-        severity: "error",
-        msg: err.message || "Failed to send medical to course unit",
-      });
-      console.error("Error sending medical:", err);
-    } finally {
-      setSending(false);
-    }
+  const handleSendToCourseUnit = () => {
+    setSendDialogOpen(true);
+  };
+
+  const handleSendDialogClose = () => {
+    setSendDialogOpen(false);
   };
 
   const formatDate = (dateString) => {
@@ -773,6 +758,19 @@ export default function ViewMedicalDialog({ open, onClose, medicalId, onMedicalU
           </Typography>
         </Stack>
       </Backdrop>
+
+      {/* Send to Course Unit Dialog */}
+      <SendToCourseUnitDialog
+        open={sendDialogOpen}
+        onClose={handleSendDialogClose}
+        medicalId={medicalId}
+        onMedicalUpdate={async () => {
+          // Reload medical data to update status
+          await loadMedical();
+          // Notify parent component
+          onMedicalUpdate?.();
+        }}
+      />
     </>
   );
-}
+};

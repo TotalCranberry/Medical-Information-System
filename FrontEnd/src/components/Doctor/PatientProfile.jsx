@@ -41,6 +41,9 @@ import ViewPrescriptionDialog from './ViewPrescriptionDialog';
 import { getLabRequestsForPatient } from '../../api/labApi';
 import ViewLabRequestDialog from './ViewLabRequestDialog';
 
+// Import for Send to Course Unit
+import SendToCourseUnitDialog from './SendToCourseUnitDialog';
+
 const PatientProfile = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
@@ -91,6 +94,10 @@ const PatientProfile = () => {
   // Lab Request Dialog State
   const [labRequestDialogOpen, setLabRequestDialogOpen] = useState(false);
   const [selectedLabRequestId, setSelectedLabRequestId] = useState(null);
+
+  // Send to Course Unit Dialog State
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [selectedMedicalForSend, setSelectedMedicalForSend] = useState(null);
 
   // --- Medical Record State ---
   const [medicalRecord, setMedicalRecord] = useState(null);
@@ -430,6 +437,16 @@ const PatientProfile = () => {
   const handleCloseLabRequestDialog = () => {
     setLabRequestDialogOpen(false);
     setSelectedLabRequestId(null);
+  };
+
+  const handleSendToCourseUnit = (medicalId) => {
+    setSelectedMedicalForSend(medicalId);
+    setSendDialogOpen(true);
+  };
+
+  const handleCloseSendDialog = () => {
+    setSendDialogOpen(false);
+    setSelectedMedicalForSend(null);
   };
 
   const getPatientAge = () => {
@@ -1058,6 +1075,7 @@ const PatientProfile = () => {
                               variant="outlined"
                               startIcon={<SendIcon />}
                               disabled={medical.isSentToCourseUnit}
+                              onClick={() => handleSendToCourseUnit(medical.id)}
                               sx={{
                                 borderColor: medical.isSentToCourseUnit ? "#ccc" : "#2196F3",
                                 color: medical.isSentToCourseUnit ? "#ccc" : "#2196F3",
@@ -1287,6 +1305,17 @@ const PatientProfile = () => {
         open={labRequestDialogOpen}
         onClose={handleCloseLabRequestDialog}
         labRequestId={selectedLabRequestId}
+      />
+
+      {/* Send to Course Unit Dialog */}
+      <SendToCourseUnitDialog
+        open={sendDialogOpen}
+        onClose={handleCloseSendDialog}
+        medicalId={selectedMedicalForSend}
+        onMedicalUpdate={() => {
+          // Reload medicals list when a medical is sent to course unit
+          loadMedicals();
+        }}
       />
     </Box>
   );

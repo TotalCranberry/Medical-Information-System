@@ -82,6 +82,29 @@ export async function fetchMedical(medicalId) {
   return apiFetch(`/doctor/medicals/${medicalId}`, 'GET', null, true);
 }
 
-export async function sendMedicalToCourseUnit(medicalId) {
-  return apiFetch(`/doctor/medicals/${medicalId}/send-to-course-unit`, 'PUT', null, true);
+export async function sendMedicalToCourseUnit(medicalId, courseUnitEmail) {
+  return apiFetch(`/doctor/medicals/${medicalId}/send-to-course-unit?courseUnitEmail=${encodeURIComponent(courseUnitEmail)}`, 'PUT', null, true);
+}
+
+export async function previewMedicalPdf(medicalId) {
+  const token = localStorage.getItem('jwtToken');
+  const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
+
+  const response = await fetch(`${baseUrl}/doctor/medicals/${medicalId}/preview-pdf`, {
+    method: 'GET',
+    headers: {
+      'Authorization': `Bearer ${token}`
+    }
+  });
+
+  if (!response.ok) {
+    const errorData = await response.json().catch(() => ({ message: 'Network error' }));
+    throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+  }
+
+  return response.blob();
+}
+
+export async function getDoctorSignatureAndSeal() {
+  return apiFetch('/doctor/signature-seal', 'GET', null, true);
 }
