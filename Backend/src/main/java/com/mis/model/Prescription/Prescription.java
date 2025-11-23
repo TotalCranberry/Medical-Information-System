@@ -87,6 +87,19 @@ public class Prescription {
     @Column(name = "updated_at")
     private Date updatedAt;
 
+    // ---------- Doctor Signature and Seal ----------
+    @Column(name = "doctor_signature", columnDefinition = "LONGBLOB")
+    private byte[] doctorSignature;
+
+    @Column(name = "doctor_signature_content_type")
+    private String doctorSignatureContentType;
+
+    @Column(name = "doctor_seal", columnDefinition = "LONGBLOB")
+    private byte[] doctorSeal;
+
+    @Column(name = "doctor_seal_content_type")
+    private String doctorSealContentType;
+
     @PrePersist
     protected void onCreate() {
         Date now = new Date();

@@ -59,9 +59,11 @@ import DoctorDashboard from './components/Doctor/DoctorDashboard';
 import PatientsTab from './components/Doctor/PatientsTab';
 import PatientProfile from './components/Doctor/PatientProfile';
 import RequestLabTest from './components/Doctor/RequestLabTest';
+import RequestLabTestForm from './components/Doctor/RequestLabTestForm';
 import PrescriptionsTab from './components/Doctor/PrescriptionsTab';
 import IssueMedical from './components/Doctor/IssueMedical';
 import ViewMedical from './components/Doctor/ViewMedical';
+import DoctorSignatureSeal from './components/Doctor/DoctorSignatureSeal';
 
 // Laboratory pages
 import LabDashboard from './components/Laboratory/LabDashboard';
@@ -145,6 +147,7 @@ const navLinksConfig = {
   doctor: [
     { label: "Dashboard", path: "/doctor/dashboard", icon: <DashboardIcon /> },
     { label: "Patients", path: "/doctor/patients", icon: <PeopleIcon /> },
+    { label: "Signature & Seal", path: "/doctor/signature-seal", icon: <EditNoteIcon /> },
     { label: "Support", path: "/doctor/support", icon: <ContactSupportIcon /> },
   ],
   pharmacist: [
@@ -415,14 +418,16 @@ function App() {
           <Route path="invoice/:id" element={<Invoice />} />
 
           {/* Doctor Routes - UPDATED with Medical Routes */}
-          <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />
-          <Route path="doctor/patients" element={<PatientsTab />} />
-          <Route path="doctor/patients/:patientId" element={<PatientProfile />} />
-          <Route path="doctor/issue-medical/:patientId" element={<IssueMedical />} />
-          <Route path="doctor/view-medical/:medicalId" element={<ViewMedical />} />
-          <Route path="doctor/request-test" element={<RequestLabTest pendingRequests={mockLabRequests} onSubmit={handleLabTestRequest} />} />
-          <Route path="doctor/prescriptions" element={<PrescriptionsTab recentPrescriptions={mockPrescriptionHistory} onSubmit={handlePrescriptionSubmit} />} />
-          <Route path="doctor/support" element={<SupportPage />} />
+           <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />
+           <Route path="doctor/patients" element={<PatientsTab />} />
+           <Route path="doctor/patients/:patientId" element={<PatientProfile />} />
+           <Route path="doctor/issue-medical/:patientId" element={<IssueMedical />} />
+           <Route path="doctor/view-medical/:medicalId" element={<ViewMedical />} />
+           <Route path="doctor/signature-seal" element={<DoctorSignatureSeal />} />
+           <Route path="doctor/request-test" element={<RequestLabTest pendingRequests={mockLabRequests} onSubmit={handleLabTestRequest} />} />
+           <Route path="doctor/request-lab-test/:patientId" element={<RequestLabTestForm />} />
+           <Route path="doctor/prescriptions" element={<PrescriptionsTab recentPrescriptions={mockPrescriptionHistory} onSubmit={handlePrescriptionSubmit} />} />
+           <Route path="doctor/support" element={<SupportPage />} />
 
           {/* Laboratory Routes */}
           <Route path="labtechnician/dashboard" element={<LabDashboard />} />

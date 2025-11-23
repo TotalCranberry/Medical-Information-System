@@ -46,7 +46,9 @@ public class PrescriptionService {
      * The controller should pass the authenticated doctor's id/name.
      */
     @Transactional
-    public Prescription create(String doctorId, String doctorName, PrescriptionCreateRequest req) {
+    public Prescription create(String doctorId, String doctorName, PrescriptionCreateRequest req,
+                              byte[] doctorSignature, String doctorSignatureContentType,
+                              byte[] doctorSeal, String doctorSealContentType) {
         validateCreateRequest(req);
 
         // Ensure patient exists (also gives us the FK entity)
@@ -109,6 +111,13 @@ public class PrescriptionService {
         }
 
         p.setItems(items); // CascadeType.ALL will persist children
+
+        // Set signature and seal
+        p.setDoctorSignature(doctorSignature);
+        p.setDoctorSignatureContentType(doctorSignatureContentType);
+        p.setDoctorSeal(doctorSeal);
+        p.setDoctorSealContentType(doctorSealContentType);
+
         return prescriptionRepository.save(p);
     }
 
@@ -511,6 +520,31 @@ public class PrescriptionService {
         for (Prescription p : prescriptions) {
             System.out.println("DEBUG: Prescription ID: " + p.getId() + ", Patient ID: " + p.getPatientId() + ", IsActive: " + p.getIsActive());
         }
+        return prescriptions;
+    }
+
+    /**
+     * Get all prescriptions for a specific patient (newest first).
+     * Use this for the doctor to see all prescriptions they've issued to a patient.
+     */
+    @Transactional(readOnly = true)
+    public List<Prescription> getAllPrescriptionsForPatient(String patientId) {
+        System.out.println("DEBUG: Looking for all prescriptions for patientId: " + patientId);
+
+        // First try to find by User entity relationship (most reliable)
+        User patient = userRepository.findById(patientId).orElse(null);
+        if (patient != null) {
+            List<Prescription> prescriptions = prescriptionRepository.findByPatientOrderByPrescriptionDateDesc(patient);
+            System.out.println("DEBUG: Found " + prescriptions.size() + " prescriptions by User entity");
+            if (!prescriptions.isEmpty()) {
+                return prescriptions;
+            }
+        }
+
+        // Fallback: try to find by encrypted patient ID string
+        List<Prescription> prescriptions = prescriptionRepository.findByPatientIdOrderByPrescriptionDateDesc(patientId);
+        System.out.println("DEBUG: Found " + prescriptions.size() + " prescriptions by encrypted patientId");
+
         return prescriptions;
     }
 

@@ -23,6 +23,19 @@ public class Doctor {
     @Lob
     @Column(columnDefinition = "TEXT")
     private String availability; // JSON string
+
+    @Column(name = "doctor_signature", columnDefinition = "LONGBLOB")
+    private byte[] doctorSignature;
+
+    @Column(name = "doctor_signature_content_type")
+    private String doctorSignatureContentType;
+
+    @Column(name = "doctor_seal", columnDefinition = "LONGBLOB")
+    private byte[] doctorSeal;
+
+    @Column(name = "doctor_seal_content_type")
+    private String doctorSealContentType;
+
     // getters and setters
 
     public String getId() {
@@ -48,5 +61,37 @@ public class Doctor {
     public void setAvailability(String availability) {
         this.availability = availability;
     }
-    
+
+    public byte[] getDoctorSignature() {
+        return doctorSignature;
+    }
+
+    public void setDoctorSignature(byte[] doctorSignature) {
+        this.doctorSignature = doctorSignature;
+    }
+
+    public String getDoctorSignatureContentType() {
+        return doctorSignatureContentType;
+    }
+
+    public void setDoctorSignatureContentType(String doctorSignatureContentType) {
+        this.doctorSignatureContentType = doctorSignatureContentType;
+    }
+
+    public byte[] getDoctorSeal() {
+        return doctorSeal;
+    }
+
+    public void setDoctorSeal(byte[] doctorSeal) {
+        this.doctorSeal = doctorSeal;
+    }
+
+    public String getDoctorSealContentType() {
+        return doctorSealContentType;
+    }
+
+    public void setDoctorSealContentType(String doctorSealContentType) {
+        this.doctorSealContentType = doctorSealContentType;
+    }
+
 }

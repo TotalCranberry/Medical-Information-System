@@ -3,8 +3,33 @@ import apiFetch from "./api";
 /* -------------------- Doctor & Common -------------------- */
 
 // Create a new prescription (Doctor only)
-export const createPrescription = (prescriptionData) =>
-  apiFetch("/prescriptions/create", "POST", prescriptionData, true);
+export const createPrescription = (prescriptionData, password) => {
+  // Send password in the request body
+  const token = localStorage.getItem('jwtToken');
+  const baseUrl = process.env.REACT_APP_API_BASE_URL || 'http://localhost:8080/api';
+
+  const requestData = {
+    ...prescriptionData,
+    password: password
+  };
+
+  return fetch(`${baseUrl}/prescriptions/create`, {
+    method: 'POST',
+    headers: {
+      'Authorization': `Bearer ${token}`,
+      'Content-Type': 'application/json'
+    },
+    body: JSON.stringify(requestData)
+  })
+  .then(response => {
+    if (!response.ok) {
+      return response.json().then(errorData => {
+        throw new Error(errorData.message || `HTTP error! status: ${response.status}`);
+      });
+    }
+    return response.json();
+  });
+};
 
 // Get prescription by ID (also used by Pharmacy “View”)
 export const getPrescriptionById = (prescriptionId) =>
@@ -319,3 +344,8 @@ export const completePrescription = (prescriptionId) =>
 // ✅ COMPLETED PRESCRIPTIONS FOR PATIENT — matches backend: GET /api/prescriptions/patient/completed
 export const getCompletedPrescriptionsForPatient = () =>
   apiFetch("/prescriptions/patient/completed", "GET", null, true);
+
+// Fetch prescriptions for a patient (Doctor only)
+export async function fetchPatientPrescriptions(patientId) {
+  return apiFetch(`/doctor/patients/${patientId}/prescriptions`, 'GET', null, true);
+}

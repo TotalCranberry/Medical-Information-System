@@ -25,4 +25,6 @@ public class PrescriptionResponse {
     private Date prescriptionDate;
     private Boolean isActive;
     private List<PrescriptionItemRequest> medications;
+    private String doctorSignature;
+    private String doctorSeal;
 }

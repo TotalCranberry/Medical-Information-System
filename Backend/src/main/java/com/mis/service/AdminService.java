@@ -1,17 +1,18 @@
 package com.mis.service;
 
-import com.mis.model.AccountStatus;
-import com.mis.model.Role;
-import com.mis.model.User;
-import com.mis.repository.UserRepository;
+import java.util.List;
+import java.util.Optional;
+
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
-import java.util.List;
-import java.util.Optional;
+import com.mis.model.AccountStatus;
+import com.mis.model.Role;
+import com.mis.model.User;
+import com.mis.repository.UserRepository;
 
 @Service
 public class AdminService {
@@ -33,8 +34,6 @@ public class AdminService {
     }
 
     public List<User> findUsersByCriteria(Optional<AccountStatus> status, Optional<Role> role, Optional<String> searchTerm) {
-        // This is a simplified example. For a real application, you would use
-        // JPA Specifications or Criteria API for more complex queries.
         List<User> allUsers = userRepository.findAll();
 
         return allUsers.stream()
