@@ -19,11 +19,13 @@ import com.mis.dto.UserResponse;
 import com.mis.mapper.UserMapper;
 import com.mis.model.AccountStatus;
 import com.mis.model.AuthMethod;
+import com.mis.model.Doctor;
 import com.mis.model.MedicalRecord;
 import com.mis.model.Role;
 import com.mis.model.Staff;
 import com.mis.model.Student;
 import com.mis.model.User;
+import com.mis.repository.DoctorRepository;
 import com.mis.repository.MedicalRecordRepository;
 import com.mis.repository.StaffRepository;
 import com.mis.repository.StudentRepository;
@@ -34,17 +36,19 @@ public class UserService {
     private final UserRepository userRepository;
     private final StudentRepository studentRepository;
     private final StaffRepository staffRepository;
+    private final DoctorRepository doctorRepository;
     private final MedicalRecordRepository medicalRecordRepository;
     private final PasswordEncoder passwordEncoder;
     private final AuditService auditService;
 
     public UserService(UserRepository userRepository, PasswordEncoder passwordEncoder,
                        StudentRepository studentRepository, MedicalRecordRepository medicalRecordRepository, StaffRepository staffRepository,
-                       AuditService auditService) {
+                       DoctorRepository doctorRepository, AuditService auditService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
         this.studentRepository = studentRepository;
         this.staffRepository = staffRepository;
+        this.doctorRepository = doctorRepository;
         this.medicalRecordRepository = medicalRecordRepository;
         this.auditService = auditService;
     }
@@ -68,15 +72,19 @@ public class UserService {
         String faculty = extractFacultyFromEmail(savedUser.getEmail());
         if (savedUser.getRole() == Role.Student) {
             Student student = new Student();
-            student.setUser(savedUser); 
+            student.setUser(savedUser);
             student.setFaculty(faculty);
             student.setRegistrationNumber(student.extractRegistrationNumberFromEmail());
             studentRepository.save(student);
         } else if (savedUser.getRole() == Role.Staff) {
             Staff staff = new Staff();
-            staff.setUser(savedUser); 
+            staff.setUser(savedUser);
             staff.setFaculty("N/A");
             staffRepository.save(staff);
+        } else if (savedUser.getRole() == Role.Doctor) {
+            Doctor doctor = new Doctor();
+            doctor.setUser(savedUser);
+            doctorRepository.save(doctor);
         }
         
         // Log the USER_REGISTRATION event
@@ -122,6 +130,10 @@ public class UserService {
             staff.setUser(savedUser);
             staff.setFaculty(faculty);
             staffRepository.save(staff);
+        } else if (savedUser.getRole() == Role.Doctor) {
+            Doctor doctor = new Doctor();
+            doctor.setUser(savedUser);
+            doctorRepository.save(doctor);
         }
         
         return savedUser;
@@ -199,18 +211,21 @@ public class UserService {
     public UserResponse getUserResponse(String userId) {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found with id: " + userId));
-        
+
         Student student = null;
         Staff staff = null;
-        
+        Doctor doctor = null;
+
         if (user.getRole() == Role.Student) {
             student = studentRepository.findById(user.getId()).orElse(null);
         } else if (user.getRole() == Role.Staff) {
             staff = staffRepository.findById(user.getId()).orElse(null);
+        } else if (user.getRole() == Role.Doctor) {
+            doctor = doctorRepository.findById(user.getId()).orElse(null);
         }
         // 3. FIND THE MEDICAL RECORD
-        MedicalRecord medicalRecord = medicalRecordRepository.findByUser_Id(userId).orElse(null); 
-        
+        MedicalRecord medicalRecord = medicalRecordRepository.findByUser_Id(userId).orElse(null);
+
         // 4. PASS THE MEDICAL RECORD TO THE MAPPER
         return UserMapper.toUserResponse(user, student, staff, medicalRecord);
      }
@@ -332,5 +347,21 @@ public class UserService {
 
         return userRepository.findByEmail(username)
                 .orElseThrow(() -> new IllegalStateException("Logged-in user not found by email: " + username));
+    }
+
+    // Method to ensure Doctor entity exists for users with Doctor role
+    @Transactional
+    public void ensureDoctorEntityExists(String userId) {
+        User user = userRepository.findById(userId)
+                .orElseThrow(() -> new RuntimeException("User not found"));
+
+        if (user.getRole() == Role.Doctor) {
+            Optional<Doctor> existingDoctor = doctorRepository.findById(userId);
+            if (existingDoctor.isEmpty()) {
+                Doctor doctor = new Doctor();
+                doctor.setUser(user);
+                doctorRepository.save(doctor);
+            }
+        }
     }
 }

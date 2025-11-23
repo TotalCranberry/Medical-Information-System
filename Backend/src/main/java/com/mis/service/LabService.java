@@ -9,15 +9,11 @@ import org.springframework.web.multipart.MultipartFile;
 import com.mis.model.LabRequest;
 import com.mis.model.LabResult;
 import com.mis.model.LabResultFile;
+import com.mis.model.User;
 import com.mis.repository.LabRequestRepository;
 import com.mis.repository.LabResultRepository;
-
 import com.mis.repository.LabResultFileRepository;
-import org.springframework.stereotype.Service;
-import org.springframework.web.multipart.MultipartFile;
-
-import java.time.LocalDateTime;
-import java.util.List;
+import com.mis.repository.UserRepository;
 import java.util.UUID;
 
 
@@ -28,18 +24,35 @@ public class LabService {
     private final LabResultRepository labResultRepository;
     private final NotificationService notificationService;
     private final LabResultFileRepository labResultFileRepository;
+    private final UserRepository userRepository;
 
 
     public LabService(
             LabRequestRepository labRequestRepository,
             LabResultRepository labResultRepository,
             NotificationService notificationService,
-            LabResultFileRepository labResultFileRepository
+            LabResultFileRepository labResultFileRepository,
+            UserRepository userRepository
     ) {
         this.labRequestRepository = labRequestRepository;
         this.labResultRepository = labResultRepository;
         this.notificationService = notificationService;
         this.labResultFileRepository = labResultFileRepository;
+        this.userRepository = userRepository;
+    }
+
+    // Create a new lab request
+    public LabRequest createLabRequest(String patientId, String testType) {
+        User patient = userRepository.findById(patientId)
+                .orElseThrow(() -> new RuntimeException("Patient not found with ID: " + patientId));
+
+        LabRequest labRequest = new LabRequest();
+        labRequest.setPatient(patient);
+        labRequest.setTestType(testType);
+        labRequest.setOrderDate(LocalDateTime.now());
+        labRequest.setStatus(LabRequest.Status.PENDING);
+
+        return labRequestRepository.save(labRequest);
     }
 
     // Get Requests by Status
@@ -107,5 +120,37 @@ public class LabService {
     // Get All Requests
     public List<LabRequest> getAllRequests() {
         return labRequestRepository.findAll();
+    }
+
+    // Get Lab Requests for a specific patient
+    public List<LabRequest> getLabRequestsForPatient(String patientId) {
+        User patient = userRepository.findById(patientId)
+                .orElseThrow(() -> new RuntimeException("Patient not found with ID: " + patientId));
+        return labRequestRepository.findByPatient(patient);
+    }
+
+    // Get a single lab request by ID
+    public LabRequest getLabRequestById(String requestId) {
+        return labRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("LabRequest not found with ID: " + requestId));
+    }
+
+    // ----------------------------
+    // NEW: Get Lab Result File for Download
+    // ----------------------------
+    public LabResultFile getLabResultFile(String requestId) {
+        // 1. Find the LabRequest
+        LabRequest request = labRequestRepository.findById(requestId)
+                .orElseThrow(() -> new RuntimeException("LabRequest not found with ID: " + requestId));
+        
+        // 2. Find the LabResult associated with this request
+        LabResult result = labResultRepository.findByLabRequest(request)
+                .orElseThrow(() -> new RuntimeException("No result found for request ID: " + requestId));
+        
+        // 3. Find the file associated with this result
+        LabResultFile resultFile = labResultFileRepository.findByResult(result)
+                .orElseThrow(() -> new RuntimeException("No file found for result ID: " + result.getId()));
+        
+        return resultFile;
     }
 }

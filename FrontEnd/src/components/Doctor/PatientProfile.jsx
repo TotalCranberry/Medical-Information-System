@@ -33,6 +33,17 @@ import { getMedicalRecord } from '../../api/patient';
 import ViewPatientMedicalRecord from './ViewPatientMedicalRecord';
 import ViewMedicalDialog from './ViewMedicalDialog';
 
+// Import for Prescriptions
+import { fetchPatientPrescriptions } from '../../api/prescription';
+import ViewPrescriptionDialog from './ViewPrescriptionDialog';
+
+// Import for Lab Requests
+import { getLabRequestsForPatient } from '../../api/labApi';
+import ViewLabRequestDialog from './ViewLabRequestDialog';
+
+// Import for Send to Course Unit
+import SendToCourseUnitDialog from './SendToCourseUnitDialog';
+
 const PatientProfile = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
@@ -43,10 +54,13 @@ const PatientProfile = () => {
     location.state?.appointmentId ||
     new URLSearchParams(location.search).get("appointmentId");
   const medicalIssued = location.state?.medicalIssued;
+  const labRequestCreated = location.state?.labRequestCreated;
 
   const [patientData, setPatientData] = useState(patientFromState || null);
   const [vitals, setVitals] = useState([]);
   const [medicals, setMedicals] = useState([]);
+  const [prescriptions, setPrescriptions] = useState([]);
+  const [labRequests, setLabRequests] = useState([]);
   const [currentVitals, setCurrentVitals] = useState({
     heightCm: "",
     weightKg: "",
@@ -72,6 +86,18 @@ const PatientProfile = () => {
   // Medical Dialog State
   const [medicalDialogOpen, setMedicalDialogOpen] = useState(false);
   const [selectedMedicalId, setSelectedMedicalId] = useState(null);
+
+  // Prescription Dialog State
+  const [prescriptionDialogOpen, setPrescriptionDialogOpen] = useState(false);
+  const [selectedPrescriptionId, setSelectedPrescriptionId] = useState(null);
+
+  // Lab Request Dialog State
+  const [labRequestDialogOpen, setLabRequestDialogOpen] = useState(false);
+  const [selectedLabRequestId, setSelectedLabRequestId] = useState(null);
+
+  // Send to Course Unit Dialog State
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [selectedMedicalForSend, setSelectedMedicalForSend] = useState(null);
 
   // --- Medical Record State ---
   const [medicalRecord, setMedicalRecord] = useState(null);
@@ -118,6 +144,8 @@ const PatientProfile = () => {
       setRecentDiagnoses(profileData.recentDiagnoses || []);
       
       await loadMedicals();
+      await loadPrescriptions();
+      await loadLabRequests();
       await fetchMedicalRecordData(); // Fetch the medical form
       
       if (profileData.latestVitals) {
@@ -166,6 +194,8 @@ const PatientProfile = () => {
       setRecentDiagnoses(profileData.recentDiagnoses || []);
       
       await loadMedicals();
+      await loadPrescriptions();
+      await loadLabRequests();
       await fetchMedicalRecordData(); // Fetch the medical form
       
       if (vitalsData.length > 0) {
@@ -233,6 +263,24 @@ const PatientProfile = () => {
       }
     } finally {
       setLoadingMedicals(false);
+    }
+  };
+
+  const loadPrescriptions = async () => {
+    try {
+      const prescriptionsData = await fetchPatientPrescriptions(patientId);
+      setPrescriptions(prescriptionsData || []);
+    } catch (err) {
+      console.error("Error loading prescriptions:", err);
+    }
+  };
+
+  const loadLabRequests = async () => {
+    try {
+      const labRequestsData = await getLabRequestsForPatient(patientId);
+      setLabRequests(labRequestsData || []);
+    } catch (err) {
+      console.error("Error loading lab requests:", err);
     }
   };
 
@@ -330,11 +378,7 @@ const PatientProfile = () => {
 
   const handleWritePrescription = () => {
     const apptId = currentAppointmentId;
-    if (!apptId) {
-      alert("No appointment selected. Open this profile from an appointment, or include ?appointmentId=...");
-      return;
-    }
-    navigate(`/doctor/prescriptions?appointmentId=${apptId}`, {
+    navigate(`/doctor/prescriptions${apptId ? `?appointmentId=${apptId}` : ''}`, {
       state: {
         appointmentId: apptId,
         patient: patientData,
@@ -345,11 +389,10 @@ const PatientProfile = () => {
   };
 
   const handleRequestLabTest = () => {
-    navigate(`/doctor/request-test`, {
+    navigate(`/doctor/request-lab-test/${patientId}`, {
       state: {
         patient: patientData,
-        patientId,
-        patientName: patientData?.name || "Unknown Patient"
+        appointmentId: currentAppointmentId
       }
     });
   };
@@ -376,6 +419,36 @@ const PatientProfile = () => {
   const handleMedicalUpdate = () => {
     // Reload medicals list when a medical is updated (e.g., sent to course unit)
     loadMedicals();
+  };
+
+  const handleViewPrescription = (prescriptionId) => {
+    setSelectedPrescriptionId(prescriptionId);
+    setPrescriptionDialogOpen(true);
+  };
+
+  const handleClosePrescriptionDialog = () => {
+    setPrescriptionDialogOpen(false);
+    setSelectedPrescriptionId(null);
+  };
+
+  const handleViewLabRequest = (labRequestId) => {
+    setSelectedLabRequestId(labRequestId);
+    setLabRequestDialogOpen(true);
+  };
+
+  const handleCloseLabRequestDialog = () => {
+    setLabRequestDialogOpen(false);
+    setSelectedLabRequestId(null);
+  };
+
+  const handleSendToCourseUnit = (medicalId) => {
+    setSelectedMedicalForSend(medicalId);
+    setSendDialogOpen(true);
+  };
+
+  const handleCloseSendDialog = () => {
+    setSendDialogOpen(false);
+    setSelectedMedicalForSend(null);
   };
 
   const getPatientAge = () => {
@@ -411,6 +484,21 @@ const PatientProfile = () => {
     } catch {
       return "Invalid Date";
     }
+  };
+
+  const normalRanges = {
+    temperatureC: { min: 36.5, max: 37.5 },
+    heartRate: { min: 60, max: 100 },
+    systolicBp: { min: 90, max: 120 },
+    diastolicBp: { min: 60, max: 80 },
+    respiratoryRate: { min: 12, max: 20 },
+    oxygenSaturation: { min: 95, max: 100 }
+  };
+
+  const isNormal = (field, value) => {
+    if (!normalRanges[field] || value == null) return true;
+    const range = normalRanges[field];
+    return value >= range.min && value <= range.max;
   };
 
   if (loading) {
@@ -464,6 +552,12 @@ const PatientProfile = () => {
       {medicalIssued && (
         <Alert severity="success" sx={{ mb: 3 }}>
           Medical certificate has been issued successfully!
+        </Alert>
+      )}
+
+      {labRequestCreated && (
+        <Alert severity="success" sx={{ mb: 3 }}>
+          Laboratory test request has been created successfully!
         </Alert>
       )}
 
@@ -539,10 +633,10 @@ const PatientProfile = () => {
                   startIcon={<ScienceIcon />}
                   onClick={handleRequestLabTest}
                   sx={{
-                    borderColor: "#45d27a",
-                    color: "#45d27a",
+                    borderColor: "#2196F3",
+                    color: "#2196F3",
                     "&:hover": {
-                      backgroundColor: "#45d27a",
+                      backgroundColor: "#2196F3",
                       color: "#fff"
                     }
                   }}
@@ -739,6 +833,47 @@ const PatientProfile = () => {
             </Grid>
           </Paper>
 
+          {/* Last Vitals Display */}
+          {vitals.length > 0 && (
+            <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
+              <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600, mb: 2 }}>
+                Last Vitals Recorded on {formatDate(vitals[0].recordedAt)}
+              </Typography>
+              <Divider sx={{ mb: 2 }} />
+              <Box sx={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 1 }}>
+                <Typography variant="body2">
+                  Height: <span style={{ color: 'black' }}>{vitals[0].heightCm || 'N/A'} cm</span>
+                </Typography>
+                <Typography variant="body2">
+                  Weight: <span style={{ color: 'black' }}>{vitals[0].weightKg || 'N/A'} kg</span>
+                </Typography>
+                <Typography variant="body2">
+                  Temperature: <span style={{ color: isNormal('temperatureC', vitals[0].temperatureC) ? 'green' : 'red' }}>{vitals[0].temperatureC || 'N/A'} °C</span>
+                </Typography>
+                <Typography variant="body2">
+                  Heart Rate: <span style={{ color: isNormal('heartRate', vitals[0].heartRate) ? 'green' : 'red' }}>{vitals[0].heartRate || 'N/A'} bpm</span>
+                </Typography>
+                <Typography variant="body2">
+                  Systolic BP: <span style={{ color: isNormal('systolicBp', vitals[0].systolicBp) ? 'green' : 'red' }}>{vitals[0].systolicBp || 'N/A'} mmHg</span>
+                </Typography>
+                <Typography variant="body2">
+                  Diastolic BP: <span style={{ color: isNormal('diastolicBp', vitals[0].diastolicBp) ? 'green' : 'red' }}>{vitals[0].diastolicBp || 'N/A'} mmHg</span>
+                </Typography>
+                <Typography variant="body2">
+                  Respiratory Rate: <span style={{ color: isNormal('respiratoryRate', vitals[0].respiratoryRate) ? 'green' : 'red' }}>{vitals[0].respiratoryRate || 'N/A'} /min</span>
+                </Typography>
+                <Typography variant="body2">
+                  Oxygen Saturation: <span style={{ color: isNormal('oxygenSaturation', vitals[0].oxygenSaturation) ? 'green' : 'red' }}>{vitals[0].oxygenSaturation || 'N/A'}%</span>
+                </Typography>
+                {vitals[0].notes && (
+                  <Typography variant="body2" sx={{ gridColumn: '1 / -1' }}>
+                    Notes: <span style={{ color: 'black' }}>{vitals[0].notes}</span>
+                  </Typography>
+                )}
+              </Box>
+            </Paper>
+          )}
+
           {/* Diagnosis Section */}
           <Paper elevation={2} sx={{ p: 3, mb: 3 }}>
             <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600, mb: 2 }}>
@@ -752,58 +887,50 @@ const PatientProfile = () => {
                 </Alert>
             )}
 
-            <Grid container spacing={2}>
-              <Grid item xs={12}>
-                <TextField
-                    fullWidth
-                    label="Diagnosis"
-                    value={diagnosis}
-                    onChange={(e) => setDiagnosis(e.target.value)}
-                    multiline
-                    rows={3}
-                    placeholder="Enter diagnosis for today's consultation..."
-                    disabled={!apiAvailable}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <TextField
-                    fullWidth
-                    label="Additional Notes"
-                    value={diagnosisNotes}
-                    onChange={(e) => setDiagnosisNotes(e.target.value)}
-                    multiline
-                    rows={2}
-                    placeholder="Additional notes or recommendations..."
-                    disabled={!apiAvailable}
-                />
-              </Grid>
-              <Grid item xs={12}>
-                <Button
-                    onClick={handleSaveDiagnosis}
-                    variant="contained"
-                    disabled={saving || !diagnosis.trim() || !apiAvailable}
-                    sx={{ backgroundColor: "#45d27a", "&:hover": { backgroundColor: "#3ab86a" } }}
-                >
-                  Save Diagnosis
-                </Button>
-              </Grid>
+            <Box sx={{ display: 'flex', flexDirection: 'column', gap: 2 }}>
+              <TextField
+                  fullWidth
+                  label="Diagnosis"
+                  value={diagnosis}
+                  onChange={(e) => setDiagnosis(e.target.value)}
+                  multiline
+                  rows={8}
+                  placeholder="Enter diagnosis for today's consultation..."
+                  disabled={!apiAvailable}
+              />
+              <TextField
+                  fullWidth
+                  label="Additional Notes"
+                  value={diagnosisNotes}
+                  onChange={(e) => setDiagnosisNotes(e.target.value)}
+                  multiline
+                  rows={6}
+                  placeholder="Additional notes or recommendations..."
+                  disabled={!apiAvailable}
+              />
+              <Button
+                  onClick={handleSaveDiagnosis}
+                  variant="contained"
+                  disabled={saving || !diagnosis.trim() || !apiAvailable}
+                  sx={{ backgroundColor: "#45d27a", "&:hover": { backgroundColor: "#3ab86a" } }}
+              >
+                Save Diagnosis
+              </Button>
               {diagnosisSaved && currentAppointmentId && (
-                <Grid item xs={12}>
-                  <Button
-                      onClick={handleCompleteAppointment}
-                      variant="contained"
-                      disabled={saving}
-                      sx={{
-                        backgroundColor: "#1976D2",
-                        "&:hover": { backgroundColor: "#1565C0" },
-                        mt: 1
-                      }}
-                  >
-                    Complete Appointment
-                  </Button>
-                </Grid>
+                <Button
+                    onClick={handleCompleteAppointment}
+                    variant="contained"
+                    disabled={saving}
+                    sx={{
+                      backgroundColor: "#1976D2",
+                      "&:hover": { backgroundColor: "#1565C0" },
+                      mt: 1
+                    }}
+                >
+                  Complete Appointment
+                </Button>
               )}
-            </Grid>
+            </Box>
           </Paper>
 
           {/* Recent Diagnoses */}
@@ -950,6 +1077,7 @@ const PatientProfile = () => {
                               variant="outlined"
                               startIcon={<SendIcon />}
                               disabled={medical.isSentToCourseUnit}
+                              onClick={() => handleSendToCourseUnit(medical.id)}
                               sx={{
                                 borderColor: medical.isSentToCourseUnit ? "#ccc" : "#2196F3",
                                 color: medical.isSentToCourseUnit ? "#ccc" : "#2196F3",
@@ -974,6 +1102,188 @@ const PatientProfile = () => {
               </Alert>
             ) : null}
           </Paper>
+
+          {/* Issued Prescriptions Section */}
+          <Paper elevation={2} sx={{ p: 3, mt: 3 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Box display="flex" alignItems="center">
+                <MedicationIcon sx={{ fontSize: 30, color: "#45d27a", mr: 1 }} />
+                <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
+                  Issued Prescriptions
+                </Typography>
+              </Box>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+
+            {prescriptions && prescriptions.length > 0 ? (
+              <List>
+                {prescriptions.map((prescription, index) => (
+                  <ListItem
+                    key={prescription.id}
+                    divider={index < prescriptions.length - 1}
+                    sx={{
+                      border: '1px solid #e0e0e0',
+                      borderRadius: 1,
+                      mb: 1,
+                      backgroundColor: '#fafafa'
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            Prescription
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={prescription.isActive ? "Active" : "Completed"}
+                            color={prescription.isActive ? "success" : "default"}
+                            variant={prescription.isActive ? "filled" : "outlined"}
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            <strong>Date:</strong> {formatDate(prescription.createdAt)}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              maxWidth: '100%',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical'
+                            }}
+                          >
+                            <strong>Doctor:</strong> {prescription.doctorName}
+                          </Typography>
+                          <Box display="flex" gap={1} mt={2}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<ViewIcon />}
+                              onClick={() => handleViewPrescription(prescription.id)}
+                              sx={{
+                                borderColor: "#45d27a",
+                                color: "#45d27a",
+                                "&:hover": {
+                                  backgroundColor: "#45d27a",
+                                  color: "#fff"
+                                }
+                              }}
+                            >
+                              View
+                            </Button>
+                          </Box>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Alert severity="info">
+                No prescriptions have been issued for this patient yet.
+              </Alert>
+            )}
+          </Paper>
+
+          {/* Lab Requests Section */}
+          <Paper elevation={2} sx={{ p: 3, mt: 3 }}>
+            <Box display="flex" justifyContent="space-between" alignItems="center" mb={2}>
+              <Box display="flex" alignItems="center">
+                <ScienceIcon sx={{ fontSize: 30, color: "#2196F3", mr: 1 }} />
+                <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
+                  Laboratory Requests
+                </Typography>
+              </Box>
+            </Box>
+            <Divider sx={{ mb: 2 }} />
+
+            {labRequests && labRequests.length > 0 ? (
+              <List>
+                {labRequests.map((labRequest, index) => (
+                  <ListItem
+                    key={labRequest.id}
+                    divider={index < labRequests.length - 1}
+                    sx={{
+                      border: '1px solid #e0e0e0',
+                      borderRadius: 1,
+                      mb: 1,
+                      backgroundColor: '#fafafa'
+                    }}
+                  >
+                    <ListItemText
+                      primary={
+                        <Box display="flex" justifyContent="space-between" alignItems="center">
+                          <Typography variant="subtitle1" sx={{ fontWeight: 600 }}>
+                            Lab Request
+                          </Typography>
+                          <Chip
+                            size="small"
+                            label={labRequest.status}
+                            color={
+                              labRequest.status === 'COMPLETED' ? 'success' :
+                              labRequest.status === 'IN_PROGRESS' ? 'warning' :
+                              labRequest.status === 'PENDING' ? 'default' : 'error'
+                            }
+                            variant={labRequest.status === 'COMPLETED' ? 'filled' : 'outlined'}
+                          />
+                        </Box>
+                      }
+                      secondary={
+                        <Box>
+                          <Typography variant="body2" color="text.secondary" gutterBottom>
+                            <strong>Date:</strong> {formatDate(labRequest.orderDate)}
+                          </Typography>
+                          <Typography
+                            variant="body2"
+                            color="text.secondary"
+                            sx={{
+                              maxWidth: '100%',
+                              overflow: 'hidden',
+                              textOverflow: 'ellipsis',
+                              display: '-webkit-box',
+                              WebkitLineClamp: 2,
+                              WebkitBoxOrient: 'vertical'
+                            }}
+                          >
+                            <strong>Test Type:</strong> {labRequest.testType}
+                          </Typography>
+                          <Box display="flex" gap={1} mt={2}>
+                            <Button
+                              size="small"
+                              variant="outlined"
+                              startIcon={<ViewIcon />}
+                              onClick={() => handleViewLabRequest(labRequest.id)}
+                              sx={{
+                                borderColor: "#2196F3",
+                                color: "#2196F3",
+                                "&:hover": {
+                                  backgroundColor: "#2196F3",
+                                  color: "#fff"
+                                }
+                              }}
+                            >
+                              View
+                            </Button>
+                          </Box>
+                        </Box>
+                      }
+                    />
+                  </ListItem>
+                ))}
+              </List>
+            ) : (
+              <Alert severity="info">
+                No laboratory tests have been requested for this patient yet.
+              </Alert>
+            )}
+          </Paper>
         </Grid>
       </Grid>
 
@@ -983,6 +1293,31 @@ const PatientProfile = () => {
         onClose={handleCloseMedicalDialog}
         medicalId={selectedMedicalId}
         onMedicalUpdate={handleMedicalUpdate}
+      />
+
+      {/* Prescription Dialog */}
+      <ViewPrescriptionDialog
+        open={prescriptionDialogOpen}
+        onClose={handleClosePrescriptionDialog}
+        prescriptionId={selectedPrescriptionId}
+      />
+
+      {/* Lab Request Dialog */}
+      <ViewLabRequestDialog
+        open={labRequestDialogOpen}
+        onClose={handleCloseLabRequestDialog}
+        labRequestId={selectedLabRequestId}
+      />
+
+      {/* Send to Course Unit Dialog */}
+      <SendToCourseUnitDialog
+        open={sendDialogOpen}
+        onClose={handleCloseSendDialog}
+        medicalId={selectedMedicalForSend}
+        onMedicalUpdate={() => {
+          // Reload medicals list when a medical is sent to course unit
+          loadMedicals();
+        }}
       />
     </Box>
   );

@@ -1,5 +1,6 @@
 package com.mis.controller;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -28,6 +29,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import com.mis.dto.DiagnosisRequest;
 import com.mis.dto.MedicalRecordResponseDTO;
@@ -36,20 +39,27 @@ import com.mis.dto.VitalsRequest;
 import com.mis.model.Appointment;
 import com.mis.model.AppointmentStatus;
 import com.mis.model.Diagnosis;
+import com.mis.model.Doctor;
 import com.mis.model.Medical;
 import com.mis.model.Role;
 import com.mis.model.Staff;
 import com.mis.model.Student;
 import com.mis.model.User;
 import com.mis.model.Vitals;
+import com.mis.model.Prescription.Prescription;
 import com.mis.repository.AppointmentRepository;
 import com.mis.repository.DiagnosisRepository;
+import com.mis.repository.DoctorRepository;
 import com.mis.repository.MedicalRepository;
 import com.mis.repository.StaffRepository;
 import com.mis.repository.StudentRepository;
 import com.mis.repository.UserRepository;
 import com.mis.repository.VitalsRepository;
 import com.mis.service.MedicalFormService;
+import com.mis.service.PdfService;
+import com.mis.service.EmailService;
+import com.mis.service.Prescription.PrescriptionService;
+import com.mis.service.UserService;
 
 @RestController
 @RequestMapping("/api/doctor")
@@ -60,22 +70,34 @@ public class DoctorController {
     private final VitalsRepository vitalsRepository;
     private final DiagnosisRepository diagnosisRepository;
     private final MedicalRepository medicalRepository;
+    private final DoctorRepository doctorRepository;
     private final StudentRepository studentRepository;
     private final StaffRepository staffRepository;
     private final MedicalFormService medicalFormService;
+    private final PdfService pdfService;
+    private final EmailService emailService;
+    private final PrescriptionService prescriptionService;
+    private final UserService userService;
 
     public DoctorController(AppointmentRepository appointmentRepository, UserRepository userRepository,
             VitalsRepository vitalsRepository, DiagnosisRepository diagnosisRepository,
-            MedicalRepository medicalRepository, StudentRepository studentRepository,
-            StaffRepository staffRepository, MedicalFormService medicalFormService) {
+            MedicalRepository medicalRepository, DoctorRepository doctorRepository, StudentRepository studentRepository,
+            StaffRepository staffRepository, MedicalFormService medicalFormService,
+            PdfService pdfService, EmailService emailService,
+            PrescriptionService prescriptionService, UserService userService) {
         this.appointmentRepository = appointmentRepository;
         this.userRepository = userRepository;
         this.vitalsRepository = vitalsRepository;
         this.diagnosisRepository = diagnosisRepository;
         this.medicalRepository = medicalRepository;
+        this.doctorRepository = doctorRepository;
         this.studentRepository = studentRepository;
         this.staffRepository = staffRepository;
         this.medicalFormService = medicalFormService;
+        this.pdfService = pdfService;
+        this.emailService = emailService;
+        this.prescriptionService = prescriptionService;
+        this.userService = userService;
     }
 
     // NEW: Get all patients (Students and Staff) for the doctor's patient search
@@ -204,62 +226,91 @@ public class DoctorController {
     // Patient Profile Endpoints
     @GetMapping("/patients/{patientId}")
     public ResponseEntity<Map<String, Object>> getPatientProfile(@PathVariable String patientId) {
-        User patient = userRepository.findById(patientId)
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
-        
-        // Get patient details based on role
+        // patientId is the student/staff id, not user id
+        User patient = null;
         Object patientDetails = null;
-        if (patient.getRole() == Role.Student) {
-            patientDetails = studentRepository.findById(patientId).orElse(null);
-        } else if (patient.getRole() == Role.Staff) {
-            patientDetails = staffRepository.findById(patientId).orElse(null);
+
+        Optional<Student> studentOpt = studentRepository.findById(patientId);
+        if (studentOpt.isPresent()) {
+            patient = studentOpt.get().getUser();
+            patientDetails = studentOpt.get();
+        } else {
+            Optional<Staff> staffOpt = staffRepository.findById(patientId);
+            if (staffOpt.isPresent()) {
+                patient = staffOpt.get().getUser();
+                patientDetails = staffOpt.get();
+            } else {
+                throw new RuntimeException("Patient not found");
+            }
         }
-        
+
         // Get latest vitals
         Vitals latestVitals = vitalsRepository.findLatestVitalsByPatient(patient).orElse(null);
-        
+
         // Get recent diagnoses
         List<Diagnosis> recentDiagnoses = diagnosisRepository.findByPatientOrderByDiagnosisDateDesc(patient)
                 .stream().limit(10).toList();
-        
+
         // Get recent medicals
         List<Medical> recentMedicals = medicalRepository.findByPatientOrderByMedicalDateDesc(patient)
                 .stream().limit(10).toList();
-        
+
         Map<String, Object> profile = new HashMap<>();
         profile.put("patient", patient);
         profile.put("patientDetails", patientDetails);
         profile.put("latestVitals", latestVitals);
         profile.put("recentDiagnoses", recentDiagnoses);
         profile.put("recentMedicals", recentMedicals);
-        
+
         return ResponseEntity.ok(profile);
     }
 
     @GetMapping("/patients/{patientId}/vitals")
     public ResponseEntity<List<Vitals>> getPatientVitals(@PathVariable String patientId) {
-        User patient = userRepository.findById(patientId)
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
-        
+        // patientId is the student/staff id
+        User patient = null;
+        Optional<Student> studentOpt = studentRepository.findById(patientId);
+        if (studentOpt.isPresent()) {
+            patient = studentOpt.get().getUser();
+        } else {
+            Optional<Staff> staffOpt = staffRepository.findById(patientId);
+            if (staffOpt.isPresent()) {
+                patient = staffOpt.get().getUser();
+            } else {
+                throw new RuntimeException("Patient not found");
+            }
+        }
+
         List<Vitals> vitals = vitalsRepository.findByPatientOrderByRecordedAtDesc(patient);
         return ResponseEntity.ok(vitals);
     }
 
     @PostMapping("/patients/{patientId}/vitals")
-    public ResponseEntity<?> savePatientVitals(Authentication authentication, 
-                                             @PathVariable String patientId, 
-                                             @RequestBody VitalsRequest request) {
+    public ResponseEntity<?> savePatientVitals(Authentication authentication,
+                                              @PathVariable String patientId,
+                                              @RequestBody VitalsRequest request) {
         try {
             String doctorId = authentication.getName();
-            User patient = userRepository.findById(patientId)
-                    .orElseThrow(() -> new RuntimeException("Patient not found"));
-            
+            // patientId is the student/staff id
+            User patient = null;
+            Optional<Student> studentOpt = studentRepository.findById(patientId);
+            if (studentOpt.isPresent()) {
+                patient = studentOpt.get().getUser();
+            } else {
+                Optional<Staff> staffOpt = staffRepository.findById(patientId);
+                if (staffOpt.isPresent()) {
+                    patient = staffOpt.get().getUser();
+                } else {
+                    throw new RuntimeException("Patient not found");
+                }
+            }
+
             Vitals vitals = new Vitals();
             vitals.setId(UUID.randomUUID().toString());
             vitals.setPatient(patient);
             vitals.setRecordedBy(doctorId);
             vitals.setRecordedAt(new Date());
-            
+
             // Set vitals data - handle null values gracefully
             vitals.setHeightCm(request.getHeightCm());
             vitals.setWeightKg(request.getWeightKg());
@@ -270,7 +321,7 @@ public class DoctorController {
             vitals.setRespiratoryRate(request.getRespiratoryRate());
             vitals.setOxygenSaturation(request.getOxygenSaturation());
             vitals.setNotes(request.getNotes());
-            
+
             Vitals savedVitals = vitalsRepository.save(vitals);
             return ResponseEntity.ok(savedVitals);
         } catch (Exception e) {
@@ -281,13 +332,24 @@ public class DoctorController {
 
     @PostMapping("/patients/{patientId}/diagnosis")
     public ResponseEntity<?> saveDiagnosis(Authentication authentication,
-                                         @PathVariable String patientId,
-                                         @RequestBody DiagnosisRequest request) {
+                                          @PathVariable String patientId,
+                                          @RequestBody DiagnosisRequest request) {
         try {
             String doctorId = authentication.getName();
-            User patient = userRepository.findById(patientId)
-                    .orElseThrow(() -> new RuntimeException("Patient not found"));
-            
+            // patientId is the student/staff id
+            User patient = null;
+            Optional<Student> studentOpt = studentRepository.findById(patientId);
+            if (studentOpt.isPresent()) {
+                patient = studentOpt.get().getUser();
+            } else {
+                Optional<Staff> staffOpt = staffRepository.findById(patientId);
+                if (staffOpt.isPresent()) {
+                    patient = staffOpt.get().getUser();
+                } else {
+                    throw new RuntimeException("Patient not found");
+                }
+            }
+
             Diagnosis diagnosis = new Diagnosis();
             diagnosis.setId(UUID.randomUUID().toString());
             diagnosis.setPatient(patient);
@@ -296,13 +358,13 @@ public class DoctorController {
             diagnosis.setDiagnosis(request.getDiagnosis());
             diagnosis.setNotes(request.getNotes());
             diagnosis.setCreatedAt(new Date());
-            
+
             // Link to appointment if provided
             if (request.getAppointmentId() != null && !request.getAppointmentId().trim().isEmpty()) {
                 Appointment appointment = appointmentRepository.findById(request.getAppointmentId()).orElse(null);
                 diagnosis.setAppointment(appointment);
             }
-            
+
             Diagnosis savedDiagnosis = diagnosisRepository.save(diagnosis);
             return ResponseEntity.ok(savedDiagnosis);
         } catch (Exception e) {
@@ -311,19 +373,20 @@ public class DoctorController {
         }
     }
 
-    // Medical Endpoints
-    @PostMapping("/patients/{patientId}/medical")
-    public ResponseEntity<?> issueMedical(Authentication authentication,
-                                         @PathVariable String patientId,
-                                         @RequestParam("recommendations") String recommendations,
-                                         @RequestParam(value = "additionalNotes", required = false) String additionalNotes,
-                                         @RequestParam(value = "appointmentId", required = false) String appointmentId,
-                                         @RequestParam(value = "doctorSignature", required = false) MultipartFile doctorSignature,
-                                         @RequestParam(value = "doctorSeal", required = false) MultipartFile doctorSeal) {
+    // Doctor Signature and Seal Upload
+    @PostMapping("/upload-signature-seal")
+    public ResponseEntity<?> uploadSignatureAndSeal(Authentication authentication,
+                                                   @RequestParam(value = "doctorSignature", required = false) MultipartFile doctorSignature,
+                                                   @RequestParam(value = "doctorSeal", required = false) MultipartFile doctorSeal) {
         try {
             String doctorId = authentication.getName();
-            User patient = userRepository.findById(patientId)
-                    .orElseThrow(() -> new RuntimeException("Patient not found"));
+
+            // Ensure Doctor entity exists
+            userService.ensureDoctorEntityExists(doctorId);
+
+            // Get the doctor
+            Doctor doctor = doctorRepository.findById(doctorId)
+                    .orElseThrow(() -> new RuntimeException("Doctor not found"));
 
             // Validate file sizes (1MB limit)
             if (doctorSignature != null && doctorSignature.getSize() > 1024 * 1024) {
@@ -335,22 +398,138 @@ public class DoctorController {
                         .body(Map.of("message", "Doctor seal image must be less than 1MB"));
             }
 
-            // Get patient details based on role
+            // Validate file types
+            if (doctorSignature != null && !isValidImageType(doctorSignature.getContentType())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor signature must be a valid image file (PNG, JPG, JPEG)"));
+            }
+            if (doctorSeal != null && !isValidImageType(doctorSeal.getContentType())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor seal must be a valid image file (PNG, JPG, JPEG)"));
+            }
+
+            // Validate file types
+            if (doctorSignature != null && !isValidImageType(doctorSignature.getContentType())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor signature must be a valid image file (PNG, JPG, JPEG)"));
+            }
+            if (doctorSeal != null && !isValidImageType(doctorSeal.getContentType())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor seal must be a valid image file (PNG, JPG, JPEG)"));
+            }
+
+            // Handle file uploads
+            if (doctorSignature != null && !doctorSignature.isEmpty()) {
+                doctor.setDoctorSignature(doctorSignature.getBytes());
+                doctor.setDoctorSignatureContentType(doctorSignature.getContentType());
+            }
+            if (doctorSeal != null && !doctorSeal.isEmpty()) {
+                doctor.setDoctorSeal(doctorSeal.getBytes());
+                doctor.setDoctorSealContentType(doctorSeal.getContentType());
+            }
+
+            Doctor savedDoctor = doctorRepository.save(doctor);
+            return ResponseEntity.ok(Map.of("message", "Signature and seal uploaded successfully"));
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Error uploading signature and seal: " + e.getMessage()));
+        }
+    }
+
+    // Get Doctor's Signature and Seal
+    @GetMapping("/signature-seal")
+    public ResponseEntity<Map<String, Object>> getSignatureAndSeal(Authentication authentication) {
+        try {
+            String doctorId = authentication.getName();
+
+            // Ensure Doctor entity exists
+            userService.ensureDoctorEntityExists(doctorId);
+
+            Doctor doctor = doctorRepository.findById(doctorId)
+                    .orElseThrow(() -> new RuntimeException("Doctor not found"));
+
+            Map<String, Object> response = new HashMap<>();
+
+            // Convert signature to base64
+            if (doctor.getDoctorSignature() != null && doctor.getDoctorSignature().length > 0) {
+                String base64Signature = Base64.getEncoder().encodeToString(doctor.getDoctorSignature());
+                String mimeType = doctor.getDoctorSignatureContentType() != null ? doctor.getDoctorSignatureContentType() : "image/png";
+                response.put("doctorSignature", "data:" + mimeType + ";base64," + base64Signature);
+            }
+
+            // Convert seal to base64
+            if (doctor.getDoctorSeal() != null && doctor.getDoctorSeal().length > 0) {
+                String base64Seal = Base64.getEncoder().encodeToString(doctor.getDoctorSeal());
+                String mimeType = doctor.getDoctorSealContentType() != null ? doctor.getDoctorSealContentType() : "image/png";
+                response.put("doctorSeal", "data:" + mimeType + ";base64," + base64Seal);
+            }
+
+            return ResponseEntity.ok(response);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                    .body(Map.of("message", "Error retrieving signature and seal: " + e.getMessage()));
+        }
+    }
+
+    // Medical Endpoints
+    @PostMapping("/patients/{patientId}/medical")
+    public ResponseEntity<?> issueMedical(Authentication authentication,
+                                           @PathVariable String patientId,
+                                           @RequestParam("recommendations") String recommendations,
+                                           @RequestParam(value = "additionalNotes", required = false) String additionalNotes,
+                                           @RequestParam(value = "appointmentId", required = false) String appointmentId,
+                                           @RequestParam(value = "doctorSignature", required = false) MultipartFile doctorSignature,
+                                           @RequestParam(value = "doctorSeal", required = false) MultipartFile doctorSeal,
+                                           @RequestParam("password") String password) {
+        try {
+            String doctorId = authentication.getName();
+
+            // Verify password
+            User doctorUser = userRepository.findById(doctorId)
+                    .orElseThrow(() -> new RuntimeException("Doctor not found"));
+            Optional<User> authenticatedUser = userService.authenticate(doctorUser.getEmail(), password);
+            if (authenticatedUser.isEmpty()) {
+                return ResponseEntity.status(HttpStatus.UNAUTHORIZED)
+                        .body(Map.of("message", "Invalid password"));
+            }
+
+            // patientId is the student/staff id
+            User patient = null;
+            Object patientDetails = null;
             Integer patientAge = null;
             String patientFaculty = null;
 
-            if (patient.getRole() == Role.Student) {
-                Student studentDetails = studentRepository.findById(patientId).orElse(null);
-                if (studentDetails != null) {
-                    patientFaculty = studentDetails.getFaculty();
-                    patientAge = calculateAge(studentDetails.getDateOfBirth());
+            Optional<Student> studentOpt = studentRepository.findById(patientId);
+            if (studentOpt.isPresent()) {
+                patient = studentOpt.get().getUser();
+                patientDetails = studentOpt.get();
+                patientFaculty = studentOpt.get().getFaculty();
+                patientAge = calculateAge(studentOpt.get().getDateOfBirth());
+            } else {
+                Optional<Staff> staffOpt = staffRepository.findById(patientId);
+                if (staffOpt.isPresent()) {
+                    patient = staffOpt.get().getUser();
+                    patientDetails = staffOpt.get();
+                    patientFaculty = staffOpt.get().getFaculty();
+                    patientAge = calculateAge(staffOpt.get().getDateOfBirth());
+                } else {
+                    throw new RuntimeException("Patient not found");
                 }
-            } else if (patient.getRole() == Role.Staff) {
-                Staff staffDetails = staffRepository.findById(patientId).orElse(null);
-                if (staffDetails != null) {
-                    patientFaculty = staffDetails.getFaculty();
-                    patientAge = calculateAge(staffDetails.getDateOfBirth());
-                }
+            }
+
+            // Get doctor's profile for signature and seal
+            userService.ensureDoctorEntityExists(doctorId);
+            Doctor doctor = doctorRepository.findById(doctorId)
+                    .orElseThrow(() -> new RuntimeException("Doctor profile not found"));
+
+            // Validate file sizes (1MB limit)
+            if (doctorSignature != null && doctorSignature.getSize() > 1024 * 1024) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor signature image must be less than 1MB"));
+            }
+            if (doctorSeal != null && doctorSeal.getSize() > 1024 * 1024) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor seal image must be less than 1MB"));
             }
 
             Medical medical = new Medical();
@@ -367,14 +546,28 @@ public class DoctorController {
             medical.setMedicalDate(new Date());
             medical.setCreatedAt(new Date());
 
-            // Handle file uploads
+            // Handle file uploads - save uploaded images to this medical record
+            // If no files provided, use the doctor's stored signature and seal
             if (doctorSignature != null && !doctorSignature.isEmpty()) {
                 medical.setDoctorSignature(doctorSignature.getBytes());
                 medical.setDoctorSignatureContentType(doctorSignature.getContentType());
+            } else if (doctor.getDoctorSignature() != null && doctor.getDoctorSignature().length > 0) {
+                // Use stored signature from doctor's profile
+                medical.setDoctorSignature(doctor.getDoctorSignature());
+                medical.setDoctorSignatureContentType(doctor.getDoctorSignatureContentType());
             }
+
             if (doctorSeal != null && !doctorSeal.isEmpty()) {
                 medical.setDoctorSeal(doctorSeal.getBytes());
                 medical.setDoctorSealContentType(doctorSeal.getContentType());
+                System.out.println("Using uploaded seal - Size: " + doctorSeal.getBytes().length + ", ContentType: " + doctorSeal.getContentType());
+            } else if (doctor.getDoctorSeal() != null && doctor.getDoctorSeal().length > 0) {
+                // Use stored seal from doctor's profile
+                medical.setDoctorSeal(doctor.getDoctorSeal());
+                medical.setDoctorSealContentType(doctor.getDoctorSealContentType());
+                System.out.println("Using stored seal - Size: " + doctor.getDoctorSeal().length + ", ContentType: " + doctor.getDoctorSealContentType());
+            } else {
+                System.out.println("No seal available for medical certificate");
             }
 
             // Link to appointment if provided
@@ -391,10 +584,41 @@ public class DoctorController {
         }
     }
 
+    @GetMapping("/patients/{patientId}/prescriptions")
+    public ResponseEntity<List<Prescription>> getPatientPrescriptions(@PathVariable String patientId) {
+        // patientId is the student/staff id
+        User patient = null;
+        Optional<Student> studentOpt = studentRepository.findById(patientId);
+        if (studentOpt.isPresent()) {
+            patient = studentOpt.get().getUser();
+        } else {
+            Optional<Staff> staffOpt = staffRepository.findById(patientId);
+            if (staffOpt.isPresent()) {
+                patient = staffOpt.get().getUser();
+            } else {
+                throw new RuntimeException("Patient not found");
+            }
+        }
+
+        List<Prescription> prescriptions = prescriptionService.getAllPrescriptionsForPatient(patient.getId());
+        return ResponseEntity.ok(prescriptions);
+    }
+
     @GetMapping("/patients/{patientId}/medicals")
     public ResponseEntity<List<Map<String, Object>>> getPatientMedicals(@PathVariable String patientId) {
-        User patient = userRepository.findById(patientId)
-                .orElseThrow(() -> new RuntimeException("Patient not found"));
+        // patientId is the student/staff id
+        User patient = null;
+        Optional<Student> studentOpt = studentRepository.findById(patientId);
+        if (studentOpt.isPresent()) {
+            patient = studentOpt.get().getUser();
+        } else {
+            Optional<Staff> staffOpt = staffRepository.findById(patientId);
+            if (staffOpt.isPresent()) {
+                patient = staffOpt.get().getUser();
+            } else {
+                throw new RuntimeException("Patient not found");
+            }
+        }
 
         List<Medical> medicals = medicalRepository.findByPatientOrderByMedicalDateDesc(patient);
         List<Map<String, Object>> medicalDTOs = new ArrayList<>();
@@ -464,23 +688,94 @@ public class DoctorController {
         return ResponseEntity.ok(dto);
     }
 
-    @PutMapping("/medicals/{medicalId}/send-to-course-unit")
-    public ResponseEntity<?> sendMedicalToCourseUnit(Authentication authentication, @PathVariable String medicalId) {
+    @GetMapping("/medicals/{medicalId}/preview-pdf")
+    public ResponseEntity<byte[]> previewMedicalPdf(@PathVariable String medicalId) {
         try {
             Medical medical = medicalRepository.findById(medicalId)
                     .orElseThrow(() -> new RuntimeException("Medical not found"));
-            
+
+            byte[] pdfBytes = pdfService.generateMedicalCertificatePdf(medical);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("inline", "Medical_Certificate_" + medical.getId() + ".pdf");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(pdfBytes);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        }
+    }
+
+    @PutMapping("/medicals/{medicalId}/send-to-course-unit")
+    public ResponseEntity<?> sendMedicalToCourseUnit(Authentication authentication,
+                                                    @PathVariable String medicalId,
+                                                    @RequestParam("courseUnitEmail") String courseUnitEmail) {
+        try {
+            String doctorId = authentication.getName();
+            Medical medical = medicalRepository.findById(medicalId)
+                    .orElseThrow(() -> new RuntimeException("Medical not found"));
+
             if (medical.getIsSentToCourseUnit()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "Medical has already been sent to course unit"));
             }
-            
+
+            // Validate course unit email
+            if (courseUnitEmail == null || courseUnitEmail.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Course unit email is required"));
+            }
+
+            // Get doctor's email
+            User doctor = userRepository.findById(doctorId)
+                    .orElseThrow(() -> new RuntimeException("Doctor not found"));
+
+            // Generate PDF
+            byte[] pdfBytes = pdfService.generateMedicalCertificatePdf(medical);
+
+            // Send email with PDF attachment
+            String subject = "Medical Certificate - " + medical.getPatientName();
+            String body = String.format(
+                "<p>Dear Course Unit,</p>" +
+                "<p>Please find attached the medical certificate for student <strong>%s</strong>.</p>" +
+                "<p><strong>Patient Details:</strong></p>" +
+                "<ul>" +
+                "<li>Name: %s</li>" +
+                "<li>Role: %s</li>" +
+                "<li>Faculty: %s</li>" +
+                "<li>Email: %s</li>" +
+                "</ul>" +
+                "<p><strong>Medical Information:</strong></p>" +
+                "<p>%s</p>" +
+                (medical.getAdditionalNotes() != null && !medical.getAdditionalNotes().trim().isEmpty() ?
+                    "<p><strong>Additional Notes:</strong></p><p>" + medical.getAdditionalNotes() + "</p>" : "") +
+                "<p><strong>Issued by:</strong> Dr. %s</p>" +
+                "<p><strong>Issue Date:</strong> %s</p>" +
+                "<p>This is an official medical certificate from the University of Peradeniya Medical Information System.</p>" +
+                "<p>Best regards,<br>Medical Information System</p>",
+                medical.getPatientName(),
+                medical.getPatientName(),
+                medical.getPatientRole(),
+                medical.getPatientFaculty() != null ? medical.getPatientFaculty() : "N/A",
+                medical.getPatientEmail(),
+                medical.getRecommendations(),
+                doctor.getName(),
+                new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(medical.getMedicalDate())
+            );
+
+            String attachmentName = "Medical_Certificate_" + medical.getId() + ".pdf";
+            emailService.sendMedicalCertificate(courseUnitEmail, doctor.getEmail(), subject, body, pdfBytes, attachmentName);
+
+            // Update medical record
             medical.setIsSentToCourseUnit(true);
             medical.setSentToCourseUnitAt(new Date());
-            
+
             Medical updatedMedical = medicalRepository.save(medical);
             return ResponseEntity.ok(Map.of(
-                "message", "Medical sent to course unit successfully",
+                "message", "Medical certificate sent to course unit successfully",
                 "medical", updatedMedical
             ));
         } catch (Exception e) {
@@ -493,7 +788,7 @@ public class DoctorController {
     @PreAuthorize("hasRole('Doctor')")
     public ResponseEntity<MedicalRecordResponseDTO> getPatientMedicalRecord(@PathVariable String patientId) {
         User patient = null;
-        
+
         Optional<Student> studentOpt = studentRepository.findById(patientId);
         if (studentOpt.isPresent()) {
             patient = studentOpt.get().getUser();
@@ -522,8 +817,16 @@ public class DoctorController {
     // Overloaded helper method to calculate age from Date (if needed elsewhere)
     private Integer calculateAge(Date dateOfBirth) {
         if (dateOfBirth == null) return null;
-        
+
         LocalDate birthDate = dateOfBirth.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         return calculateAge(birthDate);
+    }
+
+    // Helper method to validate image content types
+    private boolean isValidImageType(String contentType) {
+        if (contentType == null) return false;
+        return contentType.equals("image/png") ||
+               contentType.equals("image/jpeg") ||
+               contentType.equals("image/jpg");
     }
 }
