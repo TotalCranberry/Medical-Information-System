@@ -102,7 +102,7 @@ const SignupPage = () => {
               required
             >
               <MenuItem value="Doctor">Doctor</MenuItem>
-              <MenuItem value="Staff">Staff</MenuItem>
+              <MenuItem value="Staff">Staff(Patient)</MenuItem>
               <MenuItem value="Pharmacist">Pharmacist</MenuItem>
               <MenuItem value="LabTechnician">Lab Technician</MenuItem>
             </TextField>

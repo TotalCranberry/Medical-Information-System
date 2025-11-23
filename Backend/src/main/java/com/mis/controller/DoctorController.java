@@ -787,8 +787,8 @@ public class DoctorController {
     @GetMapping("/patient/{patientId}/medical-record")
     @PreAuthorize("hasRole('Doctor')")
     public ResponseEntity<MedicalRecordResponseDTO> getPatientMedicalRecord(@PathVariable String patientId) {
-        // patientId is the student/staff id, but medicalFormService uses userId
         User patient = null;
+
         Optional<Student> studentOpt = studentRepository.findById(patientId);
         if (studentOpt.isPresent()) {
             patient = studentOpt.get().getUser();
@@ -800,11 +800,10 @@ public class DoctorController {
                 return ResponseEntity.notFound().build();
             }
         }
-
         Optional<MedicalRecordResponseDTO> dtoOpt = medicalFormService.getFullMedicalRecordByUserId(patient.getId());
 
         return dtoOpt.map(ResponseEntity::ok)
-                      .orElseGet(() -> ResponseEntity.notFound().build());
+                     .orElseGet(() -> ResponseEntity.noContent().build());  
     }
 
     // Helper method to calculate age from LocalDate

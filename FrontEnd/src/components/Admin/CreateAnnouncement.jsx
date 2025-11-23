@@ -6,18 +6,28 @@ const CreateAnnouncement = () => {
     const [title, setTitle] = useState('');
     const [content, setContent] = useState('');
     const [targetRole, setTargetRole] = useState('ALL');
+    const [snackbarOpen, setSnackbarOpen] = useState(false);
+    const [snackbarMessage, setSnackbarMessage] = useState('');
+    const [snackbarSeverity, setSnackbarSeverity] = useState('success');
 
     const handleSubmit = async (e) => {
         e.preventDefault();
         try {
             await apiFetch('/admin/announcements', 'POST', { title, content, targetRole }, true);
-            alert('Announcement created successfully');
+
+            setSnackbarMessage('Announcement created successfully');
+            setSnackbarSeverity('success');
+            setSnackbarOpen(true);
             setTitle('');
+
             setContent('');
             setTargetRole('ALL');
         } catch (error) {
             console.error('Failed to create announcement', error);
-            alert('Failed to create announcement');
+            
+            setSnackbarMessage('Failed to create announcement');
+            setSnackbarSeverity('error');
+            setSnackbarOpen(true);
         }
     };
 
