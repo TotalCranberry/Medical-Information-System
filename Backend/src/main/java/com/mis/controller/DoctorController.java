@@ -1,5 +1,6 @@
 package com.mis.controller;
 
+import java.text.SimpleDateFormat;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
 import java.time.ZoneId;
@@ -28,6 +29,8 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RequestParam;
 import org.springframework.web.bind.annotation.RestController;
 import org.springframework.web.multipart.MultipartFile;
+import org.springframework.http.HttpHeaders;
+import org.springframework.http.MediaType;
 
 import com.mis.dto.DiagnosisRequest;
 import com.mis.dto.MedicalRecordResponseDTO;
@@ -53,6 +56,8 @@ import com.mis.repository.StudentRepository;
 import com.mis.repository.UserRepository;
 import com.mis.repository.VitalsRepository;
 import com.mis.service.MedicalFormService;
+import com.mis.service.PdfService;
+import com.mis.service.EmailService;
 import com.mis.service.Prescription.PrescriptionService;
 import com.mis.service.UserService;
 
@@ -69,6 +74,8 @@ public class DoctorController {
     private final StudentRepository studentRepository;
     private final StaffRepository staffRepository;
     private final MedicalFormService medicalFormService;
+    private final PdfService pdfService;
+    private final EmailService emailService;
     private final PrescriptionService prescriptionService;
     private final UserService userService;
 
@@ -76,6 +83,7 @@ public class DoctorController {
             VitalsRepository vitalsRepository, DiagnosisRepository diagnosisRepository,
             MedicalRepository medicalRepository, DoctorRepository doctorRepository, StudentRepository studentRepository,
             StaffRepository staffRepository, MedicalFormService medicalFormService,
+            PdfService pdfService, EmailService emailService,
             PrescriptionService prescriptionService, UserService userService) {
         this.appointmentRepository = appointmentRepository;
         this.userRepository = userRepository;
@@ -86,6 +94,8 @@ public class DoctorController {
         this.studentRepository = studentRepository;
         this.staffRepository = staffRepository;
         this.medicalFormService = medicalFormService;
+        this.pdfService = pdfService;
+        this.emailService = emailService;
         this.prescriptionService = prescriptionService;
         this.userService = userService;
     }
@@ -388,6 +398,26 @@ public class DoctorController {
                         .body(Map.of("message", "Doctor seal image must be less than 1MB"));
             }
 
+            // Validate file types
+            if (doctorSignature != null && !isValidImageType(doctorSignature.getContentType())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor signature must be a valid image file (PNG, JPG, JPEG)"));
+            }
+            if (doctorSeal != null && !isValidImageType(doctorSeal.getContentType())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor seal must be a valid image file (PNG, JPG, JPEG)"));
+            }
+
+            // Validate file types
+            if (doctorSignature != null && !isValidImageType(doctorSignature.getContentType())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor signature must be a valid image file (PNG, JPG, JPEG)"));
+            }
+            if (doctorSeal != null && !isValidImageType(doctorSeal.getContentType())) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Doctor seal must be a valid image file (PNG, JPG, JPEG)"));
+            }
+
             // Handle file uploads
             if (doctorSignature != null && !doctorSignature.isEmpty()) {
                 doctor.setDoctorSignature(doctorSignature.getBytes());
@@ -487,6 +517,11 @@ public class DoctorController {
                 }
             }
 
+            // Get doctor's profile for signature and seal
+            userService.ensureDoctorEntityExists(doctorId);
+            Doctor doctor = doctorRepository.findById(doctorId)
+                    .orElseThrow(() -> new RuntimeException("Doctor profile not found"));
+
             // Validate file sizes (1MB limit)
             if (doctorSignature != null && doctorSignature.getSize() > 1024 * 1024) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
@@ -512,13 +547,27 @@ public class DoctorController {
             medical.setCreatedAt(new Date());
 
             // Handle file uploads - save uploaded images to this medical record
+            // If no files provided, use the doctor's stored signature and seal
             if (doctorSignature != null && !doctorSignature.isEmpty()) {
                 medical.setDoctorSignature(doctorSignature.getBytes());
                 medical.setDoctorSignatureContentType(doctorSignature.getContentType());
+            } else if (doctor.getDoctorSignature() != null && doctor.getDoctorSignature().length > 0) {
+                // Use stored signature from doctor's profile
+                medical.setDoctorSignature(doctor.getDoctorSignature());
+                medical.setDoctorSignatureContentType(doctor.getDoctorSignatureContentType());
             }
+
             if (doctorSeal != null && !doctorSeal.isEmpty()) {
                 medical.setDoctorSeal(doctorSeal.getBytes());
                 medical.setDoctorSealContentType(doctorSeal.getContentType());
+                System.out.println("Using uploaded seal - Size: " + doctorSeal.getBytes().length + ", ContentType: " + doctorSeal.getContentType());
+            } else if (doctor.getDoctorSeal() != null && doctor.getDoctorSeal().length > 0) {
+                // Use stored seal from doctor's profile
+                medical.setDoctorSeal(doctor.getDoctorSeal());
+                medical.setDoctorSealContentType(doctor.getDoctorSealContentType());
+                System.out.println("Using stored seal - Size: " + doctor.getDoctorSeal().length + ", ContentType: " + doctor.getDoctorSealContentType());
+            } else {
+                System.out.println("No seal available for medical certificate");
             }
 
             // Link to appointment if provided
@@ -639,23 +688,94 @@ public class DoctorController {
         return ResponseEntity.ok(dto);
     }
 
-    @PutMapping("/medicals/{medicalId}/send-to-course-unit")
-    public ResponseEntity<?> sendMedicalToCourseUnit(Authentication authentication, @PathVariable String medicalId) {
+    @GetMapping("/medicals/{medicalId}/preview-pdf")
+    public ResponseEntity<byte[]> previewMedicalPdf(@PathVariable String medicalId) {
         try {
             Medical medical = medicalRepository.findById(medicalId)
                     .orElseThrow(() -> new RuntimeException("Medical not found"));
-            
+
+            byte[] pdfBytes = pdfService.generateMedicalCertificatePdf(medical);
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_PDF);
+            headers.setContentDispositionFormData("inline", "Medical_Certificate_" + medical.getId() + ".pdf");
+
+            return ResponseEntity.ok()
+                    .headers(headers)
+                    .body(pdfBytes);
+        } catch (Exception e) {
+            return ResponseEntity.status(HttpStatus.INTERNAL_SERVER_ERROR)
+                    .body(null);
+        }
+    }
+
+    @PutMapping("/medicals/{medicalId}/send-to-course-unit")
+    public ResponseEntity<?> sendMedicalToCourseUnit(Authentication authentication,
+                                                    @PathVariable String medicalId,
+                                                    @RequestParam("courseUnitEmail") String courseUnitEmail) {
+        try {
+            String doctorId = authentication.getName();
+            Medical medical = medicalRepository.findById(medicalId)
+                    .orElseThrow(() -> new RuntimeException("Medical not found"));
+
             if (medical.getIsSentToCourseUnit()) {
                 return ResponseEntity.status(HttpStatus.BAD_REQUEST)
                         .body(Map.of("message", "Medical has already been sent to course unit"));
             }
-            
+
+            // Validate course unit email
+            if (courseUnitEmail == null || courseUnitEmail.trim().isEmpty()) {
+                return ResponseEntity.status(HttpStatus.BAD_REQUEST)
+                        .body(Map.of("message", "Course unit email is required"));
+            }
+
+            // Get doctor's email
+            User doctor = userRepository.findById(doctorId)
+                    .orElseThrow(() -> new RuntimeException("Doctor not found"));
+
+            // Generate PDF
+            byte[] pdfBytes = pdfService.generateMedicalCertificatePdf(medical);
+
+            // Send email with PDF attachment
+            String subject = "Medical Certificate - " + medical.getPatientName();
+            String body = String.format(
+                "<p>Dear Course Unit,</p>" +
+                "<p>Please find attached the medical certificate for student <strong>%s</strong>.</p>" +
+                "<p><strong>Patient Details:</strong></p>" +
+                "<ul>" +
+                "<li>Name: %s</li>" +
+                "<li>Role: %s</li>" +
+                "<li>Faculty: %s</li>" +
+                "<li>Email: %s</li>" +
+                "</ul>" +
+                "<p><strong>Medical Information:</strong></p>" +
+                "<p>%s</p>" +
+                (medical.getAdditionalNotes() != null && !medical.getAdditionalNotes().trim().isEmpty() ?
+                    "<p><strong>Additional Notes:</strong></p><p>" + medical.getAdditionalNotes() + "</p>" : "") +
+                "<p><strong>Issued by:</strong> Dr. %s</p>" +
+                "<p><strong>Issue Date:</strong> %s</p>" +
+                "<p>This is an official medical certificate from the University of Peradeniya Medical Information System.</p>" +
+                "<p>Best regards,<br>Medical Information System</p>",
+                medical.getPatientName(),
+                medical.getPatientName(),
+                medical.getPatientRole(),
+                medical.getPatientFaculty() != null ? medical.getPatientFaculty() : "N/A",
+                medical.getPatientEmail(),
+                medical.getRecommendations(),
+                doctor.getName(),
+                new SimpleDateFormat("yyyy-MM-dd HH:mm:ss").format(medical.getMedicalDate())
+            );
+
+            String attachmentName = "Medical_Certificate_" + medical.getId() + ".pdf";
+            emailService.sendMedicalCertificate(courseUnitEmail, doctor.getEmail(), subject, body, pdfBytes, attachmentName);
+
+            // Update medical record
             medical.setIsSentToCourseUnit(true);
             medical.setSentToCourseUnitAt(new Date());
-            
+
             Medical updatedMedical = medicalRepository.save(medical);
             return ResponseEntity.ok(Map.of(
-                "message", "Medical sent to course unit successfully",
+                "message", "Medical certificate sent to course unit successfully",
                 "medical", updatedMedical
             ));
         } catch (Exception e) {
@@ -667,8 +787,8 @@ public class DoctorController {
     @GetMapping("/patient/{patientId}/medical-record")
     @PreAuthorize("hasRole('Doctor')")
     public ResponseEntity<MedicalRecordResponseDTO> getPatientMedicalRecord(@PathVariable String patientId) {
-        // patientId is the student/staff id, but medicalFormService uses userId
         User patient = null;
+
         Optional<Student> studentOpt = studentRepository.findById(patientId);
         if (studentOpt.isPresent()) {
             patient = studentOpt.get().getUser();
@@ -680,11 +800,10 @@ public class DoctorController {
                 return ResponseEntity.notFound().build();
             }
         }
-
         Optional<MedicalRecordResponseDTO> dtoOpt = medicalFormService.getFullMedicalRecordByUserId(patient.getId());
 
         return dtoOpt.map(ResponseEntity::ok)
-                      .orElseGet(() -> ResponseEntity.notFound().build());
+                     .orElseGet(() -> ResponseEntity.noContent().build());  
     }
 
     // Helper method to calculate age from LocalDate
@@ -698,8 +817,16 @@ public class DoctorController {
     // Overloaded helper method to calculate age from Date (if needed elsewhere)
     private Integer calculateAge(Date dateOfBirth) {
         if (dateOfBirth == null) return null;
-        
+
         LocalDate birthDate = dateOfBirth.toInstant().atZone(ZoneId.systemDefault()).toLocalDate();
         return calculateAge(birthDate);
+    }
+
+    // Helper method to validate image content types
+    private boolean isValidImageType(String contentType) {
+        if (contentType == null) return false;
+        return contentType.equals("image/png") ||
+               contentType.equals("image/jpeg") ||
+               contentType.equals("image/jpg");
     }
 }

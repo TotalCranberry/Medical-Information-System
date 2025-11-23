@@ -41,6 +41,9 @@ import ViewPrescriptionDialog from './ViewPrescriptionDialog';
 import { getLabRequestsForPatient } from '../../api/labApi';
 import ViewLabRequestDialog from './ViewLabRequestDialog';
 
+// Import for Send to Course Unit
+import SendToCourseUnitDialog from './SendToCourseUnitDialog';
+
 const PatientProfile = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
@@ -91,6 +94,10 @@ const PatientProfile = () => {
   // Lab Request Dialog State
   const [labRequestDialogOpen, setLabRequestDialogOpen] = useState(false);
   const [selectedLabRequestId, setSelectedLabRequestId] = useState(null);
+
+  // Send to Course Unit Dialog State
+  const [sendDialogOpen, setSendDialogOpen] = useState(false);
+  const [selectedMedicalForSend, setSelectedMedicalForSend] = useState(null);
 
   // --- Medical Record State ---
   const [medicalRecord, setMedicalRecord] = useState(null);
@@ -224,21 +231,23 @@ const PatientProfile = () => {
           setRecordStatus('not_found');
           return;
       }
+      
+      // With the backend change to return 204 (No Content) instead of 404 (Not Found),
+      // recordData will be null if no record exists, but it won't throw an error.
       const recordData = await getMedicalRecord(patientId);
-      setMedicalRecord(recordData);
-      setRecordStatus('found');
-    } catch (recordError) {
-      // If 404, it just means the patient hasn't uploaded one yet.
-      if (recordError.message && (recordError.message.includes('404') || recordError.message.includes('Not Found'))) {
+      
+      if (recordData) {
+        setMedicalRecord(recordData);
+        setRecordStatus('found');
+      } else {
         setMedicalRecord(null);
         setRecordStatus('not_found');
-      } else {
-        // Any other error (500, network, etc.) is a real problem.
-        console.error("Failed to fetch medical record:", recordError);
-        setRecordStatus('error');
-        // Append this error to the main error state so the user sees it
-        setError(prev => prev ? `${prev} | Medical Record Error: ${recordError.message}` : `Medical Record Error: ${recordError.message}`);
       }
+    } catch (recordError) {
+      // Fallback for any other errors (e.g. server error, network issue)
+      console.error("Failed to fetch medical record:", recordError);
+      setRecordStatus('error');
+      setError(prev => prev ? `${prev} | Medical Record Error: ${recordError.message}` : `Medical Record Error: ${recordError.message}`);
     }
   };
 
@@ -430,6 +439,16 @@ const PatientProfile = () => {
   const handleCloseLabRequestDialog = () => {
     setLabRequestDialogOpen(false);
     setSelectedLabRequestId(null);
+  };
+
+  const handleSendToCourseUnit = (medicalId) => {
+    setSelectedMedicalForSend(medicalId);
+    setSendDialogOpen(true);
+  };
+
+  const handleCloseSendDialog = () => {
+    setSendDialogOpen(false);
+    setSelectedMedicalForSend(null);
   };
 
   const getPatientAge = () => {
@@ -655,7 +674,7 @@ const PatientProfile = () => {
 
           {recordStatus === 'not_found' && (
             <Alert severity="info" sx={{ mb: 3 }}>
-              This patient has not submitted a medical form.
+              Patient has not uploaded the medical information form.
             </Alert>
           )}
 
@@ -1058,6 +1077,7 @@ const PatientProfile = () => {
                               variant="outlined"
                               startIcon={<SendIcon />}
                               disabled={medical.isSentToCourseUnit}
+                              onClick={() => handleSendToCourseUnit(medical.id)}
                               sx={{
                                 borderColor: medical.isSentToCourseUnit ? "#ccc" : "#2196F3",
                                 color: medical.isSentToCourseUnit ? "#ccc" : "#2196F3",
@@ -1287,6 +1307,17 @@ const PatientProfile = () => {
         open={labRequestDialogOpen}
         onClose={handleCloseLabRequestDialog}
         labRequestId={selectedLabRequestId}
+      />
+
+      {/* Send to Course Unit Dialog */}
+      <SendToCourseUnitDialog
+        open={sendDialogOpen}
+        onClose={handleCloseSendDialog}
+        medicalId={selectedMedicalForSend}
+        onMedicalUpdate={() => {
+          // Reload medicals list when a medical is sent to course unit
+          loadMedicals();
+        }}
       />
     </Box>
   );
