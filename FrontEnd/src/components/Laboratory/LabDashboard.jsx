@@ -61,8 +61,12 @@ const LabDashboard = () => {
   const loadRequests = async () => {
     try {
       const data = await getLabRequests(filter);
-      setRequests(data);
-      setFilteredRequests(data);
+      // Sort by orderDate descending (newest first)
+      const sortedData = data.sort((a, b) => {
+        return new Date(b.orderDate) - new Date(a.orderDate);
+      });
+      setRequests(sortedData);
+      setFilteredRequests(sortedData);
     } catch (error) {
       console.error("Error loading requests:", error);
     }
@@ -95,6 +99,11 @@ const LabDashboard = () => {
           .includes(searchTestType.toLowerCase())
       );
     }
+
+    // Keep the newest first order after filtering
+    filtered = filtered.sort((a, b) => {
+      return new Date(b.orderDate) - new Date(a.orderDate);
+    });
 
     setFilteredRequests(filtered);
   }, [searchName, searchTestType, requests]);
@@ -254,25 +263,12 @@ const LabDashboard = () => {
                     </TableCell>
                     {filter === "COMPLETED" && (
                       <TableCell align="center">
-                        <Tooltip title="Download Lab Report">
-                          <span>
-                            <IconButton
-                              color="primary"
-                              onClick={() => handleDownload(r.id, r.patientName, r.testType)}
-                              disabled={downloadingId === r.id}
-                              size="small"
-                            >
-                              <Download />
-                            </IconButton>
-                          </span>
-                        </Tooltip>
                         <Button
                           variant="contained"
                           size="small"
                           startIcon={<Download />}
                           onClick={() => handleDownload(r.id, r.patientName, r.testType)}
                           disabled={downloadingId === r.id}
-                          sx={{ ml: 1 }}
                         >
                           {downloadingId === r.id ? "Downloading..." : "Download"}
                         </Button>
