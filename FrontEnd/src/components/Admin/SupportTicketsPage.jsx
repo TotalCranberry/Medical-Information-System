@@ -36,6 +36,7 @@ const SupportTicketsPage = () => {
         try {
             await apiFetch(`/admin/support-tickets/${selectedTicket.id}/reply`, 'POST', { reply }, true);
             fetchTickets();
+            setReply('');
             handleCloseDialog();
         } catch (error) {
             console.error('Failed to submit reply', error);

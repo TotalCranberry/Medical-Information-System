@@ -23,7 +23,7 @@ import com.mis.security.JwtTokenFilter;
 
 @Configuration
 @EnableWebSecurity
-@EnableMethodSecurity // <-- enable @PreAuthorize on controllers if you use it
+@EnableMethodSecurity 
 public class SecurityConfig {
 
     private final JwtTokenFilter jwtTokenFilter;

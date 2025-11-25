@@ -21,8 +21,7 @@ public class AdminService {
     private final UserRepository userRepository;
     private final AuditService auditService;
     private final PasswordEncoder passwordEncoder;
-
-    // CORRECTED CONSTRUCTOR: Added PasswordEncoder
+    
     public AdminService(UserRepository userRepository, AuditService auditService, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
         this.auditService = auditService;

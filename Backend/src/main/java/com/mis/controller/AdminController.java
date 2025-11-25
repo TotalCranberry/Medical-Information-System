@@ -42,7 +42,6 @@ public class AdminController {
 
     /**
      * Endpoint to get all users or filter by status.
-     * Example URL for pending users: /api/admin/users?status=PENDING_APPROVAL
      */
     @GetMapping("/users")
     public ResponseEntity<List<User>> getUsers(
@@ -139,8 +138,6 @@ public class AdminController {
     public ResponseEntity<?> resetUserPassword(@PathVariable String userId) {
         try {
             adminService.resetPassword(userId);
-            // The response does NOT include the password for security.
-            // The admin must check the server logs.
             return ResponseEntity.ok(Map.of("message", "Password has been reset. Please check the server logs for the temporary password."));
         } catch (RuntimeException e) {
             return ResponseEntity.badRequest().body(Map.of("message", e.getMessage()));

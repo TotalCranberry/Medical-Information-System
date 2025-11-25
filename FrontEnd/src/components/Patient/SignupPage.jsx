@@ -101,8 +101,9 @@ const SignupPage = () => {
               variant="outlined"
               required
             >
-              <MenuItem value="Doctor">Doctor</MenuItem>
+
               <MenuItem value="Staff">Staff(Patient)</MenuItem>
+              <MenuItem value="Doctor">Doctor</MenuItem>
               <MenuItem value="Pharmacist">Pharmacist</MenuItem>
               <MenuItem value="LabTechnician">Lab Technician</MenuItem>
             </TextField>

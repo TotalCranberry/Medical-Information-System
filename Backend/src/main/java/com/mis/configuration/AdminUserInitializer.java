@@ -40,13 +40,11 @@ public class AdminUserInitializer implements CommandLineRunner {
 
     @Override
     public void run(String... args) {
-        // Check if an admin user already exists
         if (userRepository.existsByRole(Role.Admin)) {
             logger.info("Admin user already exists. Skipping creation.");
             return;
         }
-
-        // If no admin user exists, create one
+        
         logger.info("No admin user found. Creating initial admin account...");
 
         User admin = new User();

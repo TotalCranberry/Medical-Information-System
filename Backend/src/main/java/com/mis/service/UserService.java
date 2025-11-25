@@ -266,12 +266,12 @@ public class UserService {
         User user = userRepository.findById(userId)
                 .orElseThrow(() -> new RuntimeException("User not found"));
 
-        // Security Check 1: Prevent password change for Google users
+        // Prevent password change for Google users
         if (user.getAuthMethod() == AuthMethod.GoogleAuth) {
             throw new IllegalStateException("Cannot change password for an account registered with Google.");
         }
 
-        // Security Check 2: Verify the current password is correct
+        // Verify the current password is correct
         if (!passwordEncoder.matches(currentPassword, user.getPasswordHash())) {
             throw new IllegalStateException("Incorrect current password.");
         }

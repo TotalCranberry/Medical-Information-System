@@ -8,10 +8,6 @@ const faqs = [
         answer: 'Navigate to the "Appointments" tab from the main menu. Select an available date and time, provide a reason for your visit, and click "Book Appointment". You will receive a confirmation once it is approved.'
     },
     {
-        question: 'Where can I see my lab results?',
-        answer: 'Your lab results and other medical documents are available in the "Reports" tab. You can view them online or download them as a PDF.'
-    },
-    {
         question: 'How do I change my password?',
         answer: 'Go to the "Profile" page. If you registered manually, you will see a "Change Password" form where you can update your credentials.'
     },

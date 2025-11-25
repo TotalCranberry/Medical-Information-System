@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Box, TextField, Button, Typography, Select, MenuItem, FormControl, InputLabel } from '@mui/material';
+import { Box, TextField, Button, Typography, Select, MenuItem, FormControl, InputLabel, Paper } from '@mui/material';
 import apiFetch from '../../api/api';
 
 const CreateAnnouncement = () => {
@@ -32,48 +32,50 @@ const CreateAnnouncement = () => {
     };
 
     return (
-        <Box sx={{ p: 3 }}>
-            <Typography variant="h4" gutterBottom>Create Announcement</Typography>
-            <form onSubmit={handleSubmit}>
-                <TextField
-                    label="Title"
-                    fullWidth
-                    value={title}
-                    onChange={(e) => setTitle(e.target.value)}
-                    margin="normal"
-                    required
-                />
-                <TextField
-                    label="Content"
-                    fullWidth
-                    multiline
-                    rows={4}
-                    value={content}
-                    onChange={(e) => setContent(e.target.value)}
-                    margin="normal"
-                    required
-                />
-                <FormControl fullWidth margin="normal">
-                    <InputLabel>Target Audience</InputLabel>
-                    <Select
-                        value={targetRole}
-                        onChange={(e) => setTargetRole(e.target.value)}
-                        label="Target Audience"
-                    >
-                        <MenuItem value="ALL">All</MenuItem>
-                        <MenuItem value="PATIENT">Patient</MenuItem>
-                        <MenuItem value="DOCTOR">Doctor</MenuItem>
-                        <MenuItem value="STAFF">Staff</MenuItem>
-                        <MenuItem value="STUDENT">Student</MenuItem>
-                        <MenuItem value="PHARMACIST">Pharmacist</MenuItem>
-                        <MenuItem value="LABTECHNICIAN">Lab Technician</MenuItem>
-                    </Select>
-                </FormControl>
-                <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
-                    Create
-                </Button>
-            </form>
-        </Box>
+        <Paper>
+            <Box sx={{ p: 3 }}>
+                <Typography variant="h4" gutterBottom>Create Announcement</Typography>
+                <form onSubmit={handleSubmit}>
+                    <TextField
+                        label="Title"
+                        fullWidth
+                        value={title}
+                        onChange={(e) => setTitle(e.target.value)}
+                        margin="normal"
+                        required
+                    />
+                    <TextField
+                        label="Content"
+                        fullWidth
+                        multiline
+                        rows={4}
+                        value={content}
+                        onChange={(e) => setContent(e.target.value)}
+                        margin="normal"
+                        required
+                    />
+                    <FormControl fullWidth margin="normal">
+                        <InputLabel>Target Audience</InputLabel>
+                        <Select
+                            value={targetRole}
+                            onChange={(e) => setTargetRole(e.target.value)}
+                            label="Target Audience"
+                        >
+                            <MenuItem value="ALL">All</MenuItem>
+                            <MenuItem value="PATIENT">Patient</MenuItem>
+                            <MenuItem value="DOCTOR">Doctor</MenuItem>
+                            <MenuItem value="STAFF">Staff</MenuItem>
+                            <MenuItem value="STUDENT">Student</MenuItem>
+                            <MenuItem value="PHARMACIST">Pharmacist</MenuItem>
+                            <MenuItem value="LABTECHNICIAN">Lab Technician</MenuItem>
+                        </Select>
+                    </FormControl>
+                    <Button type="submit" variant="contained" color="primary" sx={{ mt: 2 }}>
+                        Create
+                    </Button>
+                </form>
+            </Box>
+        </Paper>
     );
 };
 

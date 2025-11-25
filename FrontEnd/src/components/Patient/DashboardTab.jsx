@@ -4,6 +4,7 @@ import AnnouncementDisplay from "../AnnouncementDisplay";
 import {
   Box, Typography, Paper, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Grid, Alert, Chip, useTheme, Button,
+  IconButton,
 } from "@mui/material";
 import PersonIcon from "@mui/icons-material/Person";
 import ApartmentIcon from "@mui/icons-material/Apartment";
@@ -99,7 +100,6 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
       >
         Welcome, {user?.name || "User"}
       </Typography>
-
       {/* --- Patient Details Card--- */}
       <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, mb: { xs: 3, md: 5 } }}>
         <Typography variant="h5" fontWeight={600} mb={3} color="primary.main">

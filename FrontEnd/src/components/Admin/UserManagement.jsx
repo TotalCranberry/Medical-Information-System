@@ -227,8 +227,10 @@ export default function UserManagement() {
                         <Select value={roleFilter || ''} label="Role Filter" onChange={(e) => setRoleFilter(e.target.value || null)}>
                             <MenuItem value="">All Roles</MenuItem>
                             <MenuItem value="Student">Student</MenuItem>
-                            <MenuItem value="Doctor">Doctor</MenuItem>
                             <MenuItem value="Staff">Staff</MenuItem>
+                            <MenuItem value="Doctor">Doctor</MenuItem>
+                            <MenuItem value="Pharmacist">Pharmacist</MenuItem>
+                            <MenuItem value="LabTechnician">Lab Technician</MenuItem>
                             <MenuItem value="Admin">Admin</MenuItem>
                         </Select>
                     </FormControl>
@@ -262,13 +264,11 @@ export default function UserManagement() {
                                             <TableCell>{user.name}</TableCell>
                                             <TableCell>{user.email}</TableCell>
                                             <TableCell>
-                                                {/* FIX: Wrapped Chip in a Box to disable clicks */}
                                                 <Box sx={{ pointerEvents: 'none' }}>
                                                     <Chip label={user.role} size="small" />
                                                 </Box>
                                             </TableCell>
                                             <TableCell>
-                                                {/* FIX: Wrapped Chip in a Box to disable clicks */}
                                                 <Box sx={{ pointerEvents: 'none' }}>
                                                     <Chip icon={statusInfo.icon} label={statusInfo.label} color={statusInfo.chipColor} size="small" variant="outlined" />
                                                 </Box>

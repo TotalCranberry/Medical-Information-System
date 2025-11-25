@@ -13,6 +13,7 @@ public class UserResponse {
     private AuthMethod authMethod;
     private LocalDate dateOfBirth; 
     private String faculty; 
+    private String registrationNumber;
     private Integer age; 
     private String gender;
     private boolean medicalRecord;
@@ -35,6 +36,8 @@ public class UserResponse {
     public void setDateOfBirth(LocalDate dateOfBirth) { this.dateOfBirth = dateOfBirth; }
     public String getFaculty() { return faculty; }
     public void setFaculty(String faculty) { this.faculty = faculty; }
+    public String getRegistrationNumber() { return registrationNumber; }
+    public void setRegistrationNumber(String registrationNumber) { this.registrationNumber = registrationNumber; }
     public Integer getAge() { return age; } 
     public void setAge(Integer age) { this.age = age; } 
     public String getGender() { return gender; }

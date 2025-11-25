@@ -3,7 +3,7 @@ import { useNavigate } from "react-router-dom";
 import {
   Box, Typography, Paper, Table, TableBody, TableCell,
   TableContainer, TableHead, TableRow, Chip, Button,
-  Tabs, Tab, TextField
+  Tabs, Tab, TextField, TablePagination
 } from "@mui/material";
 import { useTheme } from "@mui/material/styles";
 import VisibilityIcon from "@mui/icons-material/Visibility";
@@ -181,6 +181,7 @@ const ReportsTab = ({
               </TableBody>
             </Table>
           </TableContainer>
+          
         )}
 
         {/* 1. Medical Certificates */}
@@ -287,6 +288,7 @@ const ReportsTab = ({
               </TableBody>
             </Table>
           </TableContainer>
+          
         )}
 
       </Paper>
