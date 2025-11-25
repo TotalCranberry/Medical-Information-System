@@ -75,7 +75,11 @@ const MedicalForm = ({ user, onProfileUpdate }) => {
 
     return (
         <Box sx={{ p: 3 }}>
-            <Typography variant="h4" gutterBottom>Medical Information Form</Typography>
+            <Typography variant="h4" 
+                color="primary.main" 
+                fontWeight={700} 
+                gutterBottom>Medical Information Form
+            </Typography>
             
             {isAlreadySet && (
                 <Alert severity="success" sx={{ mb: 2 }}>

@@ -186,6 +186,8 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
                               label={app.status}
                               size="small"
                               color="primary"
+                              onClick={() => {}} 
+                              clickable={false}
                             />
                           </TableCell>
                         </TableRow>
@@ -235,6 +237,8 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
                             label={req.status || "Unknown"}
                             size="small"
                             color={getStatusChipColor(req.status)}
+                            onClick={() => {}} 
+                            clickable={false}
                           />
                         </TableCell>
                       </TableRow>

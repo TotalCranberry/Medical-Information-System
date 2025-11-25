@@ -251,7 +251,7 @@ const ReportsTab = ({
           </TableContainer>
         )}
 
-        {/* 3. Lab Requests (New) */}
+        {/* 3. Lab Requests */}
         {tabValue === 3 && (
           <TableContainer>
             <Table stickyHeader>
@@ -277,6 +277,8 @@ const ReportsTab = ({
                           label={req.status || "Unknown"}
                           size="small"
                           color={getStatusChipColor(req.status)}
+                          onClick={() => {}} 
+                          clickable={false}
                         />
                       </TableCell>
                     </TableRow>

@@ -28,7 +28,7 @@ const theme = createTheme({
           transition: "background-color 0.2s",
           '&:hover': {
             backgroundColor: "#45d27a",
-            color: '#fff', // optional
+            color: '#fff', 
           },
         },
       },

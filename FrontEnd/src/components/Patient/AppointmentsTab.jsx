@@ -212,6 +212,8 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
                                       ? "success"
                                       : "default"
                                   }
+                                  onClick={() => {}} 
+                                  clickable={false}
                                 />
                               </TableCell>
                               <TableCell>
