@@ -67,7 +67,17 @@ const MedicalForm = ({ user, onProfileUpdate }) => {
                 onProfileUpdate(); 
             }
         } catch (err) {
-            setError(err.message || 'An error occurred while submitting the form.');
+            const errorMsg = err.message || 'An error occurred while submitting the form.';
+            try {
+                const parsedError = JSON.parse(errorMsg);
+                if (parsedError && typeof parsedError === 'object') {
+                    setError(parsedError);
+                } else {
+                    setError(errorMsg);
+                }
+            } catch (e) {
+                setError(errorMsg);
+            }
         } finally {
             setLoading(false);
         }
@@ -138,7 +148,21 @@ const MedicalForm = ({ user, onProfileUpdate }) => {
                         </Button>
                     </Box>
                 </form>
-                {error && <Alert severity="error" sx={{ mt: 2 }}>{error}</Alert>}
+                {error && (
+                    <Alert severity="error" sx={{ mt: 2 }}>
+                        {typeof error === 'object' ? (
+                            <ul style={{ margin: 0, paddingLeft: '20px' }}>
+                                {Object.entries(error).map(([field, message]) => (
+                                    <li key={field}>
+                                        {message}
+                                    </li>
+                                ))}
+                            </ul>
+                        ) : (
+                            error
+                        )}
+                    </Alert>
+                )}
                 {success && <Alert severity="success" sx={{ mt: 2 }}>Medical form submitted successfully! Your submission is final.</Alert>}
             </Paper>
         </Box>

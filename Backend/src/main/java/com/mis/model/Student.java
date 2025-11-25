@@ -66,7 +66,6 @@ public class Student {
     }
 
     /**
-     * FIX: Added a transient method to calculate age dynamically.
      * The @Transient annotation tells JPA not to try to save this to the database.
      * @return The calculated age in years, or null if DOB is not set.
      */
