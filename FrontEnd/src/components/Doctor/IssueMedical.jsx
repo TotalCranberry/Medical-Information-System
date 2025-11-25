@@ -40,7 +40,7 @@ const IssueMedical = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
-  const [password, setPassword] = useState('');
+  //const [password, setPassword] = useState('');
   const [success, setSuccess] = useState(false);
 
   // Load doctor's stored signature and seal on component mount
