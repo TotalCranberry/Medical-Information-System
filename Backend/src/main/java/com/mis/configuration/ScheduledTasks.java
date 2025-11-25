@@ -13,7 +13,7 @@ public class ScheduledTasks {
         this.appointmentReminderService = appointmentReminderService;
     }
 
-    @Scheduled(cron = "0 0 8 * * ?") // Run every day at 8 AM
+    @Scheduled(cron = "0 0 5 * * ?") // Run every day at 5 AM
     public void sendAppointmentReminders() {
         appointmentReminderService.sendAppointmentReminders();
     }

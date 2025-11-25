@@ -18,7 +18,7 @@ const NotificationBell = () => {
         };
 
         fetchNotifications();
-        const interval = setInterval(fetchNotifications, 60000); // Poll every minute
+        const interval = setInterval(fetchNotifications, 60000); 
 
         return () => clearInterval(interval);
     }, []);

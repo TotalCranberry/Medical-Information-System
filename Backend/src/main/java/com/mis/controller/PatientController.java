@@ -26,14 +26,14 @@ import com.mis.dto.MedicalFormRequest;
 import com.mis.model.Appointment;
 import com.mis.model.AppointmentStatus;
 import com.mis.model.Diagnosis;
-import com.mis.model.LabRequest; // Import LabRequest
+import com.mis.model.LabRequest; 
 import com.mis.model.LabResult;
 import com.mis.model.Medical;
 import com.mis.model.Prescription.Prescription;
 import com.mis.model.User;
 import com.mis.repository.AppointmentRepository;
 import com.mis.repository.DiagnosisRepository;
-import com.mis.repository.LabRequestRepository; // Import Repository
+import com.mis.repository.LabRequestRepository; 
 import com.mis.repository.LabResultRepository;
 import com.mis.repository.MedicalRepository;
 import com.mis.repository.Prescription.PrescriptionRepository;
@@ -52,14 +52,14 @@ public class PatientController {
     private final MedicalRepository medicalRepository;
     private final PrescriptionRepository prescriptionRepository;
     private final LabResultRepository labResultRepository;
-    private final LabRequestRepository labRequestRepository; // Declare repository
+    private final LabRequestRepository labRequestRepository; 
     private final MedicalFormService medicalFormService;
 
-    // Update Constructor to include LabRequestRepository
+    
     public PatientController(AppointmentRepository appointmentRepository, 
                              DiagnosisRepository diagnosisRepository, 
                              LabResultRepository labResultRepository, 
-                             LabRequestRepository labRequestRepository, // Inject here
+                             LabRequestRepository labRequestRepository, 
                              MedicalRepository medicalRepository, 
                              PrescriptionRepository prescriptionRepository, 
                              UserRepository userRepository, 
@@ -67,7 +67,7 @@ public class PatientController {
         this.appointmentRepository = appointmentRepository;
         this.diagnosisRepository = diagnosisRepository;
         this.labResultRepository = labResultRepository;
-        this.labRequestRepository = labRequestRepository; // Assign here
+        this.labRequestRepository = labRequestRepository;
         this.medicalRepository = medicalRepository;
         this.prescriptionRepository = prescriptionRepository;
         this.userRepository = userRepository;
@@ -79,11 +79,10 @@ public class PatientController {
         String userId = authentication.getName();
         User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
         
-        List<Appointment> appointments = appointmentRepository.findByPatientOrderByAppointmentDateTimeDesc(patient);
+        List<Appointment> appointments = appointmentRepository.findByPatientAndAppointmentDateTimeAfterOrderByAppointmentDateTimeAsc(patient, new Date());
         return ResponseEntity.ok(appointments);
     }
 
-    // ... [Existing Appointment Logic: createAppointment, cancelAppointment] ...
     
     @PostMapping("/appointments")
     public ResponseEntity<?> createAppointment(Authentication authentication, @Valid @RequestBody AppointmentRequest request) {
@@ -168,12 +167,10 @@ public class PatientController {
         return ResponseEntity.ok(labResults);
     }
     
-    // NEW ENDPOINT: Get Lab Requests
     @GetMapping("/lab-requests")
     public ResponseEntity<List<LabRequest>> getLabRequests(Authentication authentication) {
         String userId = authentication.getName();
         User patient = userRepository.findById(userId).orElseThrow(() -> new RuntimeException("Patient not found"));
-        // Fetch requests ordered by date (using the method added to repository in previous step)
         List<LabRequest> requests = labRequestRepository.findByPatientOrderByOrderDateDesc(patient);
         return ResponseEntity.ok(requests);
     }

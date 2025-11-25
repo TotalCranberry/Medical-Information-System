@@ -16,6 +16,8 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
 
     List<Appointment> findByPatientOrderByAppointmentDateTimeDesc(User patient);
 
+    List<Appointment> findByPatientAndAppointmentDateTimeAfterOrderByAppointmentDateTimeAsc(User patient, Date date);
+
     @Query("SELECT a FROM Appointment a WHERE a.appointmentDateTime >= :startOfDay AND a.appointmentDateTime < :endOfDay ORDER BY a.appointmentDateTime ASC")
     List<Appointment> findAppointmentsForDay(@Param("startOfDay") Date startOfDay, @Param("endOfDay") Date endOfDay);
 
@@ -26,7 +28,6 @@ public interface AppointmentRepository extends JpaRepository<Appointment, String
 
     List<Appointment> findByStatusOrderByAppointmentDateTimeAsc(AppointmentStatus status);
     
-    // FIXED: Corrected typo in method name
     List<Appointment> findAllByOrderByAppointmentDateTimeDesc();
     
     long countByStatus(AppointmentStatus status);

@@ -31,7 +31,6 @@ const SupportPage = () => {
       const response = await submitSupportRequest(message);
       setFeedback({ text: response.message, type: "success" });
       setMessage("");
-      // Refresh tickets after submitting a new one
       const tickets = await getMyTickets();
       setMyTickets(tickets);
     } catch (error) {

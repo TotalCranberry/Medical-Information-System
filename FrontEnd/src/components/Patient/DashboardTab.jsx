@@ -13,14 +13,12 @@ import WcIcon from "@mui/icons-material/Wc";
 import SchoolIcon from "@mui/icons-material/School";
 import VisibilityIcon from "@mui/icons-material/Visibility";
 import { getCompletedPrescriptionsForPatient } from "../../api/prescription";
-// Import the new API function
 import { fetchLabRequests } from "../../api/reports";
 
 const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescriptions }) => {
   const theme = useTheme();
   const navigate = useNavigate();
   const [completedPrescriptions, setCompletedPrescriptions] = useState([]);
-  // State for lab requests
   const [labRequests, setLabRequests] = useState([]);
 
   const isDobRequired = user?.role === "Student" || user?.role === "Staff";
@@ -102,7 +100,7 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
         Welcome, {user?.name || "User"}
       </Typography>
 
-      {/* --- Patient Details Card (Unchanged) --- */}
+      {/* --- Patient Details Card--- */}
       <Paper elevation={3} sx={{ p: { xs: 2, md: 3 }, mb: { xs: 3, md: 5 } }}>
         <Typography variant="h5" fontWeight={600} mb={3} color="primary.main">
           Patient Details
@@ -205,7 +203,7 @@ const DashboardTab = ({ user, appointments, medicals, diagnoses, reports, prescr
           </Paper>
         </Grid>
 
-        {/* Lab Requests Table (New) */}
+        {/* Lab Requests Table */}
         <Grid item xs={12} md={6} lg={3}>
           <Paper elevation={2} sx={{ p: 3, minHeight: 350 }}>
             <Typography variant="h6" fontWeight={600} mb={2} textAlign="center">

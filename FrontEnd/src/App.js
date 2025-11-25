@@ -77,54 +77,6 @@ import CreateAnnouncement from './components/Admin/CreateAnnouncement';
 import SupportTicketsPage from './components/Admin/SupportTicketsPage';
 import NotificationBell from './components/NotificationBell';
 
-// --- Doctor mock data & helpers ---
-const mockPatients = [
-  { id: 1, name: "John Doe", faculty: "Engineering", age: 22 },
-  { id: 2, name: "Jane Smith", faculty: "Medicine", age: 24 },
-  { id: 3, name: "Mike Johnson", faculty: "Science", age: 23 },
-  { id: 4, name: "Sarah Wilson", faculty: "Arts", age: 21 },
-  { id: 5, name: "David Brown", faculty: "Engineering", age: 25 }
-];
-
-const mockPatientDetails = {
-  id: 1,
-  name: "John Doe",
-  age: 24,
-  faculty: "Science Faculty",
-  conditions: ["Hypertension", "Diabetes Type 2"],
-  allergies: ["Penicillin", "Shellfish"],
-  diagnoses: [
-    { date: "2024-01-15", condition: "Common Cold" },
-    { date: "2024-01-10", condition: "Routine Checkup" }
-  ],
-  vitals: [
-    { date: "2024-01-15", bloodPressure: "120/80", temperature: "98.6" },
-    { date: "2024-01-10", bloodPressure: "118/78", temperature: "98.4" }
-  ],
-  weightChart: [
-    { date: "2024-01-15", weight: 75 },
-    { date: "2024-01-10", weight: 74.5 }
-  ],
-  medicalHistory: [
-    { type: "Diagnosis", date: "2024-01-15", description: "Common Cold" },
-    { type: "Prescription", date: "2024-01-12", description: "Amoxicillin" },
-    { type: "Lab Test", date: "2024-01-10", description: "CBC Test" },
-  ]
-};
-
-const mockTodaysAppointments = [
-  { id: 1, time: "09:00 AM", patientName: "John Doe", status: "Confirmed" },
-  { id: 2, time: "10:30 AM", patientName: "Jane Smith", status: "Pending" },
-  { id: 3, time: "02:00 PM", patientName: "Mike Johnson", status: "Confirmed" }
-];
-
-const mockRecentActivity = [
-  { description: "Prescription written for John Doe", timestamp: "2 hours ago" },
-  { description: "Lab test requested for Jane Smith", timestamp: "4 hours ago" },
-  { description: "Patient consultation completed", timestamp: "1 day ago" },
-  { description: "Medical report reviewed", timestamp: "2 days ago" }
-];
-
 const mockLabRequests = [
   { id: 1, date: "2024-01-15", testType: "Blood Test", patientName: "John Doe", status: "Pending" },
   { id: 2, date: "2024-01-14", testType: "X-Ray", patientName: "Jane Smith", status: "Completed" }
@@ -417,7 +369,7 @@ function App() {
           <Route path="pharmacist/prescription-print" element={<PrescriptionPrint user={user} />} />
           <Route path="invoice/:id" element={<Invoice />} />
 
-          {/* Doctor Routes - UPDATED with Medical Routes */}
+          {/* Doctor Routes  */}
            <Route path="doctor/dashboard" element={<DoctorDashboard doctor={user} />} />
            <Route path="doctor/patients" element={<PatientsTab />} />
            <Route path="doctor/patients/:patientId" element={<PatientProfile />} />

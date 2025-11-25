@@ -11,7 +11,6 @@ import { AdapterDateFns } from '@mui/x-date-pickers/AdapterDateFns';
 import { LocalizationProvider } from '@mui/x-date-pickers/LocalizationProvider';
 import { DatePicker } from '@mui/x-date-pickers/DatePicker';
 import { getCompletedPrescriptionsForPatient } from "../../api/prescription";
-// Import new API
 import { fetchLabRequests } from "../../api/reports";
 
 const ReportsTab = ({

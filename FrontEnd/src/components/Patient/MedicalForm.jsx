@@ -2,7 +2,6 @@ import React, { useState } from 'react';
 import { Box, Button, Typography, Paper, Grid, TextField, CircularProgress, Alert } from '@mui/material';
 import { submitMedicalForm } from '../../api/patient';
 
-// 1. Accept 'user' as a prop
 const MedicalForm = ({ user, onProfileUpdate }) => {
     const [formData, setFormData] = useState({
         medicalHistory: {
@@ -35,10 +34,8 @@ const MedicalForm = ({ user, onProfileUpdate }) => {
     const [error, setError] = useState(null);
     const [success, setSuccess] = useState(false);
 
-    // 2. Check if form is already submitted (from user prop)
     const isAlreadySet = user?.medicalRecordSet === true;
 
-    // 3. Form is disabled if already set, successfully submitted now, or loading
     const isDisabled = isAlreadySet || success || loading;
 
     const handleChange = (e) => {
@@ -67,7 +64,6 @@ const MedicalForm = ({ user, onProfileUpdate }) => {
             await submitMedicalForm(formData);
             setSuccess(true);
             if (onProfileUpdate) {
-                // This will trigger a refresh of the user object in the parent
                 onProfileUpdate(); 
             }
         } catch (err) {
@@ -81,7 +77,6 @@ const MedicalForm = ({ user, onProfileUpdate }) => {
         <Box sx={{ p: 3 }}>
             <Typography variant="h4" gutterBottom>Medical Information Form</Typography>
             
-            {/* 4. Show a message if the form is already set */}
             {isAlreadySet && (
                 <Alert severity="success" sx={{ mb: 2 }}>
                     Your medical form has already been submitted.
@@ -97,7 +92,6 @@ const MedicalForm = ({ user, onProfileUpdate }) => {
 
             <Paper sx={{ p: 3 }}>
                 <form onSubmit={handleSubmit}>
-                    {/* 5. Add 'required' and 'disabled' props to all fields */}
                     <Typography variant="h6" gutterBottom>Medical History</Typography>
                     <TextField name="medicalHistory.pastHospitalAdmissions" label="Past Hospital Admissions" fullWidth onChange={handleChange} sx={{ mb: 2 }} required disabled={isDisabled} />
                     <TextField name="medicalHistory.chronicIllnesses" label="Chronic Illnesses" fullWidth onChange={handleChange} sx={{ mb: 2 }} required disabled={isDisabled} />
@@ -118,7 +112,6 @@ const MedicalForm = ({ user, onProfileUpdate }) => {
                     </Grid>
                     <Typography variant="body1" gutterBottom sx={{ mt: 1 }}>Vision (With Glasses)</Typography>
                     <Grid container spacing={2} sx={{ mb: 2 }}>
-                        {/* 6. These two fields are NOT required */}
                         <Grid item xs={12} sm={6}><TextField name="eyeExam.visionWithGlasses.right" label="R" fullWidth onChange={handleChange} disabled={isDisabled} /></Grid>
                         <Grid item xs={12} sm={6}><TextField name="eyeExam.visionWithGlasses.left" label="L" fullWidth onChange={handleChange} disabled={isDisabled} /></Grid>
                     </Grid>
@@ -136,7 +129,6 @@ const MedicalForm = ({ user, onProfileUpdate }) => {
                     </Grid>
 
                     <Box sx={{ mt: 3 }}>
-                        {/* 7. Disable button based on the new logic */}
                         <Button type="submit" variant="contained" color="primary" disabled={isDisabled}>
                             {loading ? <CircularProgress size={24} /> : 'Submit'}
                         </Button>
