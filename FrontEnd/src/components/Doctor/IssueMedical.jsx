@@ -22,11 +22,11 @@ const IssueMedical = () => {
   const { patientId } = useParams();
   const navigate = useNavigate();
   const location = useLocation();
-
+  
   // Get patient data from navigation state
   const patientFromState = location.state?.patient;
   const currentAppointmentId = location.state?.appointmentId;
-
+  
   const [patientData] = useState(patientFromState || null);
   const [recommendations, setRecommendations] = useState('');
   const [additionalNotes, setAdditionalNotes] = useState('');
@@ -40,6 +40,7 @@ const IssueMedical = () => {
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
+  //const [password, setPassword] = useState('');
   const [success, setSuccess] = useState(false);
 
   // Load doctor's stored signature and seal on component mount
@@ -391,11 +392,33 @@ const IssueMedical = () => {
             </Card>
           </Grid>
 
+          {/* Password Authentication */}
+          <Grid item xs={12}>
+            <Card elevation={3} sx={{ borderRadius: 3 }}>
+              <CardContent sx={{ p: 4 }}>
+                <Box display="flex" alignItems="center" mb={2}>
+                  <SecurityIcon sx={{ fontSize: 28, color: "#45d27a", mr: 1.5 }} />
+                  <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
+                    Confirm with Password
+                  </Typography>
+                </Box>
+                <TextField
+                  fullWidth
+                  type="password"
+                  label="Enter your password to issue the certificate"
+                  value={password}
+                  onChange={(e) => setPassword(e.target.value)}
+                  required
+                />
+              </CardContent>
+            </Card>
+          </Grid>
+
           {/* Doctor Authentication Section */}
           <Grid item xs={12}>
             <Card elevation={3} sx={{ borderRadius: 3 }}>
               <CardContent sx={{ p: 4 }}>
-                <Box display="flex" alignItems="center" mb={3}>
+                <Box display="flex" alignItems="center" mb={2}>
                   <SecurityIcon sx={{ fontSize: 28, color: "#45d27a", mr: 1.5 }} />
                   <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
                     Doctor Authentication
@@ -407,7 +430,7 @@ const IssueMedical = () => {
 
                 <Grid container spacing={4}>
                   {/* Doctor Signature Upload */}
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={6}>
                     <Card sx={{
                       height: '100%',
                       border: (doctorSignature || storedSignature) ? '2px solid #45d27a' : '2px dashed #ddd',
@@ -519,7 +542,7 @@ const IssueMedical = () => {
                   </Grid>
 
                   {/* Doctor Seal Upload */}
-                  <Grid item xs={12} md={4}>
+                  <Grid item xs={12} md={6}>
                     <Card sx={{
                       height: '100%',
                       border: (doctorSeal || storedSeal) ? '2px solid #45d27a' : '2px dashed #ddd',
@@ -625,46 +648,6 @@ const IssueMedical = () => {
                               </Button>
                             </Box>
                           )}
-                        </Box>
-                      </CardContent>
-                    </Card>
-                  </Grid>
-
-                  {/* Password Input */}
-                  <Grid item xs={12} md={4}>
-                    <Card sx={{
-                      height: '100%',
-                      border: '2px solid #ddd',
-                      borderRadius: 2
-                    }}>
-                      <CardContent sx={{ p: 3, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Typography variant="h6" sx={{ mb: 2, color: "#0c3c3c", fontWeight: 600 }}>
-                          Confirm Identity
-                        </Typography>
-                        <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          <TextField
-                            fullWidth
-                            type="password"
-                            label="Enter Password"
-                            value={password}
-                            onChange={(e) => setPassword(e.target.value)}
-                            error={!password.trim() && error && error.includes("Password")}
-                            helperText={!password.trim() && error && error.includes("Password") ? "Password is required" : ""}
-                            sx={{
-                              '& .MuiOutlinedInput-root': {
-                                backgroundColor: '#fafafa',
-                                '&:hover': {
-                                  backgroundColor: '#f5f5f5'
-                                },
-                                '&.Mui-focused': {
-                                  backgroundColor: '#fff'
-                                }
-                              }
-                            }}
-                          />
-                          <Typography variant="caption" color="text.secondary" sx={{ mt: 1 }}>
-                            Your login password is required to issue medical certificates
-                          </Typography>
                         </Box>
                       </CardContent>
                     </Card>
