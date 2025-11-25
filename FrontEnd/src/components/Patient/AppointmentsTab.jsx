@@ -14,8 +14,6 @@ const AppointmentsTab = ({ appointments, onBookSuccess, onCancel }) => {
   const [reason, setReason] = useState("");
   const [feedback, setFeedback] = useState({ text: "", type: "" });
   const theme = useTheme();
-
-  // Confirmation dialog state
   const [openCancelDialog, setOpenCancelDialog] = useState(false);
   const [appointmentToCancel, setAppointmentToCancel] = useState(null);
 

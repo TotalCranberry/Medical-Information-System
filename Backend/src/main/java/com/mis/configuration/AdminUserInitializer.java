@@ -56,7 +56,7 @@ public class AdminUserInitializer implements CommandLineRunner {
         admin.setPasswordHash(passwordEncoder.encode(adminPassword));
         admin.setRole(Role.Admin);
         admin.setAuthMethod(AuthMethod.Manual);
-        admin.setStatus(AccountStatus.ACTIVE); // The admin account is active by default
+        admin.setStatus(AccountStatus.ACTIVE); 
         admin.setLastLogin(LocalDateTime.now());
 
         userRepository.save(admin);
