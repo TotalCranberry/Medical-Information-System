@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState } from "react";
 import {
   Box, Typography, Grid, Button, TextField, Alert,
   CircularProgress, Divider, Card, CardContent, Container
@@ -16,7 +16,7 @@ import {
   Security as SecurityIcon
 } from "@mui/icons-material";
 import { useParams, useNavigate, useLocation } from "react-router-dom";
-import { issueMedical, getDoctorSignatureAndSeal } from "../../api/appointments";
+import { issueMedical } from "../../api/appointments";
 
 const IssueMedical = () => {
   const { patientId } = useParams();
@@ -34,38 +34,10 @@ const IssueMedical = () => {
   const [doctorSeal, setDoctorSeal] = useState(null);
   const [signaturePreview, setSignaturePreview] = useState(null);
   const [sealPreview, setSealPreview] = useState(null);
-  const [storedSignature, setStoredSignature] = useState(null);
-  const [storedSeal, setStoredSeal] = useState(null);
-  const [loadingStoredImages, setLoadingStoredImages] = useState(true);
   const [password, setPassword] = useState('');
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState(null);
   const [success, setSuccess] = useState(false);
-
-  // Load doctor's stored signature and seal on component mount
-  useEffect(() => {
-    const loadStoredImages = async () => {
-      try {
-        setLoadingStoredImages(true);
-        const response = await getDoctorSignatureAndSeal();
-        if (response.doctorSignature) {
-          setStoredSignature(response.doctorSignature);
-          setSignaturePreview(response.doctorSignature);
-        }
-        if (response.doctorSeal) {
-          setStoredSeal(response.doctorSeal);
-          setSealPreview(response.doctorSeal);
-        }
-      } catch (err) {
-        console.error("Error loading stored signature and seal:", err);
-        // Don't show error to user, just continue without stored images
-      } finally {
-        setLoadingStoredImages(false);
-      }
-    };
-
-    loadStoredImages();
-  }, []);
 
   const getPatientAge = () => {
     const details = patientData?.patientDetails || patientData;
@@ -123,12 +95,8 @@ const IssueMedical = () => {
       return;
     }
 
-    // Check if we have either uploaded files or stored files for both signature and seal
-    const hasSignature = doctorSignature || storedSignature;
-    const hasSeal = doctorSeal || storedSeal;
-
-    if (!hasSignature || !hasSeal) {
-      setError("Both doctor signature and seal images are required. Please upload them or ensure they are stored in your profile.");
+    if (!doctorSignature || !doctorSeal) {
+      setError("Both doctor signature and seal images are required");
       return;
     }
 
@@ -402,7 +370,7 @@ const IssueMedical = () => {
                   </Typography>
                 </Box>
                 <Typography variant="body2" color="text.secondary" sx={{ mb: 4 }}>
-                  Upload your signature and seal to authenticate this medical certificate, or use your previously stored images. Both images must be less than 1MB each and will be permanently attached to this document. Your password is also required for verification.
+                  Upload your signature and seal to authenticate this medical certificate. Both images must be less than 1MB each and will be permanently attached to this document. Your password is also required for verification.
                 </Typography>
 
                 <Grid container spacing={4}>
@@ -410,39 +378,16 @@ const IssueMedical = () => {
                   <Grid item xs={12} md={4}>
                     <Card sx={{
                       height: '100%',
-                      border: (doctorSignature || storedSignature) ? '2px solid #45d27a' : '2px dashed #ddd',
-                      backgroundColor: (doctorSignature || storedSignature) ? 'rgba(69, 210, 122, 0.05)' : 'transparent',
+                      border: doctorSignature ? '2px solid #45d27a' : '2px dashed #ddd',
+                      backgroundColor: doctorSignature ? 'rgba(69, 210, 122, 0.05)' : 'transparent',
                       borderRadius: 2
                     }}>
                       <CardContent sx={{ p: 3, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-                          <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
-                            Doctor Signature
-                          </Typography>
-                          {storedSignature && !doctorSignature && (
-                            <Typography variant="caption" sx={{
-                              ml: 1,
-                              px: 1,
-                              py: 0.5,
-                              bgcolor: '#e8f5e8',
-                              color: '#2e7d32',
-                              borderRadius: 1,
-                              fontSize: '0.7rem',
-                              fontWeight: 600
-                            }}>
-                              STORED
-                            </Typography>
-                          )}
-                        </Box>
+                        <Typography variant="h6" sx={{ mb: 2, color: "#0c3c3c", fontWeight: 600 }}>
+                          Doctor Signature
+                        </Typography>
                         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          {loadingStoredImages ? (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                              <CircularProgress size={32} sx={{ color: '#45d27a' }} />
-                              <Typography variant="body2" color="text.secondary">
-                                Loading stored signature...
-                              </Typography>
-                            </Box>
-                          ) : !signaturePreview ? (
+                          {!signaturePreview ? (
                             <Button
                               variant="outlined"
                               component="label"
@@ -522,39 +467,16 @@ const IssueMedical = () => {
                   <Grid item xs={12} md={4}>
                     <Card sx={{
                       height: '100%',
-                      border: (doctorSeal || storedSeal) ? '2px solid #45d27a' : '2px dashed #ddd',
-                      backgroundColor: (doctorSeal || storedSeal) ? 'rgba(69, 210, 122, 0.05)' : 'transparent',
+                      border: doctorSeal ? '2px solid #45d27a' : '2px dashed #ddd',
+                      backgroundColor: doctorSeal ? 'rgba(69, 210, 122, 0.05)' : 'transparent',
                       borderRadius: 2
                     }}>
                       <CardContent sx={{ p: 3, textAlign: 'center', height: '100%', display: 'flex', flexDirection: 'column' }}>
-                        <Box sx={{ display: 'flex', alignItems: 'center', justifyContent: 'center', mb: 2 }}>
-                          <Typography variant="h6" sx={{ color: "#0c3c3c", fontWeight: 600 }}>
-                            Doctor Seal
-                          </Typography>
-                          {storedSeal && !doctorSeal && (
-                            <Typography variant="caption" sx={{
-                              ml: 1,
-                              px: 1,
-                              py: 0.5,
-                              bgcolor: '#e8f5e8',
-                              color: '#2e7d32',
-                              borderRadius: 1,
-                              fontSize: '0.7rem',
-                              fontWeight: 600
-                            }}>
-                              STORED
-                            </Typography>
-                          )}
-                        </Box>
+                        <Typography variant="h6" sx={{ mb: 2, color: "#0c3c3c", fontWeight: 600 }}>
+                          Doctor Seal
+                        </Typography>
                         <Box sx={{ flexGrow: 1, display: 'flex', flexDirection: 'column', justifyContent: 'center' }}>
-                          {loadingStoredImages ? (
-                            <Box sx={{ display: 'flex', flexDirection: 'column', alignItems: 'center', gap: 1 }}>
-                              <CircularProgress size={32} sx={{ color: '#45d27a' }} />
-                              <Typography variant="body2" color="text.secondary">
-                                Loading stored seal...
-                              </Typography>
-                            </Box>
-                          ) : !sealPreview ? (
+                          {!sealPreview ? (
                             <Button
                               variant="outlined"
                               component="label"
@@ -680,7 +602,7 @@ const IssueMedical = () => {
               <Button
                 onClick={handleSubmitMedical}
                 variant="contained"
-                disabled={loading || !recommendations.trim() || !(doctorSignature || storedSignature) || !(doctorSeal || storedSeal) || !password.trim()}
+                disabled={loading || !recommendations.trim() || !doctorSignature || !doctorSeal || !password.trim()}
                 sx={{
                   backgroundColor: "#45d27a",
                   "&:hover": { backgroundColor: "#3ab86a" },
